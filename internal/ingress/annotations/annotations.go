@@ -54,6 +54,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/sslpassthrough"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/upstreamhashby"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/upstreamvhost"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/xforwardedprefix"
 	"k8s.io/ingress-nginx/internal/ingress/errors"
 	"k8s.io/ingress-nginx/internal/ingress/resolver"
@@ -96,6 +97,7 @@ type Ingress struct {
 	GRPC                 bool
 	LuaRestyWAF          luarestywaf.Config
 	InfluxDB             influxdb.Config
+	Wallarm              wallarm.Config
 }
 
 // Extractor defines the annotation parsers to be used in the extraction of annotations
@@ -137,6 +139,7 @@ func NewAnnotationExtractor(cfg resolver.Resolver) Extractor {
 			"GRPC":                 grpc.NewParser(cfg),
 			"LuaRestyWAF":          luarestywaf.NewParser(cfg),
 			"InfluxDB":             influxdb.NewParser(cfg),
+			"Wallarm":              wallarm.NewParser(cfg),
 		},
 	}
 }

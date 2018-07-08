@@ -104,6 +104,17 @@ func (c1 *Configuration) Equal(c2 *Configuration) bool {
 		}
 	}
 
+	if c1.WallarmTarantoolUpstream != nil {
+		if c2.WallarmTarantoolUpstream == nil {
+			return false
+		}
+		if !c1.WallarmTarantoolUpstream.Equal(c2.WallarmTarantoolUpstream) {
+			return false
+		}
+	} else if c2.WallarmTarantoolUpstream != nil {
+		return false
+	}
+
 	if c1.ConfigurationChecksum != c2.ConfigurationChecksum {
 		return false
 	}
@@ -388,6 +399,9 @@ func (l1 *Location) Equal(l2 *Location) bool {
 	}
 
 	if !(&l1.InfluxDB).Equal(&l2.InfluxDB) {
+		return false
+	}
+	if !(&l1.Wallarm).Equal(&l2.Wallarm) {
 		return false
 	}
 

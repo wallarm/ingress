@@ -12,6 +12,10 @@
 # setup custom paths that do not require root access
 pid /tmp/nginx.pid;
 
+{{ if $cfg.EnableWallarm }}
+load_module /etc/nginx/modules/ngx_http_wallarm_module.so;
+{{ end }}
+
 {{ if $cfg.EnableModsecurity }}
 load_module /etc/nginx/modules/ngx_http_modsecurity_module.so;
 {{ end }}
@@ -42,6 +46,17 @@ events {
 }
 
 http {
+    {{ if $cfg.EnableWallarm }}
+    wallarm_upstream_connect_attempts {{ $cfg.WallarmUpstreamConnectAttempts }};
+    wallarm_upstream_reconnect_interval {{ $cfg.WallarmUpstreamReconnectInterval }};
+    ## Commented out until NODE-1288 will fixed
+    # wallarm_acl_mapsize {{ $cfg.WallarmAclMapsize }};
+    wallarm_process_time_limit {{ $cfg.WallarmProcessTimeLimit }};
+    wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
+    wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
+    wallarm_worker_rlimit_vmem {{ $cfg.WallarmWorkerRlimitVmem }};
+    {{ end }}
+
     {{ if not $all.DisableLua }}
     lua_package_cpath "/usr/local/lib/lua/?.so;/usr/lib/lua-platform-path/lua/5.1/?.so;;";
     lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;/usr/local/lib/lua/?.lua;;";
@@ -369,6 +384,17 @@ http {
     {{ $cfg.HTTPSnippet }}
     {{ end }}
 
+    {{ if $all.WallarmTarantoolUpstream }}
+    upstream wallarm_tarantool {
+        {{ range $server := $all.WallarmTarantoolUpstream.Endpoints }}server {{ $server.Address | formatIP }}:{{ $server.Port }} max_fails={{ $server.MaxFails }} fail_timeout={{ $server.FailTimeout }};
+        {{ end }}
+
+        keepalive {{ $all.WallarmTarantoolUpstream.Endpoints | len }};
+    }
+
+    wallarm_tarantool_upstream wallarm_tarantool;
+    {{ end }}
+
     {{ if not $all.DynamicConfigurationEnabled }}
     {{ range $name, $upstream := $backends }}
     {{ if eq $upstream.SessionAffinity.AffinityType "cookie" }}
@@ -545,6 +571,26 @@ http {
             access_log off;
             stub_status on;
         }
+
+        {{ if $cfg.EnableWallarm }}
+        location /wallarm-status {
+            {{ if $cfg.EnableOpentracing }}
+            opentracing off;
+            {{ end }}
+
+            access_log off;
+            wallarm_status on format=json;
+        }
+
+        location /wallarm-metrics {
+            {{ if $cfg.EnableOpentracing }}
+            opentracing off;
+            {{ end }}
+
+            access_log off;
+            wallarm_status on format=prometheus;
+        }
+        {{ end }}
 
         {{ if $all.DynamicConfigurationEnabled }}
         location /configuration {
@@ -847,6 +893,21 @@ stream {
             set $service_name   "{{ $ing.Service }}";
             set $service_port   "{{ $location.Port }}";
             set $location_path  "{{ $location.Path }}";
+
+            {{ if $all.Cfg.EnableWallarm }}
+            wallarm_mode                 {{ $location.Wallarm.Mode }};
+            wallarm_mode_allow_override  {{ $location.Wallarm.ModeAllowOverride }};
+            wallarm_fallback             {{ $location.Wallarm.Fallback }};
+            wallarm_instance             "{{ $location.Wallarm.Instance }}";
+            wallarm_block_page           "{{ $location.Wallarm.BlockPage }}";
+            wallarm_parse_response       {{ $location.Wallarm.ParseResponse }};
+            wallarm_parse_websocket      {{ $location.Wallarm.ParseWebsocket }};
+            wallarm_unpack_response      {{ $location.Wallarm.UnpackResponse }};
+
+            {{ range $parser := $location.Wallarm.ParserDisable }}wallarm_parser_disable {{ $parser }};
+            {{ end }}
+
+            {{ end }}
 
             {{ if $all.Cfg.EnableOpentracing }}
             opentracing_propagate_context;

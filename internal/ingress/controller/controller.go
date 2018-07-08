@@ -35,6 +35,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/healthcheck"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 	ngx_config "k8s.io/ingress-nginx/internal/ingress/controller/config"
 	"k8s.io/ingress-nginx/internal/k8s"
 )
@@ -149,11 +150,12 @@ func (n *NGINXController) syncIngress(interface{}) error {
 	}
 
 	pcfg := ingress.Configuration{
-		Backends:            upstreams,
-		Servers:             servers,
-		TCPEndpoints:        n.getStreamServices(n.cfg.TCPConfigMapName, apiv1.ProtocolTCP),
-		UDPEndpoints:        n.getStreamServices(n.cfg.UDPConfigMapName, apiv1.ProtocolUDP),
-		PassthroughBackends: passUpstreams,
+		Backends:                 upstreams,
+		Servers:                  servers,
+		TCPEndpoints:             n.getStreamServices(n.cfg.TCPConfigMapName, apiv1.ProtocolTCP),
+		UDPEndpoints:             n.getStreamServices(n.cfg.UDPConfigMapName, apiv1.ProtocolUDP),
+		PassthroughBackends:      passUpstreams,
+		WallarmTarantoolUpstream: n.getWallarmTarantoolUpstream(),
 
 		ConfigurationChecksum: n.store.GetBackendConfiguration().Checksum,
 	}
@@ -446,6 +448,7 @@ func (n *NGINXController) getBackendServers(ingresses []*extensions.Ingress) ([]
 						loc.GRPC = anns.GRPC
 						loc.LuaRestyWAF = anns.LuaRestyWAF
 						loc.InfluxDB = anns.InfluxDB
+						loc.Wallarm = anns.Wallarm
 						loc.DefaultBackend = anns.DefaultBackend
 
 						if loc.Redirect.FromToWWW {
@@ -484,6 +487,7 @@ func (n *NGINXController) getBackendServers(ingresses []*extensions.Ingress) ([]
 						GRPC:                 anns.GRPC,
 						LuaRestyWAF:          anns.LuaRestyWAF,
 						InfluxDB:             anns.InfluxDB,
+						Wallarm:              anns.Wallarm,
 						DefaultBackend:       anns.DefaultBackend,
 					}
 
@@ -583,6 +587,33 @@ func (n *NGINXController) getBackendServers(ingresses []*extensions.Ingress) ([]
 	})
 
 	return aUpstreams, aServers
+}
+
+func (n *NGINXController) getWallarmTarantoolUpstream() *ingress.Backend {
+	if !n.store.GetBackendConfiguration().EnableWallarm {
+		return nil
+	}
+
+	svcKey := n.store.GetBackendConfiguration().WallarmUpstreamService
+	svc, err := n.store.GetService(svcKey)
+	if err != nil {
+		glog.Warningf("Error getting Wallarm Tarantool Upstream %q from local store: %v", svcKey, err)
+		return nil
+	}
+	port := &svc.Spec.Ports[0]
+	hz := &healthcheck.Config{
+		MaxFails:    n.store.GetBackendConfiguration().WallarmUpstreamMaxFails,
+		FailTimeout: n.store.GetBackendConfiguration().WallarmUpstreamFailTimeout,
+	}
+	endpoints := getEndpoints(svc, port, port.Protocol, hz, n.store.GetServiceEndpoints)
+	if len(endpoints) == 0 {
+		glog.Warning("No Wallarm Tarantool Upstream endpoints found")
+		return nil
+	}
+
+	return &ingress.Backend{
+		Endpoints: endpoints,
+	}
 }
 
 // createUpstreams creates the NGINX upstreams (Endpoints) for each Service
@@ -845,6 +876,18 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 		ProxyBuffering:    bdef.ProxyBuffering,
 	}
 
+	ngxWallarm := wallarm.Config{
+		Mode:              bdef.WallarmMode,
+		ModeAllowOverride: bdef.WallarmModeAllowOverride,
+		Fallback:          bdef.WallarmFallback,
+		Instance:          bdef.WallarmInstance,
+		BlockPage:         bdef.WallarmBlockPage,
+		ParseResponse:     bdef.WallarmParseResponse,
+		ParseWebsocket:    bdef.WallarmParseWebsocket,
+		UnpackResponse:    bdef.WallarmUnpackResponse,
+		ParserDisable:     bdef.WallarmParserDisable,
+	}
+
 	// generated on Start() with createDefaultSSLCertificate()
 	defaultPemFileName := n.cfg.FakeCertificatePath
 	defaultPemSHA := n.cfg.FakeCertificateSHA
@@ -869,6 +912,7 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 				IsDefBackend: true,
 				Backend:      du.Name,
 				Proxy:        ngxProxy,
+				Wallarm:      ngxWallarm,
 				Service:      du.Service,
 			},
 		}}
@@ -918,6 +962,7 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 					defLoc.GRPC = anns.GRPC
 					defLoc.LuaRestyWAF = anns.LuaRestyWAF
 					defLoc.InfluxDB = anns.InfluxDB
+					defLoc.Wallarm = anns.Wallarm
 				} else {
 					glog.V(3).Infof("Ingress \"%v/%v\" defines both a backend and rules. Using its backend as default upstream for all its rules.", ing.Namespace, ing.Name)
 				}
@@ -942,6 +987,7 @@ func (n *NGINXController) createServers(data []*extensions.Ingress,
 						IsDefBackend: true,
 						Backend:      un,
 						Proxy:        ngxProxy,
+						Wallarm:      ngxWallarm,
 						Service:      &apiv1.Service{},
 					},
 				},

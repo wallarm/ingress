@@ -573,6 +573,7 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 		BacklogSize:                 sysctlSomaxconn(),
 		Backends:                    ingressCfg.Backends,
 		PassthroughBackends:         ingressCfg.PassthroughBackends,
+		WallarmTarantoolUpstream:    ingressCfg.WallarmTarantoolUpstream,
 		Servers:                     ingressCfg.Servers,
 		TCPBackends:                 ingressCfg.TCPEndpoints,
 		UDPBackends:                 ingressCfg.UDPEndpoints,

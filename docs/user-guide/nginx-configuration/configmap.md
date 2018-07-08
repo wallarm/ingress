@@ -137,6 +137,14 @@ The following table shows a configuration option's name, type, and the default v
 |[limit-req-status-code](#limit-req-status-code)|int|503|
 |[no-tls-redirect-locations](#no-tls-redirect-locations)|string|"/.well-known/acme-challenge"|
 |[no-auth-locations](#no-auth-locations)|string|"/.well-known/acme-challenge"|
+|[enable-wallarm](#enable-wallarm)|bool|"true"|
+|[wallarm-upstream-connect-attempts](#wallarm-upstream-connect-attempts)|int|10|
+|[wallarm-upstream-reconnect-interval](#wallarm-upstream-reconnect-interval)|string|"15s"|
+|[wallarm-acl-mapsize](#wallarm-acl-mapsize)|string|"64m"|
+|[wallarm-process-time-limit](#wallarm-process-time-limit)|int|1000|
+|[wallarm-process-time-limit-block](#wallarm-process-time-limit-block)|string|"attack"|
+|[wallarm-request-memory-limit](#wallarm-request-memory-limit)|string|"0"|
+|[wallarm-worker-rlimit-vmem](#wallarm-worker-rlimit-vmem)|string|"1g"|
 
 ## add-headers
 
@@ -748,3 +756,57 @@ _**default:**_ "/.well-known/acme-challenge"
 
 A comma-separated list of locations that should not get authenticated.
 _**default:**_ "/.well-known/acme-challenge"
+
+## enable-wallarm
+
+Enables the wallarm module for NGINX. _**default:**_ is enabled
+
+## wallarm-upstream-connect-attempts
+
+The number of reconnection attempts to Tarantool upstream.
+
+_References:_
+[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectattempts](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectattempts)
+
+## wallarm-upstream-reconnect-interval
+
+A delay in reconnecting to Tarantool after a number of failed attempts exceeds
+the threshold value set in wallarm-upstream-connect-attempts
+
+_References:_
+[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval)
+
+## wallarm-acl-mapsize
+
+Initial memory size to be allocated for the corresponding ACL
+
+_References:_
+[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize)
+
+## wallarm-process-time-limit
+
+The time limit of a single request processing in milliseconds
+
+_References:_
+[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimit](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimit)
+
+## wallarm-process-time-limit-block
+
+Ability to manage the blocking of requests, which exceed the time limit
+
+_References:_
+[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimitblock](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimitblock)
+
+## wallarm-request-memory-limit
+
+A limit for the maximum amount of memory that can be used for processing of a single request
+
+_References:_
+[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit)
+
+## wallarm-worker-rlimit-vmem
+
+The maximum amount of virtual memory in megabytes that is allowed for the NGINX-Wallarm worker
+
+_References:_
+[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit)
