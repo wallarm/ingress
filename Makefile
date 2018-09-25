@@ -18,7 +18,7 @@ all: all-container
 BUILDTAGS=
 
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
-TAG?=1.0.0
+TAG?=1.0.1
 REGISTRY?=wallarm
 GOOS?=linux
 DOCKER?=docker

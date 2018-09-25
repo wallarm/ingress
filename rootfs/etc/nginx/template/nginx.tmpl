@@ -898,8 +898,12 @@ stream {
             wallarm_mode                 {{ $location.Wallarm.Mode }};
             wallarm_mode_allow_override  {{ $location.Wallarm.ModeAllowOverride }};
             wallarm_fallback             {{ $location.Wallarm.Fallback }};
-            wallarm_instance             "{{ $location.Wallarm.Instance }}";
+            {{ if not (eq $location.Wallarm.Instance "") }}
+            wallarm_instance             {{ $location.Wallarm.Instance }};
+            {{ end }}
+            {{ if not (eq $location.Wallarm.BlockPage "") }}
             wallarm_block_page           "{{ $location.Wallarm.BlockPage }}";
+            {{ end }}
             wallarm_parse_response       {{ $location.Wallarm.ParseResponse }};
             wallarm_parse_websocket      {{ $location.Wallarm.ParseWebsocket }};
             wallarm_unpack_response      {{ $location.Wallarm.UnpackResponse }};
