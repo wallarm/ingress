@@ -15,7 +15,7 @@ package framework
 
 import (
 	"fmt"
-	"os/exec"
+	"os"
 	"strings"
 	"time"
 
@@ -108,17 +108,15 @@ func (f *Framework) BeforeEach() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = WaitForPodsReady(f.KubeClientSet, 5*time.Minute, 1, f.IngressController.Namespace, metav1.ListOptions{
-		LabelSelector: "app=ingress-nginx",
+		LabelSelector: "app.kubernetes.io/name=ingress-nginx",
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Building NGINX HTTP URL")
 	HTTPURL, err := f.GetNginxURL(HTTP)
 	Expect(err).NotTo(HaveOccurred())
 
 	f.IngressController.HTTPURL = HTTPURL
 
-	By("Building NGINX HTTPS URL")
 	HTTPSURL, err := f.GetNginxURL(HTTPS)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -135,6 +133,13 @@ func (f *Framework) AfterEach() {
 	By("Waiting for test namespace to no longer exist")
 	err := DeleteKubeNamespace(f.KubeClientSet, f.IngressController.Namespace)
 	Expect(err).NotTo(HaveOccurred())
+
+	if CurrentGinkgoTestDescription().Failed {
+		log, err := f.NginxLogs()
+		Expect(err).ToNot(HaveOccurred())
+		By("Dumping NGINX logs after a failure running a test")
+		Logf("%v", log)
+	}
 }
 
 // IngressNginxDescribe wrapper function for ginkgo describe. Adds namespacing.
@@ -145,11 +150,7 @@ func IngressNginxDescribe(text string, body func()) bool {
 // GetNginxIP returns the IP address of the minikube cluster
 // where the NGINX ingress controller is running
 func (f *Framework) GetNginxIP() (string, error) {
-	out, err := exec.Command("minikube", "ip").Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(out)), nil
+	return os.Getenv("NODE_IP"), nil
 }
 
 // GetNginxPort returns the number of TCP port where NGINX is running
@@ -199,7 +200,7 @@ func (f *Framework) WaitForNginxConfiguration(matcher func(cfg string) bool) err
 // NginxLogs returns the logs of the nginx ingress controller pod running
 func (f *Framework) NginxLogs() (string, error) {
 	l, err := f.KubeClientSet.CoreV1().Pods(f.IngressController.Namespace).List(metav1.ListOptions{
-		LabelSelector: "app=ingress-nginx",
+		LabelSelector: "app.kubernetes.io/name=ingress-nginx",
 	})
 	if err != nil {
 		return "", err
@@ -219,7 +220,7 @@ func (f *Framework) NginxLogs() (string, error) {
 func (f *Framework) matchNginxConditions(name string, matcher func(cfg string) bool) wait.ConditionFunc {
 	return func() (bool, error) {
 		l, err := f.KubeClientSet.CoreV1().Pods(f.IngressController.Namespace).List(metav1.ListOptions{
-			LabelSelector: "app=ingress-nginx",
+			LabelSelector: "app.kubernetes.io/name=ingress-nginx",
 		})
 		if err != nil {
 			return false, err
@@ -384,8 +385,17 @@ func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name
 	return nil
 }
 
+// NewSingleIngressWithTLS creates a simple ingress rule with TLS spec included
+func NewSingleIngressWithTLS(name, path, host, ns, service string, port int, annotations *map[string]string) *extensions.Ingress {
+	return newSingleIngress(name, path, host, ns, service, port, annotations, true)
+}
+
 // NewSingleIngress creates a simple ingress rule
 func NewSingleIngress(name, path, host, ns, service string, port int, annotations *map[string]string) *extensions.Ingress {
+	return newSingleIngress(name, path, host, ns, service, port, annotations, false)
+}
+
+func newSingleIngress(name, path, host, ns, service string, port int, annotations *map[string]string, withTLS bool) *extensions.Ingress {
 	if annotations == nil {
 		annotations = &map[string]string{}
 	}
@@ -397,12 +407,6 @@ func NewSingleIngress(name, path, host, ns, service string, port int, annotation
 			Annotations: *annotations,
 		},
 		Spec: extensions.IngressSpec{
-			TLS: []extensions.IngressTLS{
-				{
-					Hosts:      []string{host},
-					SecretName: host,
-				},
-			},
 			Rules: []extensions.IngressRule{
 				{
 					Host: host,
@@ -423,6 +427,30 @@ func NewSingleIngress(name, path, host, ns, service string, port int, annotation
 			},
 		},
 	}
+	if withTLS {
+		ing.Spec.TLS = []extensions.IngressTLS{
+			{
+				Hosts:      []string{host},
+				SecretName: host,
+			},
+		}
+	}
 
 	return ing
+}
+
+// DisableDynamicConfiguration disables dynamic configuration
+func (f *Framework) DisableDynamicConfiguration() error {
+	return UpdateDeployment(f.KubeClientSet, f.IngressController.Namespace, "nginx-ingress-controller", 1,
+		func(deployment *appsv1beta1.Deployment) error {
+			args := deployment.Spec.Template.Spec.Containers[0].Args
+			args = append(args, "--enable-dynamic-configuration=false")
+			deployment.Spec.Template.Spec.Containers[0].Args = args
+			_, err := f.KubeClientSet.AppsV1beta1().Deployments(f.IngressController.Namespace).Update(deployment)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
 }

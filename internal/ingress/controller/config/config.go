@@ -19,7 +19,6 @@ package config
 
 import (
 	"fmt"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/defaults"
+	"k8s.io/ingress-nginx/internal/runtime"
 )
 
 const (
@@ -78,7 +78,7 @@ const (
 	sslSessionCacheSize = "10m"
 
 	// Default setting for load balancer algorithm
-	defaultLoadBalancerAlgorithm = "least_conn"
+	defaultLoadBalancerAlgorithm = ""
 
 	// Parameters for a shared memory zone that will keep states for various keys.
 	// http://nginx.org/en/docs/http/ngx_http_limit_conn_module.html#limit_conn_zone
@@ -179,6 +179,12 @@ type Configuration struct {
 	// HTTP2MaxHeaderSize Limits the maximum size of the entire request header list after HPACK decompression
 	HTTP2MaxHeaderSize string `json:"http2-max-header-size,omitempty"`
 
+	// http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests
+	// HTTP2MaxRequests Sets the maximum number of requests (including push requests) that can be served
+	// through one HTTP/2 connection, after which the next client request will lead to connection closing
+	// and the need of establishing a new connection.
+	HTTP2MaxRequests int `json:"http2-max-requests,omitempty"`
+
 	// Enables or disables the header HSTS in servers running SSL
 	HSTS bool `json:"hsts,omitempty"`
 
@@ -222,6 +228,12 @@ type Configuration struct {
 	// Customize stream log_format
 	// http://nginx.org/en/docs/http/ngx_http_log_module.html#log_format
 	LogFormatStream string `json:"log-format-stream,omitempty"`
+
+	// If disabled, a worker process will accept one new connection at a time.
+	// Otherwise, a worker process will accept all new connections at a time.
+	// http://nginx.org/en/docs/ngx_core_module.html#multi_accept
+	// Default: true
+	EnableMultiAccept bool `json:"enable-multi-accept,omitempty"`
 
 	// Maximum number of simultaneous connections that can be opened by each worker process
 	// http://nginx.org/en/docs/ngx_core_module.html#worker_connections
@@ -304,7 +316,7 @@ type Configuration struct {
 	// Sets the secret key used to encrypt and decrypt TLS session tickets.
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_tickets
 	// By default, a randomly generated key is used.
-	// Example: openssl rand 80 | base64 -w0
+	// Example: openssl rand 80 | openssl enc -A -base64
 	SSLSessionTicketKey string `json:"ssl-session-ticket-key,omitempty"`
 
 	// Time during which a client may reuse the session parameters stored in a cache.
@@ -350,6 +362,9 @@ type Configuration struct {
 	// http://nginx.org/en/docs/http/ngx_http_v2_module.html
 	// Default: true
 	UseHTTP2 bool `json:"use-http2,omitempty"`
+
+	// gzip Compression Level that will be used
+	GzipLevel int `json:"gzip-level,omitempty"`
 
 	// MIME types in addition to "text/html" to compress. The special value “*” matches any MIME type.
 	// Responses with the “text/html” type are always compressed if UseGzip is enabled
@@ -403,6 +418,9 @@ type Configuration struct {
 	// Sets the ipv6 addresses on which the server will accept requests.
 	BindAddressIpv6 []string `json:"bind-address-ipv6,omitempty"`
 
+	// Sets whether to use incoming X-Forwarded headers.
+	UseForwardedHeaders bool `json:"use-forwarded-headers"`
+
 	// Sets the header field for identifying the originating IP address of a client
 	// Default is X-Forwarded-For
 	ForwardedForHeader string `json:"forwarded-for-header,omitempty"`
@@ -434,6 +452,10 @@ type Configuration struct {
 	// Default: nginx
 	ZipkinServiceName string `json:"zipkin-service-name"`
 
+	// ZipkinSampleRate specifies sampling rate for traces
+	// Default: 1.0
+	ZipkinSampleRate float32 `json:"zipkin-sample-rate"`
+
 	// JaegerCollectorHost specifies the host to use when uploading traces
 	JaegerCollectorHost string `json:"jaeger-collector-host"`
 
@@ -453,6 +475,9 @@ type Configuration struct {
 	// Default: 1
 	JaegerSamplerParam string `json:"jaeger-sampler-param"`
 
+	// MainSnippet adds custom configuration to the main section of the nginx configuration
+	MainSnippet string `json:"main-snippet"`
+
 	// HTTPSnippet adds custom configuration to the http section of the nginx configuration
 	HTTPSnippet string `json:"http-snippet"`
 
@@ -470,8 +495,7 @@ type Configuration struct {
 	// ReusePort instructs NGINX to create an individual listening socket for
 	// each worker process (using the SO_REUSEPORT socket option), allowing a
 	// kernel to distribute incoming connections between worker processes
-	// Default: false
-	// Reason for the default: https://trac.nginx.org/nginx/ticket/1300
+	// Default: true
 	ReusePort bool `json:"reuse-port"`
 
 	// HideHeaders sets additional header that will not be passed from the upstream
@@ -559,12 +583,22 @@ type Configuration struct {
 
 	// Checksum contains a checksum of the configmap configuration
 	Checksum string `json:"-"`
+
+	// Block all requests from given IPs
+	BlockCIDRs []string `json:"block-cidrs"`
+
+	// Block all requests with given User-Agent headers
+	BlockUserAgents []string `json:"block-user-agents"`
+
+	// Block all requests with given Referer headers
+	BlockReferers []string `json:"block-referers"`
 }
 
 // NewDefault returns the default nginx configuration
 func NewDefault() Configuration {
 	defIPCIDR := make([]string, 0)
 	defBindAddress := make([]string, 0)
+	defBlockEntity := make([]string, 0)
 	defNginxStatusIpv4Whitelist := make([]string, 0)
 	defNginxStatusIpv6Whitelist := make([]string, 0)
 
@@ -578,6 +612,9 @@ func NewDefault() Configuration {
 		AccessLogPath:              "/var/log/nginx/access.log",
 		WorkerCpuAffinity:          "",
 		ErrorLogPath:               "/var/log/nginx/error.log",
+		BlockCIDRs:                 defBlockEntity,
+		BlockUserAgents:            defBlockEntity,
+		BlockReferers:              defBlockEntity,
 		BrotliLevel:                4,
 		BrotliTypes:                brotliTypes,
 		ClientHeaderBufferSize:     "1k",
@@ -587,18 +624,21 @@ func NewDefault() Configuration {
 		EnableDynamicTLSRecords:    true,
 		EnableUnderscoresInHeaders: false,
 		ErrorLogLevel:              errorLevel,
+		UseForwardedHeaders:        true,
 		ForwardedForHeader:         "X-Forwarded-For",
 		ComputeFullForwardedFor:    false,
 		ProxyAddOriginalUriHeader:  true,
 		GenerateRequestId:          true,
 		HTTP2MaxFieldSize:          "4k",
 		HTTP2MaxHeaderSize:         "16k",
+		HTTP2MaxRequests:           1000,
 		HTTPRedirectCode:           308,
 		HSTS:                       true,
 		HSTSIncludeSubdomains:      true,
 		HSTSMaxAge:                 hstsMaxAge,
 		HSTSPreload:                false,
 		IgnoreInvalidHeaders:       true,
+		GzipLevel:                  5,
 		GzipTypes:                  gzipTypes,
 		KeepAlive:                  75,
 		KeepAliveRequests:          100,
@@ -606,6 +646,7 @@ func NewDefault() Configuration {
 		LogFormatEscapeJSON:        false,
 		LogFormatStream:            logFormatStream,
 		LogFormatUpstream:          logFormatUpstream,
+		EnableMultiAccept:          true,
 		MaxWorkerConnections:       16384,
 		MapHashBucketSize:          64,
 		NginxStatusIpv4Whitelist:   defNginxStatusIpv4Whitelist,
@@ -616,6 +657,7 @@ func NewDefault() Configuration {
 		ProxyHeadersHashMaxSize:    512,
 		ProxyHeadersHashBucketSize: 64,
 		ProxyStreamResponses:       1,
+		ReusePort:                  true,
 		ShowServerTokens:           true,
 		SSLBufferSize:              sslBufferSize,
 		SSLCiphers:                 sslCiphers,
@@ -671,6 +713,7 @@ func NewDefault() Configuration {
 		BindAddressIpv6:              defBindAddress,
 		ZipkinCollectorPort:          9411,
 		ZipkinServiceName:            "nginx",
+		ZipkinSampleRate:             1.0,
 		JaegerCollectorPort:          6831,
 		JaegerServiceName:            "nginx",
 		JaegerSamplerType:            "const",
@@ -733,6 +776,7 @@ type TemplateConfig struct {
 	ListenPorts                 *ListenPorts
 	PublishService              *apiv1.Service
 	DynamicConfigurationEnabled bool
+	DynamicCertificatesEnabled  bool
 	DisableLua                  bool
 }
 

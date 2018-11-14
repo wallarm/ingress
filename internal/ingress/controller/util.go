@@ -74,15 +74,30 @@ const (
 	cfgPath   = "/etc/nginx/nginx.conf"
 )
 
+var valgrind = []string{
+	"valgrind",
+	"--tool=memcheck",
+	"--leak-check=full",
+	"--show-leak-kinds=all",
+	"--leak-check=yes",
+}
+
 func nginxExecCommand(args ...string) *exec.Cmd {
 	ngx := os.Getenv("NGINX_BINARY")
 	if ngx == "" {
 		ngx = defBinary
 	}
 
-	cmdArgs := []string{"-c", cfgPath}
+	cmdArgs := []string{"--deep"}
+
+	if os.Getenv("RUN_WITH_VALGRIND") == "true" {
+		cmdArgs = append(cmdArgs, valgrind...)
+	}
+
+	cmdArgs = append(cmdArgs, ngx, "-c", cfgPath)
 	cmdArgs = append(cmdArgs, args...)
-	return exec.Command(ngx, cmdArgs...)
+
+	return exec.Command("authbind", cmdArgs...)
 }
 
 func nginxTestCommand(cfg string) *exec.Cmd {
@@ -91,5 +106,5 @@ func nginxTestCommand(cfg string) *exec.Cmd {
 		ngx = defBinary
 	}
 
-	return exec.Command(ngx, "-c", cfg, "-t")
+	return exec.Command("authbind", "--deep", ngx, "-c", cfg, "-t")
 }

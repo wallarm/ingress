@@ -43,16 +43,14 @@ spec:
          - name: nginx-ingress-internal-controller
            args:
              - /nginx-ingress-controller
-             - '--default-backend-service=ingress/nginx-ingress-default-backend'
              - '--election-id=ingress-controller-leader-internal'
              - '--ingress-class=nginx-internal'
              - '--configmap=ingress/nginx-ingress-internal-controller'
 ```
 
-## !!! important
+!!! important
+    Deploying multiple Ingress controllers, of different types (e.g., `ingress-nginx` & `gce`), and not specifying a class annotation will
+    result in both or all controllers fighting to satisfy the Ingress, and all of them racing to update Ingress status field in confusing ways.
 
-Deploying multiple Ingress controllers, of different types (e.g., `ingress-nginx` & `gce`), and not specifying a class annotation will
-result in both or all controllers fighting to satisfy the Ingress, and all of them racing to update Ingress status field in confusing ways.
-
- When running multiple ingress-nginx controllers, it will only process an unset class annotation if one of the controllers uses the default
- `--ingress-class` value (see `IsValid` method in `internal/ingress/annotations/class/main.go`), otherwise the class annotation become required.
+    When running multiple ingress-nginx controllers, it will only process an unset class annotation if one of the controllers uses the default
+    `--ingress-class` value (see `IsValid` method in `internal/ingress/annotations/class/main.go`), otherwise the class annotation become required.

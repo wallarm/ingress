@@ -143,9 +143,13 @@ extension for this to succeed.`)
 			`Customized address to set as the load-balancer status of Ingress objects this controller satisfies.
 Requires the update-status parameter.`)
 
-		dynamicConfigurationEnabled = flags.Bool("enable-dynamic-configuration", false,
+		dynamicConfigurationEnabled = flags.Bool("enable-dynamic-configuration", true,
 			`Dynamically refresh backends on topology changes instead of reloading NGINX.
 Feature backed by OpenResty Lua libraries.`)
+
+		dynamicCertificatesEnabled = flags.Bool("enable-dynamic-certificates", false,
+			`Dynamically update SSL certificates instead of reloading NGINX.
+Feature backed by OpenResty Lua libraries. Requires that OCSP stapling is not enabled`)
 
 		httpPort      = flags.Int("http-port", 80, `Port to use for servicing HTTP traffic.`)
 		httpsPort     = flags.Int("https-port", 443, `Port to use for servicing HTTPS traffic.`)
@@ -170,10 +174,6 @@ Feature backed by OpenResty Lua libraries.`)
 
 	if *showVersion {
 		return true, nil, nil
-	}
-
-	if *defaultSvc == "" {
-		return false, nil, fmt.Errorf("Please specify --default-backend-service")
 	}
 
 	if *ingressClass != "" {
@@ -206,11 +206,16 @@ Feature backed by OpenResty Lua libraries.`)
 	}
 
 	if *enableSSLPassthrough && !ing_net.IsPortAvailable(*sslProxyPort) {
-		return false, nil, fmt.Errorf("Port %v is already in use. Please check the flag --ssl-passtrough-proxy-port", *sslProxyPort)
+		return false, nil, fmt.Errorf("Port %v is already in use. Please check the flag --ssl-passthrough-proxy-port", *sslProxyPort)
 	}
 
 	if !*enableSSLChainCompletion {
 		glog.Warningf("SSL certificate chain completion is disabled (--enable-ssl-chain-completion=false)")
+	}
+
+	if (*enableSSLChainCompletion || !*dynamicConfigurationEnabled) && *dynamicCertificatesEnabled {
+		return false, nil, fmt.Errorf(`SSL certificate chain completion cannot be enabled and dynamic configuration cannot be disabled when 
+dynamic certificates functionality is enabled. Please check the flags --enable-ssl-chain-completion and --enable-dynamic-configuration`)
 	}
 
 	// LuaJIT is not available on arch s390x and ppc64le
@@ -248,6 +253,7 @@ Feature backed by OpenResty Lua libraries.`)
 		SyncRateLimit:               *syncRateLimit,
 		DynamicConfigurationEnabled: *dynamicConfigurationEnabled,
 		DisableLua:                  disableLua,
+		DynamicCertificatesEnabled:  *dynamicCertificatesEnabled,
 		ListenPorts: &ngx_config.ListenPorts{
 			Default:  *defServerPort,
 			Health:   *healthzPort,

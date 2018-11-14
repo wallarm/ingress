@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strconv"
 
 	"github.com/golang/glog"
 
@@ -27,11 +28,12 @@ import (
 
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/healthcheck"
+	"k8s.io/ingress-nginx/internal/k8s"
 )
 
 // getEndpoints returns a list of Endpoint structs for a given service/target port combination.
 func getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Protocol, hz *healthcheck.Config,
-	getServiceEndpoints func(*corev1.Service) (*corev1.Endpoints, error)) []ingress.Endpoint {
+	getServiceEndpoints func(string) (*corev1.Endpoints, error)) []ingress.Endpoint {
 
 	upsServers := []ingress.Endpoint{}
 
@@ -43,13 +45,15 @@ func getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Prot
 	// contains multiple port definitions sharing the same targetport
 	processedUpstreamServers := make(map[string]struct{})
 
+	svcKey := k8s.MetaNamespaceKey(s)
+
 	// ExternalName services
 	if s.Spec.Type == corev1.ServiceTypeExternalName {
-		glog.V(3).Infof("Ingress using Service %q of type ExternalName.", s.Name)
+		glog.V(3).Infof("Ingress using Service %q of type ExternalName.", svcKey)
 
 		targetPort := port.TargetPort.IntValue()
 		if targetPort <= 0 {
-			glog.Errorf("ExternalName Service %q has an invalid port (%v)", s.Name, targetPort)
+			glog.Errorf("ExternalName Service %q has an invalid port (%v)", svcKey, targetPort)
 			return upsServers
 		}
 
@@ -69,10 +73,10 @@ func getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Prot
 		})
 	}
 
-	glog.V(3).Infof("Getting Endpoints for Service \"%v/%v\" and port %v", s.Namespace, s.Name, port.String())
-	ep, err := getServiceEndpoints(s)
+	glog.V(3).Infof("Getting Endpoints for Service %q and port %v", svcKey, port.String())
+	ep, err := getServiceEndpoints(svcKey)
 	if err != nil {
-		glog.Warningf("Error obtaining Endpoints for Service \"%v/%v\": %v", s.Namespace, s.Name, err)
+		glog.Warningf("Error obtaining Endpoints for Service %q: %v", svcKey, err)
 		return upsServers
 	}
 
@@ -97,7 +101,7 @@ func getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Prot
 			}
 
 			for _, epAddress := range ss.Addresses {
-				ep := fmt.Sprintf("%v:%v", epAddress.IP, targetPort)
+				ep := net.JoinHostPort(epAddress.IP, strconv.Itoa(int(targetPort)))
 				if _, exists := processedUpstreamServers[ep]; exists {
 					continue
 				}
@@ -114,6 +118,6 @@ func getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Prot
 		}
 	}
 
-	glog.V(3).Infof("Endpoints found for Service \"%v/%v\": %v", s.Namespace, s.Name, upsServers)
+	glog.V(3).Infof("Endpoints found for Service %q: %v", svcKey, upsServers)
 	return upsServers
 }

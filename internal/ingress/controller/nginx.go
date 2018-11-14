@@ -53,6 +53,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/controller/process"
 	"k8s.io/ingress-nginx/internal/ingress/controller/store"
 	ngx_template "k8s.io/ingress-nginx/internal/ingress/controller/template"
+	"k8s.io/ingress-nginx/internal/ingress/metric"
 	"k8s.io/ingress-nginx/internal/ingress/status"
 	ing_net "k8s.io/ingress-nginx/internal/net"
 	"k8s.io/ingress-nginx/internal/net/dns"
@@ -70,7 +71,7 @@ var (
 )
 
 // NewNGINXController creates a new NGINX Ingress controller.
-func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXController {
+func NewNGINXController(config *Configuration, mc metric.Collector, fs file.Filesystem) *NGINXController {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
@@ -103,6 +104,8 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 		runningConfig: new(ingress.Configuration),
 
 		Proxy: &TCPProxy{},
+
+		metricCollector: mc,
 	}
 
 	n.store = store.New(
@@ -115,7 +118,8 @@ func NewNGINXController(config *Configuration, fs file.Filesystem) *NGINXControl
 		config.ResyncPeriod,
 		config.Client,
 		fs,
-		n.updateCh)
+		n.updateCh,
+		config.DynamicCertificatesEnabled)
 
 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
 
@@ -191,7 +195,7 @@ Error loading new template: %v
 
 	for _, f := range filesToWatch {
 		_, err = watch.NewFileWatcher(f, func() {
-			glog.Info("File %v changed. Reloading NGINX", f)
+			glog.Infof("File %v changed. Reloading NGINX", f)
 			n.syncQueue.EnqueueTask(task.GetDummyObject("file-change"))
 		})
 		if err != nil {
@@ -243,6 +247,8 @@ type NGINXController struct {
 	store store.Storer
 
 	fileSystem filesystem.Filesystem
+
+	metricCollector metric.Collector
 }
 
 // Start starts a new NGINX master process running in the foreground.
@@ -389,7 +395,7 @@ func (n NGINXController) DefaultEndpoint() ingress.Endpoint {
 // running the command "nginx -t" using a temporal file.
 func (n NGINXController) testTemplate(cfg []byte) error {
 	if len(cfg) == 0 {
-		return fmt.Errorf("Invalid NGINX configuration (empty)")
+		return fmt.Errorf("invalid NGINX configuration (empty)")
 	}
 	tmpfile, err := ioutil.TempFile("", "nginx-cfg")
 	if err != nil {
@@ -588,8 +594,11 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 		ListenPorts:                 n.cfg.ListenPorts,
 		PublishService:              n.GetPublishService(),
 		DynamicConfigurationEnabled: n.cfg.DynamicConfigurationEnabled,
+		DynamicCertificatesEnabled:  n.cfg.DynamicCertificatesEnabled,
 		DisableLua:                  n.cfg.DisableLua,
 	}
+
+	tc.Cfg.Checksum = ingressCfg.ConfigurationChecksum
 
 	content, err := n.t.Write(tc)
 	if err != nil {
@@ -717,6 +726,18 @@ func (n *NGINXController) setupSSLProxy() {
 	}()
 }
 
+// Helper function to clear Certificates from the ingress configuration since they should be ignored when
+// checking if the new configuration changes can be applied dynamically if dynamic certificates is on
+func clearCertificates(config *ingress.Configuration) {
+	var clearedServers []*ingress.Server
+	for _, server := range config.Servers {
+		copyOfServer := *server
+		copyOfServer.SSLCert = ingress.SSLCert{PemFileName: copyOfServer.SSLCert.PemFileName}
+		clearedServers = append(clearedServers, &copyOfServer)
+	}
+	config.Servers = clearedServers
+}
+
 // IsDynamicConfigurationEnough returns whether a Configuration can be
 // dynamically applied, without reloading the backend.
 func (n *NGINXController) IsDynamicConfigurationEnough(pcfg *ingress.Configuration) bool {
@@ -726,15 +747,24 @@ func (n *NGINXController) IsDynamicConfigurationEnough(pcfg *ingress.Configurati
 	copyOfRunningConfig.Backends = []*ingress.Backend{}
 	copyOfPcfg.Backends = []*ingress.Backend{}
 
+	if n.cfg.DynamicCertificatesEnabled {
+		clearCertificates(&copyOfRunningConfig)
+		clearCertificates(&copyOfPcfg)
+	}
+
 	return copyOfRunningConfig.Equal(&copyOfPcfg)
 }
 
 // configureDynamically encodes new Backends in JSON format and POSTs the
 // payload to an internal HTTP endpoint handled by Lua.
-func configureDynamically(pcfg *ingress.Configuration, port int) error {
+func configureDynamically(pcfg *ingress.Configuration, port int, isDynamicCertificatesEnabled bool) error {
 	backends := make([]*ingress.Backend, len(pcfg.Backends))
 
 	for i, backend := range pcfg.Backends {
+		var service *apiv1.Service
+		if backend.Service != nil {
+			service = &apiv1.Service{Spec: backend.Service.Spec}
+		}
 		luaBackend := &ingress.Backend{
 			Name:            backend.Name,
 			Port:            backend.Port,
@@ -743,6 +773,7 @@ func configureDynamically(pcfg *ingress.Configuration, port int) error {
 			SessionAffinity: backend.SessionAffinity,
 			UpstreamHashBy:  backend.UpstreamHashBy,
 			LoadBalancing:   backend.LoadBalancing,
+			Service:         service,
 		}
 
 		var endpoints []ingress.Endpoint
@@ -759,14 +790,53 @@ func configureDynamically(pcfg *ingress.Configuration, port int) error {
 		backends[i] = luaBackend
 	}
 
-	buf, err := json.Marshal(backends)
+	url := fmt.Sprintf("http://localhost:%d/configuration/backends", port)
+	err := post(url, backends)
 	if err != nil {
 		return err
 	}
 
-	glog.V(2).Infof("Posting backends configuration: %s", buf)
+	if isDynamicCertificatesEnabled {
+		err = configureCertificates(pcfg, port)
+		if err != nil {
+			return err
+		}
+	}
 
-	url := fmt.Sprintf("http://localhost:%d/configuration/backends", port)
+	return nil
+}
+
+// configureCertificates JSON encodes certificates and POSTs it to an internal HTTP endpoint
+// that is handled by Lua
+func configureCertificates(pcfg *ingress.Configuration, port int) error {
+	var servers []*ingress.Server
+
+	for _, server := range pcfg.Servers {
+		servers = append(servers, &ingress.Server{
+			Hostname: server.Hostname,
+			SSLCert: ingress.SSLCert{
+				PemCertKey: server.SSLCert.PemCertKey,
+			},
+		})
+	}
+
+	url := fmt.Sprintf("http://localhost:%d/configuration/servers", port)
+	err := post(url, servers)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func post(url string, data interface{}) error {
+	buf, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	glog.V(2).Infof("Posting to %s", url)
+
 	resp, err := http.Post(url, "application/json", bytes.NewReader(buf))
 	if err != nil {
 		return err
@@ -779,7 +849,7 @@ func configureDynamically(pcfg *ingress.Configuration, port int) error {
 	}()
 
 	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("Unexpected error code: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected error code: %d", resp.StatusCode)
 	}
 
 	return nil
@@ -788,7 +858,8 @@ func configureDynamically(pcfg *ingress.Configuration, port int) error {
 const zipkinTmpl = `{
   "service_name": "{{ .ZipkinServiceName }}",
   "collector_host": "{{ .ZipkinCollectorHost }}",
-  "collector_port": {{ .ZipkinCollectorPort }}
+  "collector_port": {{ .ZipkinCollectorPort }},
+  "sample_rate": {{ .ZipkinSampleRate }}
 }`
 
 const jaegerTmpl = `{

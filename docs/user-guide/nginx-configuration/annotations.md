@@ -27,6 +27,7 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/auth-tls-error-page](#client-certificate-authentication)|string|
 |[nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream](#client-certificate-authentication)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/auth-url](#external-authentication)|string|
+|[nginx.ingress.kubernetes.io/backend-protocol](#backend-protocol)|string|HTTP,HTTPS,GRPC,GRPCS,AJP|
 |[nginx.ingress.kubernetes.io/base-url-scheme](#rewrite)|string|
 |[nginx.ingress.kubernetes.io/client-body-buffer-size](#client-body-buffer-size)|string|
 |[nginx.ingress.kubernetes.io/configuration-snippet](#configuration-snippet)|string|
@@ -43,8 +44,10 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/limit-connections](#rate-limiting)|number|
 |[nginx.ingress.kubernetes.io/limit-rps](#rate-limiting)|number|
 |[nginx.ingress.kubernetes.io/permanent-redirect](#permanent-redirect)|string|
+|[nginx.ingress.kubernetes.io/permanent-redirect-code](#permanent-redirect-code)|number|
 |[nginx.ingress.kubernetes.io/proxy-body-size](#custom-max-body-size)|string|
 |[nginx.ingress.kubernetes.io/proxy-cookie-domain](#proxy-cookie-domain)|string|
+|[nginx.ingress.kubernetes.io/proxy-cookie-path](#proxy-cookie-path)|string|
 |[nginx.ingress.kubernetes.io/proxy-connect-timeout](#custom-timeouts)|number|
 |[nginx.ingress.kubernetes.io/proxy-send-timeout](#custom-timeouts)|number|
 |[nginx.ingress.kubernetes.io/proxy-read-timeout](#custom-timeouts)|number|
@@ -53,7 +56,7 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/proxy-request-buffering](#custom-timeouts)|string|
 |[nginx.ingress.kubernetes.io/proxy-redirect-from](#proxy-redirect)|string|
 |[nginx.ingress.kubernetes.io/proxy-redirect-to](#proxy-redirect)|string|
-|[nginx.ingress.kubernetes.io/rewrite-log](#enable-rewrite-log)|URI|
+|[nginx.ingress.kubernetes.io/enable-rewrite-log](#enable-rewrite-log)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/rewrite-target](#rewrite)|URI|
 |[nginx.ingress.kubernetes.io/secure-backends](#secure-backends)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/secure-verify-ca-secret](#secure-backends)|string|
@@ -84,6 +87,7 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/influxdb-port](#influxdb)|string|
 |[nginx.ingress.kubernetes.io/influxdb-host](#influxdb)|string|
 |[nginx.ingress.kubernetes.io/influxdb-server-name](#influxdb)|string|
+|[nginx.ingress.kubernetes.io/use-regex](#use-regex)|bool|
 
 ### Rewrite
 
@@ -233,37 +237,42 @@ This is a global configuration for the ingress controller. In some cases could b
 
 ### Enable CORS
 
-To enable Cross-Origin Resource Sharing (CORS) in an Ingress rule,
-add the annotation `nginx.ingress.kubernetes.io/enable-cors: "true"`.
-This will add a section in the server location enabling this functionality.
+To enable Cross-Origin Resource Sharing (CORS) in an Ingress rule, add the annotation
+`nginx.ingress.kubernetes.io/enable-cors: "true"`. This will add a section in the server
+location enabling this functionality.
 
 CORS can be controlled with the following annotations:
 
 * `nginx.ingress.kubernetes.io/cors-allow-methods`
-  controls which methods are accepted.
-  This is a multi-valued field, separated by ',' and accepts only letters (upper and lower case).
-  Example: `nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS"`
+  controls which methods are accepted. This is a multi-valued field, separated by ',' and
+  accepts only letters (upper and lower case).
+  - Default: `GET, PUT, POST, DELETE, PATCH, OPTIONS`
+  - Example: `nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS"`
 
 * `nginx.ingress.kubernetes.io/cors-allow-headers`
-  controls which headers are accepted.
-  This is a multi-valued field, separated by ',' and accepts letters, numbers, _ and -.
-  Example: `nginx.ingress.kubernetes.io/cors-allow-headers: "X-Forwarded-For, X-app123-XPTO"`
+  controls which headers are accepted. This is a multi-valued field, separated by ',' and accepts letters,
+  numbers, _ and -.
+  - Default: `DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization`
+  - Example: `nginx.ingress.kubernetes.io/cors-allow-headers: "X-Forwarded-For, X-app123-XPTO"`
 
 * `nginx.ingress.kubernetes.io/cors-allow-origin`
-  controls what's the accepted Origin for CORS and defaults to '*'.
+  controls what's the accepted Origin for CORS.
   This is a single field value, with the following format: `http(s)://origin-site.com` or `http(s)://origin-site.com:port`
-  Example: `nginx.ingress.kubernetes.io/cors-allow-origin: "https://origin-site.com:4443"`
+  - Default: `*`
+  - Example: `nginx.ingress.kubernetes.io/cors-allow-origin: "https://origin-site.com:4443"`
 
 * `nginx.ingress.kubernetes.io/cors-allow-credentials`
   controls if credentials can be passed during CORS operations.
-  Example: `nginx.ingress.kubernetes.io/cors-allow-credentials: "true"`
+  - Default: `true`
+  - Example: `nginx.ingress.kubernetes.io/cors-allow-credentials: "false"`
 
 * `nginx.ingress.kubernetes.io/cors-max-age`
   controls how long preflight requests can be cached.
+  Default: `1728000`
   Example: `nginx.ingress.kubernetes.io/cors-max-age: 600`
 
 !!! note
-    For more information please see [https://enable-cors.org](https://enable-cors.org/server_nginx.html)
+    For more information please see [https://enable-cors.org](https://enable-cors.org/server_nginx.html) 
 
 ### Server Alias
 
@@ -287,15 +296,15 @@ kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/server-snippet: |
-set $agentflag 0;
-
-if ($http_user_agent ~* "(Mobile)" ){
-  set $agentflag 1;
-}
-
-if ( $agentflag = 1 ) {
-  return 301 https://m.example.com;
-}
+        set $agentflag 0;
+        
+        if ($http_user_agent ~* "(Mobile)" ){
+          set $agentflag 1;
+        }
+        
+        if ( $agentflag = 1 ) {
+          return 301 https://m.example.com;
+        }
 ```
 
 !!! attention
@@ -366,18 +375,27 @@ To configure this setting globally for all Ingress rules, the `limit-rate-after`
 
 This annotation allows to return a permanent redirect instead of sending data to the upstream.  For example `nginx.ingress.kubernetes.io/permanent-redirect: https://www.google.com` would redirect everything to Google.
 
+### Permanent Redirect Code
+
+This annotation allows you to modify the status code used for permanent redirects.  For example `nginx.ingress.kubernetes.io/permanent-redirect-code: '308'` would return your permanent-redirect with a 308.
+
 ### SSL Passthrough
 
-The annotation `nginx.ingress.kubernetes.io/ssl-passthrough` allows to configure TLS termination in the pod and not in NGINX.
+The annotation `nginx.ingress.kubernetes.io/ssl-passthrough` instructs the controller to send TLS connections directly
+to the backend instead of letting NGINX decrypt the communication. See also [TLS/HTTPS](../tls/#ssl-passthrough) in
+the User guide.
+
+!!! note
+    SSL Passthrough is **disabled by default** and requires starting the controller with the
+    [`--enable-ssl-passthrough`](../cli-arguments/) flag.
 
 !!! attention
-    Using the annotation `nginx.ingress.kubernetes.io/ssl-passthrough` invalidates all the other available annotations.
-    This is because SSL Passthrough works on level 4 of the OSI stack (TCP), not on the HTTP/HTTPS level.
+    Because SSL Passthrough works on layer 4 of the OSI model (TCP) and not on the layer 7 (HTTP), using SSL Passthrough
+    invalidates all the other annotations set on an Ingress object.
 
-!!! attention
-    The use of this annotation requires the flag `--enable-ssl-passthrough` (By default it is disabled).
+### Secure backends DEPRECATED (since 0.18.0)
 
-### Secure backends
+Please use `nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"`
 
 By default NGINX uses plain HTTP to reach the services.
 Adding the annotation `nginx.ingress.kubernetes.io/secure-backends: "true"` in the Ingress rule changes the protocol to HTTPS.
@@ -472,6 +490,12 @@ Sets a text that [should be changed in the domain attribute](http://nginx.org/en
 
 To configure this setting globally for all Ingress rules, the `proxy-cookie-domain` value may be set in the [NGINX ConfigMap][configmap].
 
+### Proxy cookie path
+
+Sets a text that [should be changed in the path attribute](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cookie_path) of the "Set-Cookie" header fields of a proxied server response.
+
+To configure this setting globally for all Ingress rules, the `proxy-cookie-path` value may be set in the [NGINX ConfigMap][configmap].
+
 ### Proxy buffering
 
 Enable or disable proxy buffering [`proxy_buffering`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering).
@@ -564,7 +588,9 @@ nginx.ingress.kubernetes.io/lua-resty-waf-extra-rules: '[=[ { "access": [ { "act
 
 For details on how to write WAF rules, please refer to [https://github.com/p0pr0ck5/lua-resty-waf](https://github.com/p0pr0ck5/lua-resty-waf).
 
-### gRPC backend
+### gRPC backend DEPRECATED (since 0.18.0)
+
+Please use `nginx.ingress.kubernetes.io/backend-protocol: "GRPC"` or `nginx.ingress.kubernetes.io/backend-protocol: "GRPCS"`
 
 Since NGINX 1.13.10 it is possible to expose [gRPC services natively](http://nginx.org/en/docs/http/ngx_http_grpc_module.html)
 
@@ -586,14 +612,51 @@ using the [nginx-influxdb-module](https://github.com/influxdata/nginx-influxdb-m
 nginx.ingress.kubernetes.io/enable-influxdb: "true"
 nginx.ingress.kubernetes.io/influxdb-measurement: "nginx-reqs"
 nginx.ingress.kubernetes.io/influxdb-port: "8089"
-nginx.ingress.kubernetes.io/influxdb-host: "influxdb"
+nginx.ingress.kubernetes.io/influxdb-host: "127.0.0.1"
 nginx.ingress.kubernetes.io/influxdb-server-name: "nginx-ingress"
 ```
 
 For the `influxdb-host` parameter you have two options:
 
-To use the module in the Kubernetes Nginx ingress controller, you have two options:
-
-- Use an InfluxDB server configured to enable the [UDP protocol](https://docs.influxdata.com/influxdb/v1.5/supported_protocols/udp/).
+- Use an InfluxDB server configured with the  [UDP protocol](https://docs.influxdata.com/influxdb/v1.5/supported_protocols/udp/) enabled. 
 - Deploy Telegraf as a sidecar proxy to the Ingress controller configured to listen UDP with the [socket listener input](https://github.com/influxdata/telegraf/tree/release-1.6/plugins/inputs/socket_listener) and to write using
-anyone of the [outputs plugins](https://github.com/influxdata/telegraf/tree/release-1.6/plugins/outputs)
+anyone of the [outputs plugins](https://github.com/influxdata/telegraf/tree/release-1.7/plugins/outputs) like InfluxDB, Apache Kafka,
+Prometheus, etc.. (recommended)
+
+It's important to remember that there's no DNS resolver at this stage so you will have to configure
+an ip address to `nginx.ingress.kubernetes.io/influxdb-host`. If you deploy Influx or Telegraf as sidecar (another container in the same pod) this becomes straightforward since you can directly use `127.0.0.1`.
+
+### Backend Protocol
+
+Using `backend-protocol` annotations is possible to indicate how NGINX should communicate with the backend service.
+Valid Values: HTTP, HTTPS, GRPC, GRPCS and AJP
+
+By default NGINX uses `HTTP`.
+
+Example:
+
+```yaml
+nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+```
+
+### Use Regex
+
+Using the `nginx.ingress.kubernetes.io/use-regex` annotation will indicate whether or not the paths defined on an Ingress use regular expressions.  The default value is `false`.
+
+The following will indicate that regular expression paths are being used:
+```yaml
+nginx.ingress.kubernetes.io/use-regex: "true"
+```
+
+The following will indicate that regular expression paths are __not__ being used:
+```yaml
+nginx.ingress.kubernetes.io/use-regex: "false"
+```
+
+When this annotation is set to `true`, the case insensitive regular expression [location modifier](https://nginx.org/en/docs/http/ngx_http_core_module.html#location) will be enforced on ALL paths for a given host regardless of what Ingress they are defined on.
+
+Additionally, if the [`rewrite-target` annotation](#rewrite) is used on any Ingress for a given host, then the case insensitive regular expression [location modifier](https://nginx.org/en/docs/http/ngx_http_core_module.html#location) will be enforced on ALL paths for a given host regardless of what Ingress they are defined on.  
+
+Please read about [ingress path matching](../ingress-path-matching.md) before using this modifier. 
+
+

@@ -64,9 +64,10 @@ type Configuration struct {
 	// It contains information about the associated Server Name Indication (SNI).
 	// +optional
 	PassthroughBackends []*SSLPassthroughBackend `json:"passthroughBackends,omitempty"`
-
 	// WallarmTarantoolUpstream contains the backend used as Wallarm postanalyst database
 	WallarmTarantoolUpstream *Backend `json:"wallarmTarantoolUpstream,omitempty"`
+	// BackendConfigChecksum contains the particular checksum of a Configuration object
+	BackendConfigChecksum string `json:"BackendConfigChecksum,omitempty"`
 
 	// ConfigurationChecksum contains the particular checksum of a Configuration object
 	ConfigurationChecksum string `json:"configurationChecksum,omitempty"`
@@ -97,6 +98,11 @@ type Backend struct {
 	UpstreamHashBy string `json:"upstream-hash-by,omitempty"`
 	// LB algorithm configuration per ingress
 	LoadBalancing string `json:"load-balance,omitempty"`
+}
+
+// HashInclude defines if a field should be used or not to calculate the hash
+func (s Backend) HashInclude(field string, v interface{}) (bool, error) {
+	return (field != "Endpoints"), nil
 }
 
 // SessionAffinityConfig describes different affinity configurations for new sessions.
@@ -269,6 +275,9 @@ type Location struct {
 	// Wallarm contains configuration options of Wallarm module
 	// +optional
 	Wallarm wallarm.Config `json:"wallarm,omitempty"`
+	// BackendProtocol indicates which protocol should be used to communicate with the service
+	// By default this is HTTP
+	BackendProtocol string `json:"backend-protocol"`
 }
 
 // SSLPassthroughBackend describes a SSL upstream server configured

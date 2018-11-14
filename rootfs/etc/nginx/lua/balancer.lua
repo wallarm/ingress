@@ -1,5 +1,7 @@
 local ngx_balancer = require("ngx.balancer")
 local json = require("cjson")
+local util = require("util")
+local dns_util = require("util.dns")
 local configuration = require("configuration")
 local round_robin = require("balancer.round_robin")
 local chash = require("balancer.chash")
@@ -40,6 +42,31 @@ local function get_implementation(backend)
   return implementation
 end
 
+local function resolve_external_names(original_backend)
+  local backend = util.deepcopy(original_backend)
+  local endpoints = {}
+  for _, endpoint in ipairs(backend.endpoints) do
+    local ips = dns_util.resolve(endpoint.address)
+    for _, ip in ipairs(ips) do
+      table.insert(endpoints, { address = ip, port = endpoint.port })
+    end
+  end
+  backend.endpoints = endpoints
+  return backend
+end
+
+local function format_ipv6_endpoints(endpoints)
+  local formatted_endpoints = {}
+  for _, endpoint in ipairs(endpoints) do
+    local formatted_endpoint = endpoint
+    if not endpoint.address:match("^%d+.%d+.%d+.%d+$") then
+      formatted_endpoint.address = string.format("[%s]", endpoint.address)
+    end
+    table.insert(formatted_endpoints, formatted_endpoint)
+  end
+  return formatted_endpoints
+end
+
 local function sync_backend(backend)
   local implementation = get_implementation(backend)
   local balancer = balancers[backend.name]
@@ -58,6 +85,13 @@ local function sync_backend(backend)
     balancers[backend.name] = implementation:new(backend)
     return
   end
+
+  local service_type = backend.service and backend.service.spec and backend.service.spec["type"]
+  if service_type == "ExternalName" then
+    backend = resolve_external_names(backend)
+  end
+
+  backend.endpoints = format_ipv6_endpoints(backend.endpoints)
 
   balancer:sync(backend)
 end
@@ -115,18 +149,17 @@ function _M.balance()
     return
   end
 
-  local host, port = balancer:balance()
-  if not (host and port) then
-    ngx.log(ngx.WARN,
-      string.format("host or port is missing, balancer: %s, host: %s, port: %s", balancer.name, host, port))
+  local peer = balancer:balance()
+  if not peer then
+    ngx.log(ngx.WARN, "no peer was returned, balancer: " .. balancer.name)
     return
   end
 
   ngx_balancer.set_more_tries(1)
 
-  local ok, err = ngx_balancer.set_current_peer(host, port)
+  local ok, err = ngx_balancer.set_current_peer(peer)
   if not ok then
-    ngx.log(ngx.ERR, "error while setting current upstream peer to " .. tostring(err))
+    ngx.log(ngx.ERR, string.format("error while setting current upstream peer %s: %s", peer, err))
   end
 end
 

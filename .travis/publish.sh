@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -o errexit
+set -o pipefail
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 if [ "$COMPONENT" == "docs" ]; then
@@ -34,9 +37,6 @@ docker login --username=$QUAY_USERNAME --password=$QUAY_PASSWORD quay.io >/dev/n
 case "$COMPONENT" in
 "ingress-controller")
     $DIR/ingress-controller.sh
-    ;;
-"nginx")
-    $DIR/nginx.sh
     ;;
 *)
     echo "Invalid option in environment variable COMPONENT"

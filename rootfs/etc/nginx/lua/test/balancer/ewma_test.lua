@@ -1,16 +1,4 @@
-package.path = "./rootfs/etc/nginx/lua/?.lua;./rootfs/etc/nginx/lua/test/mocks/?.lua;" .. package.path
-
 local util = require("util")
-
-local _ngx = {
-  shared = {
-    balancer_ewma = { flush_all = function() end },
-    balancer_ewma_last_touched_at = { flush_all = function() end }
-  },
-  log = function(...) end,
-  now = function() return os.time() end,
-}
-_G.ngx = _ngx
 
 describe("Balancer ewma", function()
   local balancer_ewma = require("balancer.ewma")
@@ -23,9 +11,8 @@ describe("Balancer ewma", function()
       }
       local instance = balancer_ewma:new(backend)
 
-      local host, port = instance:balance()
-      assert.equal("10.184.7.40", host)
-      assert.equal("8080", port)
+      local peer = instance:balance()
+      assert.equal("10.184.7.40:8080", peer)
     end)
 
     it("picks the endpoint with lowest score when there two of them", function()
@@ -44,9 +31,8 @@ describe("Balancer ewma", function()
       ngx.shared.balancer_ewma_last_touched_at.get = function(self, key) return t end
 
 
-      local host, port = instance:balance()
-      assert.equal("10.184.97.100", host)
-      assert.equal("8080", port)
+      local peer = instance:balance()
+      assert.equal("10.184.97.100:8080", peer)
     end)
   end)
 

@@ -3,7 +3,7 @@
 ConfigMaps allow you to decouple configuration artifacts from image content to keep containerized applications portable.
 
 The ConfigMap API resource stores configuration data as key-value pairs. The data provides the configurations for system
-components for the nginx-controller. Before you can begin using a config-map it must be [deployed](../../deploy/README.md/#deploying-the-config-map).
+components for the nginx-controller.
 
 In order to overwrite nginx-controller configuration values as seen in [config.go](https://github.com/kubernetes/ingress-nginx/blob/master/internal/ingress/controller/config/config.go),
 you can add key-value pairs to the data section of the config-map. For Example:
@@ -15,11 +15,11 @@ data:
 ```
 
 !!! Important
-	The key and values in a ConfigMap can only be strings.
-	This means that we want a value with boolean values we need to quote the values, like "true" or "false".
-	Same for numbers, like "100".
+    The key and values in a ConfigMap can only be strings.
+    This means that we want a value with boolean values we need to quote the values, like "true" or "false".
+    Same for numbers, like "100".
 
-	"Slice" types (defined below as `[]string` or `[]int` can be provided as a comma-delimited string.
+    "Slice" types (defined below as `[]string` or `[]int` can be provided as a comma-delimited string.
 
 ## Configuration options
 
@@ -48,6 +48,7 @@ The following table shows a configuration option's name, type, and the default v
 |[error-log-level](#error-log-level)|string|"notice"|
 |[http2-max-field-size](#http2-max-field-size)|string|"4k"|
 |[http2-max-header-size](#http2-max-header-size)|string|"16k"|
+|[http2-max-requests](#http2-max-requests)|int|1000|
 |[hsts](#hsts)|bool|"true"|
 |[hsts-include-subdomains](#hsts-include-subdomains)|bool|"true"|
 |[hsts-max-age](#hsts-max-age)|string|"15724800"|
@@ -58,6 +59,7 @@ The following table shows a configuration option's name, type, and the default v
 |[log-format-escape-json](#log-format-escape-json)|bool|"false"|
 |[log-format-upstream](#log-format-upstream)|string|`%v - [$the_real_ip] - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time [$proxy_upstream_name] $upstream_addr $upstream_response_length $upstream_response_time $upstream_status`|
 |[log-format-stream](#log-format-stream)|string|`[$time_local] $protocol $status $bytes_sent $bytes_received $session_time`|
+|[enable-multi-accept](#enable-multi-accept)|bool|"true"|
 |[max-worker-connections](#max-worker-connections)|int|16384|
 |[map-hash-bucket-size](#max-worker-connections)|int|64|
 |[nginx-status-ipv4-whitelist](#nginx-status-ipv4-whitelist)|[]string|"127.0.0.1"|
@@ -68,6 +70,7 @@ The following table shows a configuration option's name, type, and the default v
 |[server-name-hash-bucket-size](#server-name-hash-bucket-size)|int|`<size of the processor’s cache line>`
 |[proxy-headers-hash-max-size](#proxy-headers-hash-max-size)|int|512|
 |[proxy-headers-hash-bucket-size](#proxy-headers-hash-bucket-size)|int|64|
+|[reuse-port](#reuse-port)|bool|"true"|
 |[server-tokens](#server-tokens)|bool|"true"|
 |[ssl-ciphers](#ssl-ciphers)|string|"ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"|
 |[ssl-ecdh-curve](#ssl-ecdh-curve)|string|"auto"|
@@ -87,11 +90,12 @@ The following table shows a configuration option's name, type, and the default v
 |[brotli-level](#brotli-level)|int|4|
 |[brotli-types](#brotli-types)|string|"application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component"|
 |[use-http2](#use-http2)|bool|"true"|
+|[gzip-level](#gzip-level)|int|5|
 |[gzip-types](#gzip-types)|string|"application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component"|
 |[worker-processes](#worker-processes)|string|`<Number of CPUs>`|
 |[worker-cpu-affinity](#worker-cpu-affinity)|string|""|
 |[worker-shutdown-timeout](#worker-shutdown-timeout)|string|"10s"|
-|[load-balance](#load-balance)|string|"least_conn"|
+|[load-balance](#load-balance)|string|"round_robin"|
 |[variables-hash-bucket-size](#variables-hash-bucket-size)|int|128|
 |[variables-hash-max-size](#variables-hash-max-size)|int|2048|
 |[upstream-keepalive-connections](#upstream-keepalive-connections)|int|32|
@@ -99,6 +103,7 @@ The following table shows a configuration option's name, type, and the default v
 |[proxy-stream-timeout](#proxy-stream-timeout)|string|"600s"|
 |[proxy-stream-responses](#proxy-stream-responses)|int|1|
 |[bind-address](#bind-address)|[]string|""|
+|[use-forwarded-headers](#use-forwarded-headers)|bool|"true"|
 |[forwarded-for-header](#forwarded-for-header)|string|"X-Forwarded-For"|
 |[compute-full-forwarded-for](#compute-full-forwarded-for)|bool|"false"|
 |[proxy-add-original-uri-header](#proxy-add-original-uri-header)|bool|"true"|
@@ -107,15 +112,17 @@ The following table shows a configuration option's name, type, and the default v
 |[zipkin-collector-host](#zipkin-collector-host)|string|""|
 |[zipkin-collector-port](#zipkin-collector-port)|int|9411|
 |[zipkin-service-name](#zipkin-service-name)|string|"nginx"|
+|[zipkin-sample-rate](#zipkin-sample-rate)|float|1.0|
 |[jaeger-collector-host](#jaeger-collector-host)|string|""|
 |[jaeger-collector-port](#jaeger-collector-port)|int|6831|
 |[jaeger-service-name](#jaeger-service-name)|string|"nginx"|
 |[jaeger-sampler-type](#jaeger-sampler-type)|string|"const"|
 |[jaeger-sampler-param](#jaeger-sampler-param)|string|"1"|
+|[main-snippet](#main-snippet)|string|""|
 |[http-snippet](#http-snippet)|string|""|
 |[server-snippet](#server-snippet)|string|""|
 |[location-snippet](#location-snippet)|string|""|
-|[custom-http-errors](#custom-http-errors)|[]int]|[]int{}|
+|[custom-http-errors](#custom-http-errors)|[]int|[]int{}|
 |[proxy-body-size](#proxy-body-size)|string|"1m"|
 |[proxy-connect-timeout](#proxy-connect-timeout)|int|5|
 |[proxy-read-timeout](#proxy-read-timeout)|int|60|
@@ -145,6 +152,9 @@ The following table shows a configuration option's name, type, and the default v
 |[wallarm-process-time-limit-block](#wallarm-process-time-limit-block)|string|"attack"|
 |[wallarm-request-memory-limit](#wallarm-request-memory-limit)|string|"0"|
 |[wallarm-worker-rlimit-vmem](#wallarm-worker-rlimit-vmem)|string|"1g"|
+|[block-cidrs](#block-cidrs)|[]string|""|
+|[block-user-agents](#block-user-agents)|[]string|""|
+|[block-referers](#block-referers)|[]string|""|
 
 ## add-headers
 
@@ -269,6 +279,13 @@ Limits the maximum size of the entire request header list after HPACK decompress
 _References:_
 [https://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_header_size](https://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_header_size)
 
+## http2-max-requests
+
+Sets the maximum number of requests (including push requests) that can be served through one HTTP/2 connection, after which the next client request will lead to connection closing and the need of establishing a new connection.
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests](http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests)
+
 ## hsts
 
 Enables or disables the header HSTS in servers running SSL.
@@ -337,6 +354,14 @@ Please check the [log-format](log-format.md) for definition of each field.
 
 Sets the nginx [stream format](https://nginx.org/en/docs/stream/ngx_stream_log_module.html#log_format).
 
+## enable-multi-accept
+
+If disabled, a worker process will accept one new connection at a time. Otherwise, a worker process will accept all new connections at a time.
+_**default:**_ true
+
+_References:_
+[http://nginx.org/en/docs/ngx_core_module.html#multi_accept](http://nginx.org/en/docs/ngx_core_module.html#multi_accept)
+
 ## max-worker-connections
 
 Sets the maximum number of simultaneous connections that can be opened by each [worker process](http://nginx.org/en/docs/ngx_core_module.html#worker_connections)
@@ -378,7 +403,12 @@ _References:_
 - [http://nginx.org/en/docs/hash.html](http://nginx.org/en/docs/hash.html)
 - [https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_headers_hash_max_size](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_headers_hash_max_size)
 
-## proxy-headers-hash-bucket-size
+## reuse-port
+
+Instructs NGINX to create an individual listening socket for each worker process (using the SO_REUSEPORT socket option), allowing a kernel to distribute incoming connections between worker processes
+_**default:**_ true
+
+## proxy-headers-hash-bucket-size 
 
 Sets the size of the bucket for the proxy headers hash tables.
 
@@ -440,8 +470,9 @@ Enables or disables session resumption through [TLS session tickets](http://ngin
 ## ssl-session-ticket-key
 
 Sets the secret key used to encrypt and decrypt TLS session tickets. The value must be a valid base64 string.
+To create a ticket: `openssl rand 80 | openssl enc -A -base64`
 
-[TLS session ticket-key](http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_tickets), by default, a randomly generated key is used. To create a ticket: `openssl rand 80 | base64 -w0`
+[TLS session ticket-key](http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_tickets), by default, a randomly generated key is used. 
 
 ## ssl-session-timeout
 
@@ -460,7 +491,7 @@ Enables or disables the [PROXY protocol](https://www.nginx.com/resources/admin-g
 
 ## proxy-protocol-header-timeout
 
-Sets the timeout value for receiving the proxy-protocol headers. The default of 5 seconds prevents the TLS passthrough handler from waiting indefinetly on a dropped connection.
+Sets the timeout value for receiving the proxy-protocol headers. The default of 5 seconds prevents the TLS passthrough handler from waiting indefinitely on a dropped connection.
 _**default:**_ 5s
 
 ## use-gzip
@@ -493,6 +524,10 @@ _**default:**_ `application/xml+rss application/atom+xml application/javascript 
 
 Enables or disables [HTTP/2](http://nginx.org/en/docs/http/ngx_http_v2_module.html) support in secure connections.
 
+## gzip-level
+
+Sets the gzip Compression Level that will be used. _**default:**_ 5
+
 ## gzip-types
 
 Sets the MIME types in addition to "text/html" to compress. The special value "\*" matches any MIME type. Responses with the "text/html" type are always compressed if `use-gzip` is enabled.
@@ -521,11 +556,11 @@ Sets the algorithm to use for load balancing.
 The value can either be:
 
 - round_robin: to use the default round robin loadbalancer
-- least_conn: to use the least connected method
-- ip_hash: to use a hash of the server for routing.
-- ewma: to use the peak ewma method for routing (only available with `enable-dynamic-configuration` flag) 
+- least_conn: to use the least connected method (_note_ that this is available only in non-dynamic mode: `--enable-dynamic-configuration=false`)
+- ip_hash: to use a hash of the server for routing (_note_ that this is available only in non-dynamic mode: `--enable-dynamic-configuration=false`, but alternatively you can consider using `nginx.ingress.kubernetes.io/upstream-hash-by`)
+- ewma: to use the Peak EWMA method for routing ([implementation](https://github.com/kubernetes/ingress-nginx/blob/master/rootfs/etc/nginx/lua/balancer/ewma.lua))
 
-The default is least_conn.
+The default is `round_robin`.
 
 _References:_
 [http://nginx.org/en/docs/http/load_balancing.html](http://nginx.org/en/docs/http/load_balancing.html)
@@ -574,6 +609,12 @@ _References:_
 
 Sets the addresses on which the server will accept requests instead of *. It should be noted that these addresses must exist in the runtime environment or the controller will crash loop.
 
+## use-forwarded-headers
+
+If true, NGINX passes the incoming `X-Forwarded-*` headers to upstreams. Use this option when NGINX is behind another L7 proxy / load balancer that is setting these headers.
+
+If false, NGINX ignores incoming `X-Forwarded-*` headers, filling them with the request information it sees. Use this option if NGINX is exposed directly to the internet, or it's behind a L3/packet-based load balancer that doesn't alter the source IP in the packets.
+
 ## forwarded-for-header
 
 Sets the header field for identifying the originating IP address of a client. _**default:**_ X-Forwarded-For
@@ -586,7 +627,7 @@ Append the remote address to the X-Forwarded-For header instead of replacing it.
 
 Adds an X-Original-Uri header with the original request URI to the backend request
 
-## generate-request-id 
+## generate-request-id
 
 Ensures that X-Request-ID is defaulted to a random value, if no X-Request-ID is present in the request
 
@@ -609,6 +650,10 @@ Specifies the port to use when uploading traces. _**default:**_ 9411
 
 Specifies the service name to use for any traces created. _**default:**_ nginx
 
+## zipkin-sample-rate
+
+Specifies sample rate for any traces created. _**default:**_ 1.0
+
 ## jaeger-collector-host
 
 Specifies the host to use when uploading traces. It must be a valid URL.
@@ -630,20 +675,21 @@ Specifies the sampler to be used when sampling traces. The available samplers ar
 Specifies the argument to be passed to the sampler constructor. Must be a number.
 For const this should be 0 to never sample and 1 to always sample. _**default:**_ 1
 
+## main-snippet
+
+Adds custom configuration to the main section of the nginx configuration.
+
 ## http-snippet
 
 Adds custom configuration to the http section of the nginx configuration.
-_**default:**_ ""
 
 ## server-snippet
 
 Adds custom configuration to all the servers in the nginx configuration.
-_**default:**_ ""
 
 ## location-snippet
 
 Adds custom configuration to all the locations in the nginx configuration.
-_**default:**_ ""
 
 ## custom-http-errors
 
@@ -732,7 +778,7 @@ _References:_
 ## http-redirect-code
 
 Sets the HTTP status code to be used in redirects.
-Supported codes are [301](https://developer.mozilla.org/es/docs/Web/HTTP/Status/301),[302](https://developer.mozilla.org/es/docs/Web/HTTP/Status/302),[307](https://developer.mozilla.org/es/docs/Web/HTTP/Status/307) and [308](https://developer.mozilla.org/es/docs/Web/HTTP/Status/308)
+Supported codes are [301](https://developer.mozilla.org/docs/Web/HTTP/Status/301),[302](https://developer.mozilla.org/docs/Web/HTTP/Status/302),[307](https://developer.mozilla.org/docs/Web/HTTP/Status/307) and [308](https://developer.mozilla.org/docs/Web/HTTP/Status/308)
 _**default:**_ 308
 
 > __Why the default code is 308?__
@@ -810,3 +856,26 @@ The maximum amount of virtual memory in megabytes that is allowed for the NGINX-
 
 _References:_
 [https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit)
+
+## block-cidrs
+
+A comma-separated list of IP addresses (or subnets), requestst from which have to be blocked globally.
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_access_module.html#deny](http://nginx.org/en/docs/http/ngx_http_access_module.html#deny)
+
+## block-user-agents
+
+A comma-separated list of User-Agent, requestst from which have to be blocked globally.
+It's possible to use here full strings and regular expressions. More details about valid patterns can be found at `map` Nginx directive documentation.
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_map_module.html#map](http://nginx.org/en/docs/http/ngx_http_map_module.html#map)
+
+## block-referers
+
+A comma-separated list of Referers, requestst from which have to be blocked globally.
+It's possible to use here full strings and regular expressions. More details about valid patterns can be found at `map` Nginx directive documentation.
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_map_module.html#map](http://nginx.org/en/docs/http/ngx_http_map_module.html#map)

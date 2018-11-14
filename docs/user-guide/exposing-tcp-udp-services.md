@@ -12,7 +12,8 @@ The next example shows how to expose the service `example-go` running in the nam
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tcp-configmap-example
+  name: tcp-services
+  namespace: ingress-nginx
 data:
   9000: "default/example-go:8080"
 ```
@@ -24,7 +25,39 @@ The next example shows how to expose the service `kube-dns` running in the names
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: udp-configmap-example
+  name: udp-services
+  namespace: ingress-nginx
 data:
   53: "kube-system/kube-dns:53"
+```
+
+If TCP/UDP proxy support is used, then those ports need to be exposed in the Service defined for the Ingress.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP
+  - name: proxied-tcp-9000
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
 ```

@@ -42,9 +42,16 @@ type SSLCert struct {
 	CN []string `json:"cn"`
 	// ExpiresTime contains the expiration of this SSL certificate in timestamp format
 	ExpireTime time.Time `json:"expires"`
+	// Pem encoded certificate and key concatenated
+	PemCertKey string `json:"pemCertKey"`
 }
 
 // GetObjectKind implements the ObjectKind interface as a noop
 func (s SSLCert) GetObjectKind() schema.ObjectKind {
 	return schema.EmptyObjectKind
+}
+
+// HashInclude defines if a field should be used or not to calculate the hash
+func (s SSLCert) HashInclude(field string, v interface{}) (bool, error) {
+	return (field != "PemSHA" && field != "ExpireTime"), nil
 }

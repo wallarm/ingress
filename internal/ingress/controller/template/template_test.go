@@ -17,7 +17,6 @@ limitations under the License.
 package template
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net"
 	"os"
@@ -29,6 +28,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	jsoniter "github.com/json-iterator/go"
 	"k8s.io/ingress-nginx/internal/file"
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/authreq"
@@ -50,6 +50,7 @@ var (
 		XForwardedPrefix            bool
 		DynamicConfigurationEnabled bool
 		SecureBackend               bool
+		enforceRegex                bool
 	}{
 		"when secure backend enabled": {
 			"/",
@@ -61,7 +62,8 @@ var (
 			false,
 			false,
 			false,
-			true},
+			true,
+			false},
 		"when secure backend and stickeness enabled": {
 			"/",
 			"/",
@@ -72,7 +74,8 @@ var (
 			true,
 			false,
 			false,
-			true},
+			true,
+			false},
 		"when secure backend and dynamic config enabled": {
 			"/",
 			"/",
@@ -83,7 +86,8 @@ var (
 			false,
 			false,
 			true,
-			true},
+			true,
+			false},
 		"when secure backend, stickeness and dynamic config enabled": {
 			"/",
 			"/",
@@ -94,7 +98,8 @@ var (
 			true,
 			false,
 			true,
-			true},
+			true,
+			false},
 		"invalid redirect / to / with dynamic config enabled": {
 			"/",
 			"/",
@@ -105,6 +110,7 @@ var (
 			false,
 			false,
 			true,
+			false,
 			false},
 		"invalid redirect / to /": {
 			"/",
@@ -116,13 +122,15 @@ var (
 			false,
 			false,
 			false,
+			false,
 			false},
 		"redirect / to /jenkins": {
 			"/",
 			"/jenkins",
-			"~* /",
+			"~* ^/",
 			`
-rewrite /(.*) /jenkins/$1 break;
+rewrite "(?i)/(.*)" /jenkins/$1 break;
+rewrite "(?i)/$" /jenkins/ break;
 proxy_pass http://upstream-name;
 `,
 			false,
@@ -130,14 +138,15 @@ proxy_pass http://upstream-name;
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect /something to /": {
 			"/something",
 			"/",
-			`~* ^/something\/?(?<baseuri>.*)`,
+			`~* "^/something\/?(?<baseuri>.*)"`,
 			`
-rewrite /something/(.*) /$1 break;
-rewrite /something / break;
+rewrite "(?i)/something/(.*)" /$1 break;
+rewrite "(?i)/something$" / break;
 proxy_pass http://upstream-name;
 `,
 			false,
@@ -145,13 +154,15 @@ proxy_pass http://upstream-name;
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect /end-with-slash/ to /not-root": {
 			"/end-with-slash/",
 			"/not-root",
-			"~* ^/end-with-slash/(?<baseuri>.*)",
+			`~* "^/end-with-slash/(?<baseuri>.*)"`,
 			`
-rewrite /end-with-slash/(.*) /not-root/$1 break;
+rewrite "(?i)/end-with-slash/(.*)" /not-root/$1 break;
+rewrite "(?i)/end-with-slash/$" /not-root/ break;
 proxy_pass http://upstream-name;
 `,
 			false,
@@ -159,13 +170,15 @@ proxy_pass http://upstream-name;
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect /something-complex to /not-root": {
 			"/something-complex",
 			"/not-root",
-			`~* ^/something-complex\/?(?<baseuri>.*)`,
+			`~* "^/something-complex\/?(?<baseuri>.*)"`,
 			`
-rewrite /something-complex/(.*) /not-root/$1 break;
+rewrite "(?i)/something-complex/(.*)" /not-root/$1 break;
+rewrite "(?i)/something-complex$" /not-root/ break;
 proxy_pass http://upstream-name;
 `,
 			false,
@@ -173,13 +186,15 @@ proxy_pass http://upstream-name;
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect / to /jenkins and rewrite": {
 			"/",
 			"/jenkins",
-			"~* /",
+			"~* ^/",
 			`
-rewrite /(.*) /jenkins/$1 break;
+rewrite "(?i)/(.*)" /jenkins/$1 break;
+rewrite "(?i)/$" /jenkins/ break;
 proxy_pass http://upstream-name;
 
 set_escape_uri $escaped_base_uri $baseuri;
@@ -190,14 +205,15 @@ subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect /something to / and rewrite": {
 			"/something",
 			"/",
-			`~* ^/something\/?(?<baseuri>.*)`,
+			`~* "^/something\/?(?<baseuri>.*)"`,
 			`
-rewrite /something/(.*) /$1 break;
-rewrite /something / break;
+rewrite "(?i)/something/(.*)" /$1 break;
+rewrite "(?i)/something$" / break;
 proxy_pass http://upstream-name;
 
 set_escape_uri $escaped_base_uri $baseuri;
@@ -208,13 +224,15 @@ subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect /end-with-slash/ to /not-root and rewrite": {
 			"/end-with-slash/",
 			"/not-root",
-			`~* ^/end-with-slash/(?<baseuri>.*)`,
+			`~* "^/end-with-slash/(?<baseuri>.*)"`,
 			`
-rewrite /end-with-slash/(.*) /not-root/$1 break;
+rewrite "(?i)/end-with-slash/(.*)" /not-root/$1 break;
+rewrite "(?i)/end-with-slash/$" /not-root/ break;
 proxy_pass http://upstream-name;
 
 set_escape_uri $escaped_base_uri $baseuri;
@@ -225,13 +243,15 @@ subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect /something-complex to /not-root and rewrite": {
 			"/something-complex",
 			"/not-root",
-			`~* ^/something-complex\/?(?<baseuri>.*)`,
+			`~* "^/something-complex\/?(?<baseuri>.*)"`,
 			`
-rewrite /something-complex/(.*) /not-root/$1 break;
+rewrite "(?i)/something-complex/(.*)" /not-root/$1 break;
+rewrite "(?i)/something-complex$" /not-root/ break;
 proxy_pass http://upstream-name;
 
 set_escape_uri $escaped_base_uri $baseuri;
@@ -242,14 +262,15 @@ subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect /something to / and rewrite with specific scheme": {
 			"/something",
 			"/",
-			`~* ^/something\/?(?<baseuri>.*)`,
+			`~* "^/something\/?(?<baseuri>.*)"`,
 			`
-rewrite /something/(.*) /$1 break;
-rewrite /something / break;
+rewrite "(?i)/something/(.*)" /$1 break;
+rewrite "(?i)/something$" / break;
 proxy_pass http://upstream-name;
 
 set_escape_uri $escaped_base_uri $baseuri;
@@ -260,13 +281,15 @@ subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="
 			false,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect / to /something with sticky enabled": {
 			"/",
 			"/something",
-			`~* /`,
+			`~* ^/`,
 			`
-rewrite /(.*) /something/$1 break;
+rewrite "(?i)/(.*)" /something/$1 break;
+rewrite "(?i)/$" /something/ break;
 proxy_pass http://sticky-upstream-name;
 `,
 			false,
@@ -274,13 +297,15 @@ proxy_pass http://sticky-upstream-name;
 			true,
 			false,
 			false,
-			false},
+			false,
+			true},
 		"redirect / to /something with sticky and dynamic config enabled": {
 			"/",
 			"/something",
-			`~* /`,
+			`~* ^/`,
 			`
-rewrite /(.*) /something/$1 break;
+rewrite "(?i)/(.*)" /something/$1 break;
+rewrite "(?i)/$" /something/ break;
 proxy_pass http://upstream_balancer;
 `,
 			false,
@@ -288,13 +313,15 @@ proxy_pass http://upstream_balancer;
 			true,
 			false,
 			true,
-			false},
+			false,
+			true},
 		"add the X-Forwarded-Prefix header": {
 			"/there",
 			"/something",
-			`~* ^/there\/?(?<baseuri>.*)`,
+			`~* "^/there\/?(?<baseuri>.*)"`,
 			`
-rewrite /there/(.*) /something/$1 break;
+rewrite "(?i)/there/(.*)" /something/$1 break;
+rewrite "(?i)/there$" /something/ break;
 proxy_set_header X-Forwarded-Prefix "/there/";
 proxy_pass http://sticky-upstream-name;
 `,
@@ -303,7 +330,20 @@ proxy_pass http://sticky-upstream-name;
 			true,
 			true,
 			false,
-			false},
+			false,
+			true},
+		"use ~* location modifier when ingress does not use rewrite/regex target but at least one other ingress does": {
+			"/something",
+			"/something",
+			`~* "^/something"`,
+			"proxy_pass http://upstream-name;",
+			false,
+			"",
+			false,
+			false,
+			false,
+			false,
+			true},
 	}
 )
 
@@ -373,7 +413,7 @@ func TestBuildLocation(t *testing.T) {
 			Rewrite: rewrite.Config{Target: tc.Target, AddBaseURL: tc.AddBaseURL},
 		}
 
-		newLoc := buildLocation(loc)
+		newLoc := buildLocation(loc, tc.enforceRegex)
 		if tc.Location != newLoc {
 			t.Errorf("%s: expected '%v' but returned %v", k, tc.Location, newLoc)
 		}
@@ -466,7 +506,7 @@ func TestTemplateWithData(t *testing.T) {
 		t.Error("unexpected error reading json file: ", err)
 	}
 	var dat config.TemplateConfig
-	if err := json.Unmarshal(data, &dat); err != nil {
+	if err := jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &dat); err != nil {
 		t.Errorf("unexpected error unmarshalling json: %v", err)
 	}
 	if dat.ListenPorts == nil {
@@ -513,7 +553,7 @@ func BenchmarkTemplateWithData(b *testing.B) {
 		b.Error("unexpected error reading json file: ", err)
 	}
 	var dat config.TemplateConfig
-	if err := json.Unmarshal(data, &dat); err != nil {
+	if err := jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &dat); err != nil {
 		b.Errorf("unexpected error unmarshalling json: %v", err)
 	}
 
@@ -598,6 +638,26 @@ func TestBuildForwardedFor(t *testing.T) {
 
 	if outputStr != validStr {
 		t.Errorf("Expected '%v' but returned '%v'", validStr, outputStr)
+	}
+}
+
+func TestBuildResolversForLua(t *testing.T) {
+	ipOne := net.ParseIP("192.0.0.1")
+	ipTwo := net.ParseIP("2001:db8:1234:0000:0000:0000:0000:0000")
+	ipList := []net.IP{ipOne, ipTwo}
+
+	expected := "\"192.0.0.1\", \"2001:db8:1234::\""
+	actual := buildResolversForLua(ipList, false)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	expected = "\"192.0.0.1\""
+	actual = buildResolversForLua(ipList, true)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
 	}
 }
 
@@ -697,8 +757,8 @@ func TestBuildAuthSignURL(t *testing.T) {
 	cases := map[string]struct {
 		Input, Output string
 	}{
-		"default url":       {"http://google.com", "http://google.com?rd=$pass_access_scheme://$http_host$request_uri"},
-		"with random field": {"http://google.com?cat=0", "http://google.com?cat=0&rd=$pass_access_scheme://$http_host$request_uri"},
+		"default url":       {"http://google.com", "http://google.com?rd=$pass_access_scheme://$http_host$escaped_request_uri"},
+		"with random field": {"http://google.com?cat=0", "http://google.com?cat=0&rd=$pass_access_scheme://$http_host$escaped_request_uri"},
 		"with rd field":     {"http://google.com?cat&rd=$request", "http://google.com?cat&rd=$request"},
 	}
 	for k, tc := range cases {
