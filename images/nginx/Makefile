@@ -33,7 +33,7 @@ IMAGE = $(REGISTRY)/$(IMGNAME)
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
 
 # Set default base image dynamically for each arch
-BASEIMAGE?=quay.io/kubernetes-ingress-controller/debian-base-$(ARCH):0.1
+BASEIMAGE?=gcr.io/google-containers/debian-base-$(ARCH):0.3
 
 ifeq ($(ARCH),arm)
 	QEMUARCH=arm
