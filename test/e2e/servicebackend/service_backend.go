@@ -44,49 +44,42 @@ var _ = framework.IngressNginxDescribe("Service backend - 503", func() {
 	It("should return 503 when backend service does not exist", func() {
 		host := "nonexistent.svc.com"
 
-		bi := buildIngressWithNonexistentService(host, f.IngressController.Namespace, "/")
-		ing, err := f.EnsureIngress(bi)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ing).NotTo(BeNil())
+		bi := buildIngressWithNonexistentService(host, f.Namespace, "/")
+		f.EnsureIngress(bi)
 
-		err = f.WaitForNginxServer(host,
+		f.WaitForNginxServer(host,
 			func(server string) bool {
-				return strings.Contains(server, "return 503;")
+				return strings.Contains(server, "proxy_pass http://upstream_balancer;")
 			})
-		Expect(err).NotTo(HaveOccurred())
 
 		resp, _, errs := gorequest.New().
-			Get(f.IngressController.HTTPURL).
+			Get(f.GetURL(framework.HTTP)).
 			Set("Host", host).
 			End()
-		Expect(len(errs)).Should(BeNumerically("==", 0))
+		Expect(errs).Should(BeEmpty())
 		Expect(resp.StatusCode).Should(Equal(503))
 	})
 
 	It("should return 503 when all backend service endpoints are unavailable", func() {
 		host := "unavailable.svc.com"
 
-		bi, bs := buildIngressWithUnavailableServiceEndpoints(host, f.IngressController.Namespace, "/")
+		bi, bs := buildIngressWithUnavailableServiceEndpoints(host, f.Namespace, "/")
 
-		svc, err := f.EnsureService(bs)
-		Expect(err).NotTo(HaveOccurred())
+		svc := f.EnsureService(bs)
 		Expect(svc).NotTo(BeNil())
 
-		ing, err := f.EnsureIngress(bi)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ing).NotTo(BeNil())
+		f.EnsureIngress(bi)
 
-		err = f.WaitForNginxServer(host,
+		f.WaitForNginxServer(host,
 			func(server string) bool {
-				return strings.Contains(server, "return 503;")
+				return strings.Contains(server, "proxy_pass http://upstream_balancer;")
 			})
-		Expect(err).NotTo(HaveOccurred())
 
 		resp, _, errs := gorequest.New().
-			Get(f.IngressController.HTTPURL).
+			Get(f.GetURL(framework.HTTP)).
 			Set("Host", host).
 			End()
-		Expect(len(errs)).Should(BeNumerically("==", 0))
+		Expect(errs).Should(BeEmpty())
 		Expect(resp.StatusCode).Should(Equal(503))
 	})
 

@@ -1,13 +1,10 @@
 # See the OWNERS docs: https://github.com/kubernetes/community/blob/master/contributors/guide/owners.md
 
 approvers:
-  - sig-network-leads
   - ingress-nginx-admins
   - ingress-nginx-maintainers
   - ElvinEfendi
-  - antoineco
 
 reviewers:
   - aledbf
   - ElvinEfendi
-  - antoineco

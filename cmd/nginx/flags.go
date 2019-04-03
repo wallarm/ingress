@@ -20,18 +20,18 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"runtime"
 
-	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/klog"
 
 	"k8s.io/ingress-nginx/internal/ingress/annotations/class"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/parser"
 	"k8s.io/ingress-nginx/internal/ingress/controller"
 	ngx_config "k8s.io/ingress-nginx/internal/ingress/controller/config"
 	ing_net "k8s.io/ingress-nginx/internal/net"
+	"k8s.io/ingress-nginx/internal/nginx"
 )
 
 func parseFlags() (bool, *controller.Configuration, error) {
@@ -71,7 +71,6 @@ The key in the map indicates the external port to be used. The value is a
 reference to a Service in the form "namespace/name:port", where "port" can
 either be a port number or name. TCP ports 80 and 443 are reserved by the
 controller for servicing HTTP traffic.`)
-
 		udpConfigMapName = flags.String("udp-services-configmap", "",
 			`Name of the ConfigMap containing the definition of the UDP services to expose.
 The key in the map indicates the external port to be used. The value is a
@@ -98,6 +97,8 @@ Takes the form "namespace/name".`)
 Configured inside the NGINX status server. All requests received on the port
 defined by the healthz-port parameter are forwarded internally to this path.`)
 
+		healthCheckTimeout = flags.Duration("health-check-timeout", 10, `Time limit, in seconds, for a probe to health-check-path to succeed.`)
+
 		updateStatus = flags.Bool("update-status", true,
 			`Update the load-balancer status of Ingress objects this controller satisfies.
 Requires setting the publish-service parameter to a valid Service reference.`)
@@ -105,7 +106,7 @@ Requires setting the publish-service parameter to a valid Service reference.`)
 		electionID = flags.String("election-id", "ingress-controller-leader",
 			`Election id to use for Ingress status updates.`)
 
-		forceIsolation = flags.Bool("force-namespace-isolation", false,
+		_ = flags.Bool("force-namespace-isolation", false,
 			`Force namespace isolation.
 Prevents Ingress objects from referencing Secrets and ConfigMaps located in a
 different namespace than their own. May be used together with watch-namespace.`)
@@ -113,9 +114,6 @@ different namespace than their own. May be used together with watch-namespace.`)
 		updateStatusOnShutdown = flags.Bool("update-status-on-shutdown", true,
 			`Update the load-balancer status of Ingress objects when the controller shuts down.
 Requires the update-status parameter.`)
-
-		sortBackends = flags.Bool("sort-backends", false,
-			`Sort servers inside NGINX upstreams.`)
 
 		useNodeInternalIP = flags.Bool("report-node-internal-ip-address", false,
 			`Set the load-balancer status of Ingress objects to internal Node addresses instead of external.
@@ -130,7 +128,7 @@ Requires the update-status parameter.`)
 		annotationsPrefix = flags.String("annotations-prefix", "nginx.ingress.kubernetes.io",
 			`Prefix of the Ingress annotations specific to the NGINX controller.`)
 
-		enableSSLChainCompletion = flags.Bool("enable-ssl-chain-completion", true,
+		enableSSLChainCompletion = flags.Bool("enable-ssl-chain-completion", false,
 			`Autocomplete SSL certificate chains with missing intermediate CA certificates.
 A valid certificate chain is required to enable OCSP stapling. Certificates
 uploaded to Kubernetes must have the "Authority Information Access" X.509 v3
@@ -143,21 +141,28 @@ extension for this to succeed.`)
 			`Customized address to set as the load-balancer status of Ingress objects this controller satisfies.
 Requires the update-status parameter.`)
 
-		dynamicConfigurationEnabled = flags.Bool("enable-dynamic-configuration", true,
-			`Dynamically refresh backends on topology changes instead of reloading NGINX.
-Feature backed by OpenResty Lua libraries.`)
-
-		dynamicCertificatesEnabled = flags.Bool("enable-dynamic-certificates", false,
+		dynamicCertificatesEnabled = flags.Bool("enable-dynamic-certificates", true,
 			`Dynamically update SSL certificates instead of reloading NGINX.
 Feature backed by OpenResty Lua libraries. Requires that OCSP stapling is not enabled`)
 
+		enableMetrics = flags.Bool("enable-metrics", true,
+			`Enables the collection of NGINX metrics`)
+		metricsPerHost = flags.Bool("metrics-per-host", true,
+			`Export metrics per-host`)
+
 		httpPort      = flags.Int("http-port", 80, `Port to use for servicing HTTP traffic.`)
 		httpsPort     = flags.Int("https-port", 443, `Port to use for servicing HTTPS traffic.`)
-		statusPort    = flags.Int("status-port", 18080, `Port to use for exposing NGINX status pages.`)
+		_             = flags.Int("status-port", 18080, `Port to use for exposing NGINX status pages.`)
 		sslProxyPort  = flags.Int("ssl-passthrough-proxy-port", 442, `Port to use internally for SSL Passthrough.`)
 		defServerPort = flags.Int("default-server-port", 8181, `Port to use for exposing the default server (catch-all).`)
 		healthzPort   = flags.Int("healthz-port", 10254, "Port to use for the healthz endpoint.")
+
+		disableCatchAll = flags.Bool("disable-catch-all", false,
+			`Disable support for catch-all Ingresses`)
 	)
+
+	flags.MarkDeprecated("status-port", `The status port is a unix socket now.`)
+	flags.MarkDeprecated("force-namespace-isolation", `This flag doesn't do anything.`)
 
 	flag.Set("logtostderr", "true")
 
@@ -169,7 +174,7 @@ Feature backed by OpenResty Lua libraries. Requires that OCSP stapling is not en
 	flag.CommandLine.Parse([]string{})
 
 	pflag.VisitAll(func(flag *pflag.Flag) {
-		glog.V(2).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
+		klog.V(2).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
 	})
 
 	if *showVersion {
@@ -177,10 +182,10 @@ Feature backed by OpenResty Lua libraries. Requires that OCSP stapling is not en
 	}
 
 	if *ingressClass != "" {
-		glog.Infof("Watching for Ingress class: %s", *ingressClass)
+		klog.Infof("Watching for Ingress class: %s", *ingressClass)
 
 		if *ingressClass != class.DefaultClass {
-			glog.Warningf("Only Ingresses with class %q will be processed by this Ingress controller", *ingressClass)
+			klog.Warningf("Only Ingresses with class %q will be processed by this Ingress controller", *ingressClass)
 		}
 
 		class.IngressClass = *ingressClass
@@ -197,10 +202,6 @@ Feature backed by OpenResty Lua libraries. Requires that OCSP stapling is not en
 		return false, nil, fmt.Errorf("Port %v is already in use. Please check the flag --https-port", *httpsPort)
 	}
 
-	if !ing_net.IsPortAvailable(*statusPort) {
-		return false, nil, fmt.Errorf("Port %v is already in use. Please check the flag --status-port", *statusPort)
-	}
-
 	if !ing_net.IsPortAvailable(*defServerPort) {
 		return false, nil, fmt.Errorf("Port %v is already in use. Please check the flag --default-server-port", *defServerPort)
 	}
@@ -210,58 +211,51 @@ Feature backed by OpenResty Lua libraries. Requires that OCSP stapling is not en
 	}
 
 	if !*enableSSLChainCompletion {
-		glog.Warningf("SSL certificate chain completion is disabled (--enable-ssl-chain-completion=false)")
+		klog.Warningf("SSL certificate chain completion is disabled (--enable-ssl-chain-completion=false)")
 	}
 
-	if (*enableSSLChainCompletion || !*dynamicConfigurationEnabled) && *dynamicCertificatesEnabled {
-		return false, nil, fmt.Errorf(`SSL certificate chain completion cannot be enabled and dynamic configuration cannot be disabled when 
-dynamic certificates functionality is enabled. Please check the flags --enable-ssl-chain-completion and --enable-dynamic-configuration`)
+	if *enableSSLChainCompletion && *dynamicCertificatesEnabled {
+		return false, nil, fmt.Errorf(`SSL certificate chain completion cannot be enabled when dynamic certificates functionality is enabled. Please check the flags --enable-ssl-chain-completion`)
 	}
 
-	// LuaJIT is not available on arch s390x and ppc64le
-	disableLua := false
-	if runtime.GOARCH == "s390x" || runtime.GOARCH == "ppc64le" {
-		disableLua = true
-		if *dynamicConfigurationEnabled {
-			*dynamicConfigurationEnabled = false
-			glog.Warningf("LuaJIT is not available on s390x and ppc64le architectures: disabling dynamic configuration feature.")
-		}
+	if *publishSvc != "" && *publishStatusAddress != "" {
+		return false, nil, fmt.Errorf("Flags --publish-service and --publish-status-address are mutually exclusive")
 	}
+
+	nginx.HealthPath = *defHealthzURL
 
 	config := &controller.Configuration{
-		APIServerHost:               *apiserverHost,
-		KubeConfigFile:              *kubeConfigFile,
-		UpdateStatus:                *updateStatus,
-		ElectionID:                  *electionID,
-		EnableProfiling:             *profiling,
-		EnableSSLPassthrough:        *enableSSLPassthrough,
-		EnableSSLChainCompletion:    *enableSSLChainCompletion,
-		ResyncPeriod:                *resyncPeriod,
-		DefaultService:              *defaultSvc,
-		Namespace:                   *watchNamespace,
-		ConfigMapName:               *configMap,
-		TCPConfigMapName:            *tcpConfigMapName,
-		UDPConfigMapName:            *udpConfigMapName,
-		DefaultSSLCertificate:       *defSSLCertificate,
-		DefaultHealthzURL:           *defHealthzURL,
-		PublishService:              *publishSvc,
-		PublishStatusAddress:        *publishStatusAddress,
-		ForceNamespaceIsolation:     *forceIsolation,
-		UpdateStatusOnShutdown:      *updateStatusOnShutdown,
-		SortBackends:                *sortBackends,
-		UseNodeInternalIP:           *useNodeInternalIP,
-		SyncRateLimit:               *syncRateLimit,
-		DynamicConfigurationEnabled: *dynamicConfigurationEnabled,
-		DisableLua:                  disableLua,
-		DynamicCertificatesEnabled:  *dynamicCertificatesEnabled,
+		APIServerHost:              *apiserverHost,
+		KubeConfigFile:             *kubeConfigFile,
+		UpdateStatus:               *updateStatus,
+		ElectionID:                 *electionID,
+		EnableProfiling:            *profiling,
+		EnableMetrics:              *enableMetrics,
+		MetricsPerHost:             *metricsPerHost,
+		EnableSSLPassthrough:       *enableSSLPassthrough,
+		EnableSSLChainCompletion:   *enableSSLChainCompletion,
+		ResyncPeriod:               *resyncPeriod,
+		DefaultService:             *defaultSvc,
+		Namespace:                  *watchNamespace,
+		ConfigMapName:              *configMap,
+		TCPConfigMapName:           *tcpConfigMapName,
+		UDPConfigMapName:           *udpConfigMapName,
+		DefaultSSLCertificate:      *defSSLCertificate,
+		HealthCheckTimeout:         *healthCheckTimeout,
+		PublishService:             *publishSvc,
+		PublishStatusAddress:       *publishStatusAddress,
+		UpdateStatusOnShutdown:     *updateStatusOnShutdown,
+		UseNodeInternalIP:          *useNodeInternalIP,
+		SyncRateLimit:              *syncRateLimit,
+		DynamicCertificatesEnabled: *dynamicCertificatesEnabled,
 		ListenPorts: &ngx_config.ListenPorts{
 			Default:  *defServerPort,
 			Health:   *healthzPort,
 			HTTP:     *httpPort,
 			HTTPS:    *httpsPort,
 			SSLProxy: *sslProxyPort,
-			Status:   *statusPort,
 		},
+		DisableCatchAll: *disableCatchAll,
 	}
 
 	return false, config, nil

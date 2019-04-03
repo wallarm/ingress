@@ -26,11 +26,9 @@ GOHOSTOS ?= $(shell go env GOHOSTOS)
 # Allow limiting the scope of the e2e tests. By default run everything
 FOCUS ?= .*
 # number of parallel test
-E2E_NODES ?= 4
-# slow test only if takes > 40s
-SLOW_E2E_THRESHOLD ?= 40
-
-NODE_IP ?= $(shell minikube ip)
+E2E_NODES ?= 10
+# slow test only if takes > 50s
+SLOW_E2E_THRESHOLD ?= 50
 
 ifeq ($(GOHOSTOS),darwin)
   SED_I=sed -i ''
@@ -47,12 +45,13 @@ PKG = k8s.io/ingress-nginx
 ARCH ?= $(shell go env GOARCH)
 GOARCH = ${ARCH}
 DUMB_ARCH = ${ARCH}
+KUBECTL_CONTEXT = $(shell kubectl config current-context)
 
 GOBUILD_FLAGS :=
 
-ALL_ARCH = amd64 arm arm64 ppc64le s390x
+ALL_ARCH = amd64 arm64
 
-QEMUVERSION = v2.12.0-1
+QEMUVERSION = v3.0.0
 
 BUSTED_ARGS =-v --pattern=_test
 
@@ -63,21 +62,8 @@ MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
 # Set default base image dynamically for each arch
 BASEIMAGE?=wallarm/node-k8s-$(ARCH):1.1.0
 
-ifeq ($(ARCH),arm)
-	QEMUARCH=arm
-	GOARCH=arm
-	DUMB_ARCH=armhf
-endif
 ifeq ($(ARCH),arm64)
 	QEMUARCH=aarch64
-endif
-ifeq ($(ARCH),ppc64le)
-	QEMUARCH=ppc64le
-	GOARCH=ppc64le
-	DUMB_ARCH=ppc64el
-endif
-ifeq ($(ARCH),s390x)
-	QEMUARCH=s390x
 endif
 
 TEMP_DIR := $(shell mktemp -d)
@@ -118,7 +104,7 @@ container: clean-container .container-$(ARCH)
 	@echo "+ Copying artifact to temporary directory"
 	mkdir -p $(TEMP_DIR)/rootfs
 	cp bin/$(ARCH)/nginx-ingress-controller $(TEMP_DIR)/rootfs/nginx-ingress-controller
-
+	cp bin/$(ARCH)/dbg $(TEMP_DIR)/rootfs/dbg
 	@echo "+ Building container image $(MULTI_ARCH_IMG):$(TAG)"
 	cp -RP ./* $(TEMP_DIR)
 	$(SED_I) "s|BASEIMAGE|$(BASEIMAGE)|g" $(DOCKERFILE)
@@ -168,6 +154,12 @@ build:
 	GOBUILD_FLAGS="$(GOBUILD_FLAGS)" \
 	build/go-in-docker.sh build/build.sh
 
+.PHONY: build-plugin
+build-plugin:
+	@$(DEF_VARS) \
+	GOBUILD_FLAGS="$(GOBUILD_FLAGS)" \
+	build/go-in-docker.sh build/build-plugin.sh
+
 .PHONY: clean
 clean:
 	rm -rf bin/ .gocache/ .env
@@ -180,7 +172,6 @@ static-check:
 .PHONY: test
 test:
 	@$(DEF_VARS)                 \
-	NODE_IP=$(NODE_IP)           \
 	DOCKER_OPTS="-i --net=host"  \
 	build/go-in-docker.sh build/test.sh
 
@@ -192,13 +183,41 @@ lua-test:
 
 .PHONY: e2e-test
 e2e-test:
-	@$(DEF_VARS)                             \
-	FOCUS=$(FOCUS)                           \
-	E2E_NODES=$(E2E_NODES)                   \
-	DOCKER_OPTS="-i --net=host"              \
-	NODE_IP=$(NODE_IP)                       \
-	SLOW_E2E_THRESHOLD=$(SLOW_E2E_THRESHOLD) \
-	build/go-in-docker.sh build/e2e-tests.sh
+	if  [ "$(KUBECTL_CONTEXT)" != "minikube" ] && \
+		[ "$(KUBECTL_CONTEXT)" =~ .*kind* ] && \
+		[ "$(KUBECTL_CONTEXT)" != "dind" ] && \
+		[ "$(KUBECTL_CONTEXT)" != "docker-for-desktop" ]; then \
+		echo "kubectl context is "$(KUBECTL_CONTEXT)", but must be one of [minikube, *kind*, dind, docker-for-deskop]"; \
+		exit 1; \
+	fi
+
+	echo "Granting permissions to ingress-nginx e2e service account..."
+	kubectl create serviceaccount ingress-nginx-e2e || true
+	kubectl create clusterrolebinding permissive-binding \
+		--clusterrole=cluster-admin \
+		--user=admin \
+		--user=kubelet \
+		--serviceaccount=default:ingress-nginx-e2e || true
+
+	kubectl run --rm -i --tty \
+		--attach \
+		--restart=Never \
+		--generator=run-pod/v1 \
+		--env="E2E_NODES=$(E2E_NODES)" \
+		--env="FOCUS=$(FOCUS)" \
+		--env="SLOW_E2E_THRESHOLD=$(SLOW_E2E_THRESHOLD)" \
+		--overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e"}}' \
+		e2e --image=nginx-ingress-controller:e2e
+
+.PHONY: e2e-test-image
+e2e-test-image:
+	make -C test/e2e-image
+
+.PHONY: e2e-test-binary
+e2e-test-binary:
+	@$(DEF_VARS)                 \
+	DOCKER_OPTS="-i --net=host"  \
+	build/go-in-docker.sh build/build-e2e.sh
 
 .PHONY: cover
 cover:
@@ -226,7 +245,7 @@ check_dead_links:
 
 .PHONY: dep-ensure
 dep-ensure:
-	dep version || go get -u github.com/golang/dep/cmd/dep
+	dep version || curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 	dep ensure -v
 	dep prune -v
 	find vendor -name '*_test.go' -delete

@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/imdario/mergo"
+	"k8s.io/klog"
 
 	apiv1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -35,17 +35,17 @@ import (
 
 // syncSecret synchronizes the content of a TLS Secret (certificate(s), secret
 // key) with the filesystem. The resulting files can be used by NGINX.
-func (s k8sStore) syncSecret(key string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *k8sStore) syncSecret(key string) {
+	s.syncSecretMu.Lock()
+	defer s.syncSecretMu.Unlock()
 
-	glog.V(3).Infof("Syncing Secret %q", key)
+	klog.V(3).Infof("Syncing Secret %q", key)
 
 	// TODO: getPemCertificate should not write to disk to avoid unnecessary overhead
 	cert, err := s.getPemCertificate(key)
 	if err != nil {
 		if !isErrSecretForAuth(err) {
-			glog.Warningf("Error obtaining X.509 certificate: %v", err)
+			klog.Warningf("Error obtaining X.509 certificate: %v", err)
 		}
 		return
 	}
@@ -57,7 +57,7 @@ func (s k8sStore) syncSecret(key string) {
 			// no need to update
 			return
 		}
-		glog.Infof("Updating Secret %q in the local store", key)
+		klog.Infof("Updating Secret %q in the local store", key)
 		s.sslStore.Update(key, cert)
 		// this update must trigger an update
 		// (like an update event from a change in Ingress)
@@ -65,7 +65,7 @@ func (s k8sStore) syncSecret(key string) {
 		return
 	}
 
-	glog.Infof("Adding Secret %q to the local store", key)
+	klog.Infof("Adding Secret %q to the local store", key)
 	s.sslStore.Add(key, cert)
 	// this update must trigger an update
 	// (like an update event from a change in Ingress)
@@ -74,7 +74,7 @@ func (s k8sStore) syncSecret(key string) {
 
 // getPemCertificate receives a secret, and creates a ingress.SSLCert as return.
 // It parses the secret and verifies if it's a keypair, or a 'ca.crt' secret only.
-func (s k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error) {
+func (s *k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error) {
 	secret, err := s.listers.Secret.ByKey(secretName)
 	if err != nil {
 		return nil, err
@@ -98,17 +98,22 @@ func (s k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error)
 			return nil, fmt.Errorf("key 'tls.key' missing from Secret %q", secretName)
 		}
 
-		if s.isDynamicCertificatesEnabled {
-			sslCert, err = ssl.CreateSSLCert(nsSecName, cert, key, ca)
+		sslCert, err = ssl.CreateSSLCert(cert, key)
+		if err != nil {
+			return nil, fmt.Errorf("unexpected error creating SSL Cert: %v", err)
+		}
+
+		if !s.isDynamicCertificatesEnabled || len(ca) > 0 {
+			err = ssl.StoreSSLCertOnDisk(s.filesystem, nsSecName, sslCert)
 			if err != nil {
-				return nil, fmt.Errorf("unexpected error creating SSL Cert: %v", err)
+				return nil, fmt.Errorf("error while storing certificate and key: %v", err)
 			}
-		} else {
-			// If 'ca.crt' is also present, it will allow this secret to be used in the
-			// 'nginx.ingress.kubernetes.io/auth-tls-secret' annotation
-			sslCert, err = ssl.AddOrUpdateCertAndKey(nsSecName, cert, key, ca, s.filesystem)
+		}
+
+		if len(ca) > 0 {
+			err = ssl.ConfigureCACertWithCertAndKey(s.filesystem, nsSecName, ca, sslCert)
 			if err != nil {
-				return nil, fmt.Errorf("unexpected error creating pem file: %v", err)
+				return nil, fmt.Errorf("error configuring CA certificate: %v", err)
 			}
 		}
 
@@ -116,18 +121,22 @@ func (s k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error)
 		if ca != nil {
 			msg += " and authentication"
 		}
-		glog.V(3).Info(msg)
+		klog.V(3).Info(msg)
 
-	} else if ca != nil {
-		sslCert, err = ssl.AddCertAuth(nsSecName, ca, s.filesystem)
-
+	} else if ca != nil && len(ca) > 0 {
+		sslCert, err = ssl.CreateCACert(ca)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unexpected error creating SSL Cert: %v", err)
+		}
+
+		err = ssl.ConfigureCACert(s.filesystem, nsSecName, ca, sslCert)
+		if err != nil {
+			return nil, fmt.Errorf("error configuring CA certificate: %v", err)
 		}
 
 		// makes this secret in 'syncSecret' to be used for Certificate Authentication
 		// this does not enable Certificate Authentication
-		glog.V(3).Infof("Configuring Secret %q for TLS authentication", secretName)
+		klog.V(3).Infof("Configuring Secret %q for TLS authentication", secretName)
 
 	} else {
 		if auth != nil {
@@ -143,7 +152,7 @@ func (s k8sStore) getPemCertificate(secretName string) (*ingress.SSLCert, error)
 	return sslCert, nil
 }
 
-func (s k8sStore) checkSSLChainIssues() {
+func (s *k8sStore) checkSSLChainIssues() {
 	for _, item := range s.ListLocalSSLCerts() {
 		secrKey := k8s.MetaNamespaceKey(item)
 		secret, err := s.GetLocalSSLCert(secrKey)
@@ -158,7 +167,7 @@ func (s k8sStore) checkSSLChainIssues() {
 
 		data, err := ssl.FullChainCert(secret.PemFileName, s.filesystem)
 		if err != nil {
-			glog.Errorf("Error generating CA certificate chain for Secret %q: %v", secrKey, err)
+			klog.Errorf("Error generating CA certificate chain for Secret %q: %v", secrKey, err)
 			continue
 		}
 
@@ -166,13 +175,13 @@ func (s k8sStore) checkSSLChainIssues() {
 
 		file, err := s.filesystem.Create(fullChainPemFileName)
 		if err != nil {
-			glog.Errorf("Error creating SSL certificate file for Secret %q: %v", secrKey, err)
+			klog.Errorf("Error creating SSL certificate file for Secret %q: %v", secrKey, err)
 			continue
 		}
 
 		_, err = file.Write(data)
 		if err != nil {
-			glog.Errorf("Error creating SSL certificate for Secret %q: %v", secrKey, err)
+			klog.Errorf("Error creating SSL certificate for Secret %q: %v", secrKey, err)
 			continue
 		}
 
@@ -180,13 +189,13 @@ func (s k8sStore) checkSSLChainIssues() {
 
 		err = mergo.MergeWithOverwrite(dst, secret)
 		if err != nil {
-			glog.Errorf("Error creating SSL certificate for Secret %q: %v", secrKey, err)
+			klog.Errorf("Error creating SSL certificate for Secret %q: %v", secrKey, err)
 			continue
 		}
 
 		dst.FullChainPemFileName = fullChainPemFileName
 
-		glog.Infof("Updating local copy of SSL certificate %q with missing intermediate CA certs", secrKey)
+		klog.Infof("Updating local copy of SSL certificate %q with missing intermediate CA certs", secrKey)
 		s.sslStore.Update(secrKey, dst)
 		// this update must trigger an update
 		// (like an update event from a change in Ingress)

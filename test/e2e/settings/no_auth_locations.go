@@ -43,73 +43,63 @@ var _ = framework.IngressNginxDescribe("No Auth locations", func() {
 	noAuthPath := "/noauth"
 
 	BeforeEach(func() {
-		err := f.NewEchoDeployment()
-		Expect(err).NotTo(HaveOccurred())
+		f.NewEchoDeployment()
 
-		s, err := f.EnsureSecret(buildSecret(username, password, secretName, f.IngressController.Namespace))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(s).NotTo(BeNil())
-		Expect(s.ObjectMeta).NotTo(BeNil())
+		s := f.EnsureSecret(buildSecret(username, password, secretName, f.Namespace))
 
-		err = f.UpdateNginxConfigMapData(setting, noAuthPath)
-		Expect(err).NotTo(HaveOccurred())
+		f.UpdateNginxConfigMapData(setting, noAuthPath)
 
-		bi := buildBasicAuthIngressWithSecondPath(host, f.IngressController.Namespace, s.Name, noAuthPath)
-		ing, err := f.EnsureIngress(bi)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ing).NotTo(BeNil())
+		bi := buildBasicAuthIngressWithSecondPath(host, f.Namespace, s.Name, noAuthPath)
+		f.EnsureIngress(bi)
 	})
 
 	AfterEach(func() {
 	})
 
 	It("should return status code 401 when accessing '/' unauthentication", func() {
-		err := f.WaitForNginxServer(host,
+		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return Expect(server).Should(ContainSubstring("test auth"))
 			})
-		Expect(err).NotTo(HaveOccurred())
 
 		resp, body, errs := gorequest.New().
-			Get(f.IngressController.HTTPURL).
+			Get(f.GetURL(framework.HTTP)).
 			Set("Host", host).
 			End()
 
-		Expect(len(errs)).Should(BeNumerically("==", 0))
+		Expect(errs).Should(BeEmpty())
 		Expect(resp.StatusCode).Should(Equal(http.StatusUnauthorized))
 		Expect(body).Should(ContainSubstring("401 Authorization Required"))
 	})
 
 	It("should return status code 200 when accessing '/'  authentication", func() {
-		err := f.WaitForNginxServer(host,
+		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return Expect(server).Should(ContainSubstring("test auth"))
 			})
-		Expect(err).NotTo(HaveOccurred())
 
 		resp, _, errs := gorequest.New().
-			Get(f.IngressController.HTTPURL).
+			Get(f.GetURL(framework.HTTP)).
 			Set("Host", host).
 			SetBasicAuth(username, password).
 			End()
 
-		Expect(len(errs)).Should(BeNumerically("==", 0))
+		Expect(errs).Should(BeEmpty())
 		Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 	})
 
 	It("should return status code 200 when accessing '/noauth' unauthenticated", func() {
-		err := f.WaitForNginxServer(host,
+		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return Expect(server).Should(ContainSubstring("test auth"))
 			})
-		Expect(err).NotTo(HaveOccurred())
 
 		resp, _, errs := gorequest.New().
-			Get(fmt.Sprintf("%s/noauth", f.IngressController.HTTPURL)).
+			Get(fmt.Sprintf("%s/noauth", f.GetURL(framework.HTTP))).
 			Set("Host", host).
 			End()
 
-		Expect(len(errs)).Should(BeNumerically("==", 0))
+		Expect(errs).Should(BeEmpty())
 		Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 	})
 })
@@ -156,8 +146,9 @@ func buildBasicAuthIngressWithSecondPath(host, namespace, secretName, pathName s
 
 func buildSecret(username, password, name, namespace string) *corev1.Secret {
 	out, err := exec.Command("openssl", "passwd", "-crypt", password).CombinedOutput()
+	Expect(err).NotTo(HaveOccurred(), "creating password")
+
 	encpass := fmt.Sprintf("%v:%s\n", username, out)
-	Expect(err).NotTo(HaveOccurred())
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

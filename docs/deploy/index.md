@@ -2,8 +2,7 @@
 
 ## Contents
 
-- [Generic Deployment](#generic-deployment)
-  - [Mandatory command](#mandatory-command)
+- [Prerequisite Generic Deployment Command](#prerequisite-generic-deployment-command)
   - [Provider Specific Steps](#provider-specific-steps)
     - [Docker for Mac](#docker-for-mac)
     - [minikube](#minikube)
@@ -15,15 +14,9 @@
   - [Detect installed version](#detect-installed-version)
 - [Using Helm](#using-helm)
 
-## Generic Deployment 
+## Prerequisite Generic Deployment Command
 
-The following resources are required for a generic deployment.
-
-### Mandatory command
-
-```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml
-```
+The following **Mandatory Command** is required for all deployments.
 
 !!! attention
     The default configuration watches Ingress object from all the namespaces.
@@ -31,6 +24,14 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/mast
 
 !!! warning
     If multiple Ingresses define different paths for the same host, the ingress controller will merge the definitions.
+    
+!!! attention
+    If you're using GKE you need to initialize your user as a cluster-admin with the following command: 
+    ```kubectl create clusterrolebinding cluster-admin-binding   --clusterrole cluster-admin   --user $(gcloud config get-value account)```
+
+```console
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/mandatory.yaml
+```
 
 ### Provider Specific Steps
 
@@ -132,7 +133,7 @@ This type of load balancer is supported since v1.10.0 as an ALPHA feature.
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/provider/aws/service-nlb.yaml
 ```
 
-#### GCE - GKE
+#### GCE-GKE
 
 ```console
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/provider/cloud-generic.yaml
@@ -157,7 +158,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/mast
 ```
 
 !!! tip
-    For extended notes regarding deployments on bare-metal, see [Bare-metal considerations](./baremetal/).
+    For extended notes regarding deployments on bare-metal, see [Bare-metal considerations](./baremetal.md).
 
 ### Verify installation
 

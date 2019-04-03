@@ -46,12 +46,6 @@ func (mounter *Mounter) Unmount(target string) error {
 	return unsupportedErr
 }
 
-// GetMountRefs finds all other references to the device referenced
-// by mountPath; returns a list of paths.
-func GetMountRefs(mounter Interface, mountPath string) ([]string, error) {
-	return []string{}, unsupportedErr
-}
-
 func (mounter *Mounter) List() ([]MountPoint, error) {
 	return []MountPoint{}, unsupportedErr
 }
@@ -61,7 +55,7 @@ func (mounter *Mounter) IsMountPointMatch(mp MountPoint, dir string) bool {
 }
 
 func (mounter *Mounter) IsNotMountPoint(dir string) (bool, error) {
-	return IsNotMountPoint(mounter, dir)
+	return isNotMountPoint(mounter, dir)
 }
 
 func (mounter *Mounter) IsLikelyNotMountPoint(file string) (bool, error) {
@@ -112,16 +106,8 @@ func (mounter *Mounter) ExistsPath(pathname string) (bool, error) {
 	return true, errors.New("not implemented")
 }
 
-func (mounter *Mounter) PrepareSafeSubpath(subPath Subpath) (newHostPath string, cleanupAction func(), err error) {
-	return subPath.Path, nil, unsupportedErr
-}
-
-func (mounter *Mounter) CleanSubPaths(podDir string, volumeName string) error {
-	return unsupportedErr
-}
-
-func (mounter *Mounter) SafeMakeDir(pathname string, base string, perm os.FileMode) error {
-	return unsupportedErr
+func (mounter *Mounter) EvalHostSymlinks(pathname string) (string, error) {
+	return "", unsupportedErr
 }
 
 func (mounter *Mounter) GetMountRefs(pathname string) ([]string, error) {

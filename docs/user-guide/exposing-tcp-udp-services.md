@@ -4,7 +4,7 @@ Ingress does not support TCP or UDP services. For this reason this Ingress contr
 `<namespace/service name>:<service port>:[PROXY]:[PROXY]`
 
 It is also possible to use a number or the name of the port. The two last fields are optional.
-Adding `PROXY` in either or both of the two last fields we can use Proxy Protocol decoding (listen) and/or encoding (proxy_pass) in a TCP service (https://www.nginx.com/resources/admin-guide/proxy-protocol/).
+Adding `PROXY` in either or both of the two last fields we can use Proxy Protocol decoding (listen) and/or encoding (proxy_pass) in a TCP service https://www.nginx.com/resources/admin-guide/proxy-protocol
 
 The next example shows how to expose the service `example-go` running in the namespace `default` in the port `8080` using the port `9000`
 
@@ -28,7 +28,7 @@ metadata:
   name: udp-services
   namespace: ingress-nginx
 data:
-  53: "kube-system/kube-dns:53"
+  53: "kube-system/kube-dns:53"
 ```
 
 If TCP/UDP proxy support is used, then those ports need to be exposed in the Service defined for the Ingress.
@@ -45,18 +45,18 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - name: http
-    port: 80
-    targetPort: 80
-    protocol: TCP
-  - name: https
-    port: 443
-    targetPort: 443
-    protocol: TCP
-  - name: proxied-tcp-9000
-    port: 9000
-    targetPort: 9000
-    protocol: TCP
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+    - name: proxied-tcp-9000
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
   selector:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx

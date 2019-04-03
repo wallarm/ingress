@@ -35,7 +35,7 @@ func TestFilterErrors(t *testing.T) {
 	}
 }
 
-func TestProxytTimeoutParsing(t *testing.T) {
+func TestProxyTimeoutParsing(t *testing.T) {
 	testCases := map[string]struct {
 		input  string
 		expect time.Duration // duration in seconds
@@ -59,6 +59,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
 		"skip-access-log-urls":          "/log,/demo,/test",
 		"use-proxy-protocol":            "true",
 		"disable-access-log":            "true",
+		"access-log-params":             "buffer=4k gzip",
 		"access-log-path":               "/var/log/test/access.log",
 		"error-log-path":                "/var/log/test/error.log",
 		"use-gzip":                      "true",
@@ -75,6 +76,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
 	def := config.NewDefault()
 	def.CustomHTTPErrors = []int{300, 400}
 	def.DisableAccessLog = true
+	def.AccessLogParams = "buffer=4k gzip"
 	def.AccessLogPath = "/var/log/test/access.log"
 	def.ErrorLogPath = "/var/log/test/error.log"
 	def.SkipAccessLogURLs = []string{"/log", "/demo", "/test"}
@@ -90,7 +92,7 @@ func TestMergeConfigMapToStruct(t *testing.T) {
 	def.WorkerShutdownTimeout = "99s"
 	def.NginxStatusIpv4Whitelist = []string{"127.0.0.1", "10.0.0.0/24"}
 	def.NginxStatusIpv6Whitelist = []string{"::1", "2001::/16"}
-	def.ProxyAddOriginalUriHeader = false
+	def.ProxyAddOriginalURIHeader = false
 
 	hash, err := hashstructure.Hash(def, &hashstructure.HashOptions{
 		TagName: "json",
@@ -149,13 +151,5 @@ func TestMergeConfigMapToStruct(t *testing.T) {
 
 	if diff := pretty.Compare(to, def); diff != "" {
 		t.Errorf("unexpected diff: (-got +want)\n%s", diff)
-	}
-}
-
-func TestDefaultLoadBalance(t *testing.T) {
-	conf := map[string]string{}
-	to := ReadConfig(conf)
-	if to.LoadBalanceAlgorithm != "" {
-		t.Errorf("default load balance algorithm wrong")
 	}
 }

@@ -18,25 +18,33 @@ package ssl
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/rand"
+	cryptorand "crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"errors"
 	"fmt"
+	"math"
+	"math/big"
 	"testing"
 	"time"
 
 	certutil "k8s.io/client-go/util/cert"
-	"k8s.io/client-go/util/cert/triple"
 
 	"k8s.io/ingress-nginx/internal/file"
 )
 
 // generateRSACerts generates a self signed certificate using a self generated ca
-func generateRSACerts(host string) (*triple.KeyPair, *triple.KeyPair, error) {
-	ca, err := triple.NewCA("self-sign-ca")
+func generateRSACerts(host string) (*keyPair, *keyPair, error) {
+	ca, err := newCA("self-sign-ca")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	key, err := certutil.NewPrivateKey()
+	key, err := newPrivateKey()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to create a server private key: %v", err)
 	}
@@ -45,18 +53,18 @@ func generateRSACerts(host string) (*triple.KeyPair, *triple.KeyPair, error) {
 		CommonName: host,
 		Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
-	cert, err := certutil.NewSignedCert(config, key, ca.Cert, ca.Key)
+	cert, err := newSignedCert(config, key, ca.Cert, ca.Key)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to sign the server certificate: %v", err)
 	}
 
-	return &triple.KeyPair{
+	return &keyPair{
 		Key:  key,
 		Cert: cert,
 	}, ca, nil
 }
 
-func TestAddOrUpdateCertAndKey(t *testing.T) {
+func TestStoreSSLCertOnDisk(t *testing.T) {
 	fs := newFS(t)
 
 	cert, _, err := generateRSACerts("echoheaders")
@@ -66,24 +74,29 @@ func TestAddOrUpdateCertAndKey(t *testing.T) {
 
 	name := fmt.Sprintf("test-%v", time.Now().UnixNano())
 
-	c := certutil.EncodeCertPEM(cert.Cert)
-	k := certutil.EncodePrivateKeyPEM(cert.Key)
+	c := encodeCertPEM(cert.Cert)
+	k := encodePrivateKeyPEM(cert.Key)
 
-	ngxCert, err := AddOrUpdateCertAndKey(name, c, k, []byte{}, fs)
+	sslCert, err := CreateSSLCert(c, k)
 	if err != nil {
-		t.Fatalf("unexpected error checking SSL certificate: %v", err)
+		t.Fatalf("unexpected error creating SSL certificate: %v", err)
 	}
 
-	if ngxCert.PemFileName == "" {
+	err = StoreSSLCertOnDisk(fs, name, sslCert)
+	if err != nil {
+		t.Fatalf("unexpected error storing SSL certificate: %v", err)
+	}
+
+	if sslCert.PemFileName == "" {
 		t.Fatalf("expected path to pem file but returned empty")
 	}
 
-	if len(ngxCert.CN) == 0 {
+	if len(sslCert.CN) == 0 {
 		t.Fatalf("expected at least one cname but none returned")
 	}
 
-	if ngxCert.CN[0] != "echoheaders" {
-		t.Fatalf("expected cname echoheaders but %v returned", ngxCert.CN[0])
+	if sslCert.CN[0] != "echoheaders" {
+		t.Fatalf("expected cname echoheaders but %v returned", sslCert.CN[0])
 	}
 }
 
@@ -97,15 +110,30 @@ func TestCACert(t *testing.T) {
 
 	name := fmt.Sprintf("test-%v", time.Now().UnixNano())
 
-	c := certutil.EncodeCertPEM(cert.Cert)
-	k := certutil.EncodePrivateKeyPEM(cert.Key)
-	ca := certutil.EncodeCertPEM(CA.Cert)
+	c := encodeCertPEM(cert.Cert)
+	k := encodePrivateKeyPEM(cert.Key)
+	ca := encodeCertPEM(CA.Cert)
 
-	ngxCert, err := AddOrUpdateCertAndKey(name, c, k, ca, fs)
+	sslCert, err := CreateSSLCert(c, k)
 	if err != nil {
-		t.Fatalf("unexpected error checking SSL certificate: %v", err)
+		t.Fatalf("unexpected error creating SSL certificate: %v", err)
 	}
-	if ngxCert.CAFileName == "" {
+
+	err = StoreSSLCertOnDisk(fs, name, sslCert)
+	if err != nil {
+		t.Fatalf("unexpected error storing SSL certificate: %v", err)
+	}
+
+	if sslCert.CAFileName != "" {
+		t.Fatalf("expected CA file name to be empty")
+	}
+
+	err = ConfigureCACertWithCertAndKey(fs, name, ca, sslCert)
+	if err != nil {
+		t.Fatalf("unexpected error configuring CA certificate: %v", err)
+	}
+
+	if sslCert.CAFileName == "" {
 		t.Fatalf("expected a valid CA file name")
 	}
 }
@@ -120,7 +148,7 @@ func TestGetFakeSSLCert(t *testing.T) {
 	}
 }
 
-func TestAddCertAuth(t *testing.T) {
+func TestConfigureCACert(t *testing.T) {
 	fs, err := file.NewFakeFS()
 	if err != nil {
 		t.Fatalf("unexpected error creating filesystem: %v", err)
@@ -131,12 +159,24 @@ func TestAddCertAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating SSL certificate: %v", err)
 	}
-	c := certutil.EncodeCertPEM(ca.Cert)
-	ic, err := AddCertAuth(cn, c, fs)
+	c := encodeCertPEM(ca.Cert)
+
+	sslCert, err := CreateCACert(c)
 	if err != nil {
 		t.Fatalf("unexpected error creating SSL certificate: %v", err)
 	}
-	if ic.CAFileName == "" {
+	if sslCert.CAFileName != "" {
+		t.Fatalf("expected CAFileName to be empty")
+	}
+	if sslCert.Certificate == nil {
+		t.Fatalf("expected Certificate to be set")
+	}
+
+	err = ConfigureCACert(fs, cn, c, sslCert)
+	if err != nil {
+		t.Fatalf("unexpected error creating SSL certificate: %v", err)
+	}
+	if sslCert.CAFileName == "" {
 		t.Fatalf("expected a valid CA file name")
 	}
 }
@@ -155,12 +195,10 @@ func TestCreateSSLCert(t *testing.T) {
 		t.Fatalf("unexpected error creating SSL certificate: %v", err)
 	}
 
-	name := fmt.Sprintf("test-%v", time.Now().UnixNano())
+	c := encodeCertPEM(cert.Cert)
+	k := encodePrivateKeyPEM(cert.Key)
 
-	c := certutil.EncodeCertPEM(cert.Cert)
-	k := certutil.EncodePrivateKeyPEM(cert.Key)
-
-	ngxCert, err := CreateSSLCert(name, c, k, []byte{})
+	sslCert, err := CreateSSLCert(c, k)
 	if err != nil {
 		t.Fatalf("unexpected error checking SSL certificate: %v", err)
 	}
@@ -170,15 +208,148 @@ func TestCreateSSLCert(t *testing.T) {
 	certKeyBuf.Write([]byte("\n"))
 	certKeyBuf.Write(k)
 
-	if ngxCert.PemCertKey != certKeyBuf.String() {
-		t.Fatalf("expected concatenated PEM cert and key but returned %v", ngxCert.PemCertKey)
+	if sslCert.PemCertKey != certKeyBuf.String() {
+		t.Fatalf("expected concatenated PEM cert and key but returned %v", sslCert.PemCertKey)
 	}
 
-	if len(ngxCert.CN) == 0 {
-		t.Fatalf("expected at least one cname but none returned")
+	if len(sslCert.CN) == 0 {
+		t.Fatalf("expected at least one CN but none returned")
 	}
 
-	if ngxCert.CN[0] != "echoheaders" {
-		t.Fatalf("expected cname echoheaders but %v returned", ngxCert.CN[0])
+	if sslCert.CN[0] != "echoheaders" {
+		t.Fatalf("expected cname echoheaders but %v returned", sslCert.CN[0])
 	}
+}
+
+type keyPair struct {
+	Key  *rsa.PrivateKey
+	Cert *x509.Certificate
+}
+
+func newCA(name string) (*keyPair, error) {
+	key, err := newPrivateKey()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create a private key for a new CA: %v", err)
+	}
+	config := certutil.Config{
+		CommonName: name,
+	}
+	cert, err := certutil.NewSelfSignedCACert(config, key)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create a self-signed certificate for a new CA: %v", err)
+	}
+	return &keyPair{
+		Key:  key,
+		Cert: cert,
+	}, nil
+}
+
+func TestIsValidHostname(t *testing.T) {
+	cases := map[string]struct {
+		Hostname string
+		CN       []string
+		Valid    bool
+	}{
+		"when there is no common names": {
+			"foo.bar",
+			[]string{},
+			false,
+		},
+		"when there is a match for foo.bar": {
+			"foo.bar",
+			[]string{"foo.bar"},
+			true,
+		},
+		"when there is a wildcard match for foo.bar": {
+			"foo.bar",
+			[]string{"*.bar"},
+			true,
+		},
+		"when there is a wrong wildcard for *.bar": {
+			"invalid.foo.bar",
+			[]string{"*.bar"},
+			false,
+		},
+	}
+
+	for k, tc := range cases {
+		valid := IsValidHostname(tc.Hostname, tc.CN)
+		if valid != tc.Valid {
+			t.Errorf("%s: expected '%v' but returned %v", k, tc.Valid, valid)
+		}
+	}
+}
+
+const (
+	duration365d = time.Hour * 24 * 365
+	rsaKeySize   = 2048
+)
+
+// newPrivateKey creates an RSA private key
+func newPrivateKey() (*rsa.PrivateKey, error) {
+	return rsa.GenerateKey(cryptorand.Reader, rsaKeySize)
+}
+
+// newSignedCert creates a signed certificate using the given CA certificate and key
+func newSignedCert(cfg certutil.Config, key crypto.Signer, caCert *x509.Certificate, caKey crypto.Signer) (*x509.Certificate, error) {
+	serial, err := rand.Int(rand.Reader, new(big.Int).SetInt64(math.MaxInt64))
+	if err != nil {
+		return nil, err
+	}
+	if len(cfg.CommonName) == 0 {
+		return nil, errors.New("must specify a CommonName")
+	}
+	if len(cfg.Usages) == 0 {
+		return nil, errors.New("must specify at least one ExtKeyUsage")
+	}
+
+	certTmpl := x509.Certificate{
+		Subject: pkix.Name{
+			CommonName:   cfg.CommonName,
+			Organization: cfg.Organization,
+		},
+		DNSNames:     cfg.AltNames.DNSNames,
+		IPAddresses:  cfg.AltNames.IPs,
+		SerialNumber: serial,
+		NotBefore:    caCert.NotBefore,
+		NotAfter:     time.Now().Add(duration365d).UTC(),
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  cfg.Usages,
+	}
+	certDERBytes, err := x509.CreateCertificate(cryptorand.Reader, &certTmpl, caCert, key.Public(), caKey)
+	if err != nil {
+		return nil, err
+	}
+	return x509.ParseCertificate(certDERBytes)
+}
+
+// encodePublicKeyPEM returns PEM-encoded public data
+func encodePublicKeyPEM(key *rsa.PublicKey) ([]byte, error) {
+	der, err := x509.MarshalPKIXPublicKey(key)
+	if err != nil {
+		return []byte{}, err
+	}
+	block := pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: der,
+	}
+	return pem.EncodeToMemory(&block), nil
+}
+
+// encodePrivateKeyPEM returns PEM-encoded private key data
+func encodePrivateKeyPEM(key *rsa.PrivateKey) []byte {
+	block := pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	}
+	return pem.EncodeToMemory(&block)
+}
+
+// encodeCertPEM returns PEM-endcoded certificate data
+func encodeCertPEM(cert *x509.Certificate) []byte {
+	block := pem.Block{
+		Type:  certutil.CertificateBlockType,
+		Bytes: cert.Raw,
+	}
+	return pem.EncodeToMemory(&block)
 }

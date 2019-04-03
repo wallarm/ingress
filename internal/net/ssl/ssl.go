@@ -30,10 +30,11 @@ import (
 	"math/big"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/zakjan/cert-chain-resolver/certUtil"
+	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
@@ -45,151 +46,29 @@ var (
 	oidExtensionSubjectAltName = asn1.ObjectIdentifier{2, 5, 29, 17}
 )
 
-// AddOrUpdateCertAndKey creates a .pem file wth the cert and the key with the specified name
-func AddOrUpdateCertAndKey(name string, cert, key, ca []byte,
-	fs file.Filesystem) (*ingress.SSLCert, error) {
-
-	pemName := fmt.Sprintf("%v.pem", name)
-	pemFileName := fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, pemName)
-	tempPemFile, err := fs.TempFile(file.DefaultSSLDirectory, pemName)
-
-	if err != nil {
-		return nil, fmt.Errorf("could not create temp pem file %v: %v", pemFileName, err)
-	}
-	glog.V(3).Infof("Creating temp file %v for Keypair: %v", tempPemFile.Name(), pemName)
-
-	_, err = tempPemFile.Write(cert)
-	if err != nil {
-		return nil, fmt.Errorf("could not write to pem file %v: %v", tempPemFile.Name(), err)
-	}
-	_, err = tempPemFile.Write([]byte("\n"))
-	if err != nil {
-		return nil, fmt.Errorf("could not write to pem file %v: %v", tempPemFile.Name(), err)
-	}
-	_, err = tempPemFile.Write(key)
-	if err != nil {
-		return nil, fmt.Errorf("could not write to pem file %v: %v", tempPemFile.Name(), err)
-	}
-
-	err = tempPemFile.Close()
-	if err != nil {
-		return nil, fmt.Errorf("could not close temp pem file %v: %v", tempPemFile.Name(), err)
-	}
-	defer fs.RemoveAll(tempPemFile.Name())
-
-	pemCerts, err := fs.ReadFile(tempPemFile.Name())
-	if err != nil {
-		return nil, err
-	}
-
-	pemBlock, _ := pem.Decode(pemCerts)
-	if pemBlock == nil {
-		return nil, fmt.Errorf("no valid PEM formatted block found")
-	}
-
-	// If the file does not start with 'BEGIN CERTIFICATE' it's invalid and must not be used.
-	if pemBlock.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("certificate %v contains invalid data, and must be created with 'kubectl create secret tls'", name)
-	}
-
-	pemCert, err := x509.ParseCertificate(pemBlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	//Ensure that certificate and private key have a matching public key
-	if _, err := tls.X509KeyPair(cert, key); err != nil {
-		return nil, err
-	}
-
-	cn := sets.NewString(pemCert.Subject.CommonName)
-	for _, dns := range pemCert.DNSNames {
-		if !cn.Has(dns) {
-			cn.Insert(dns)
-		}
-	}
-
-	if len(pemCert.Extensions) > 0 {
-		glog.V(3).Info("parsing ssl certificate extensions")
-		for _, ext := range getExtension(pemCert, oidExtensionSubjectAltName) {
-			dns, _, _, err := parseSANExtension(ext.Value)
-			if err != nil {
-				glog.Warningf("unexpected error parsing certificate extensions: %v", err)
-				continue
-			}
-
-			for _, dns := range dns {
-				if !cn.Has(dns) {
-					cn.Insert(dns)
-				}
-			}
-		}
-	}
-
-	err = fs.Rename(tempPemFile.Name(), pemFileName)
-	if err != nil {
-		return nil, fmt.Errorf("could not move temp pem file %v to destination %v: %v", tempPemFile.Name(), pemFileName, err)
-	}
-
-	if len(ca) > 0 {
-		bundle := x509.NewCertPool()
-		bundle.AppendCertsFromPEM(ca)
-		opts := x509.VerifyOptions{
-			Roots: bundle,
-		}
-
-		_, err := pemCert.Verify(opts)
-		if err != nil {
-			oe := fmt.Sprintf("failed to verify certificate chain: \n\t%s\n", err)
-			return nil, errors.New(oe)
-		}
-
-		caData, err := fs.ReadFile(pemFileName)
-		if err != nil {
-			return nil, fmt.Errorf("could not open file %v for writing additional CA chains: %v", pemFileName, err)
-		}
-
-		caFile, err := fs.Create(pemFileName)
-		if err != nil {
-			return nil, fmt.Errorf("could not create CA cert file %v: %v", pemFileName, err)
-		}
-
-		_, err = caFile.Write(caData)
-		if err != nil {
-			return nil, fmt.Errorf("could not append CA to cert file %v: %v", pemFileName, err)
-		}
-
-		_, err = caFile.Write([]byte("\n"))
-		if err != nil {
-			return nil, fmt.Errorf("could not append CA to cert file %v: %v", pemFileName, err)
-		}
-		caFile.Write(ca)
-		caFile.Write([]byte("\n"))
-		defer caFile.Close()
-
-		return &ingress.SSLCert{
-			Certificate: pemCert,
-			CAFileName:  pemFileName,
-			PemFileName: pemFileName,
-			PemSHA:      file.SHA1(pemFileName),
-			CN:          cn.List(),
-			ExpireTime:  pemCert.NotAfter,
-		}, nil
-	}
-
-	s := &ingress.SSLCert{
-		Certificate: pemCert,
-		PemFileName: pemFileName,
-		PemSHA:      file.SHA1(pemFileName),
-		CN:          cn.List(),
-		ExpireTime:  pemCert.NotAfter,
-	}
-
-	return s, nil
+// getPemFileName returns absolute file path and file name of pem cert related to given fullSecretName
+func getPemFileName(fullSecretName string) (string, string) {
+	pemName := fmt.Sprintf("%v.pem", fullSecretName)
+	return fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, pemName), pemName
 }
 
-// CreateSSLCert creates an SSLCert and avoids writing on disk
-func CreateSSLCert(name string, cert, key, ca []byte) (*ingress.SSLCert, error) {
+func verifyPemCertAgainstRootCA(pemCert *x509.Certificate, ca []byte) error {
+	bundle := x509.NewCertPool()
+	bundle.AppendCertsFromPEM(ca)
+	opts := x509.VerifyOptions{
+		Roots: bundle,
+	}
+
+	_, err := pemCert.Verify(opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateSSLCert validates cert and key, extracts common names and returns corresponding SSLCert object
+func CreateSSLCert(cert, key []byte) (*ingress.SSLCert, error) {
 	var pemCertBuffer bytes.Buffer
 
 	pemCertBuffer.Write(cert)
@@ -201,9 +80,8 @@ func CreateSSLCert(name string, cert, key, ca []byte) (*ingress.SSLCert, error) 
 		return nil, fmt.Errorf("no valid PEM formatted block found")
 	}
 
-	// If the file does not start with 'BEGIN CERTIFICATE' it's invalid and must not be used.
 	if pemBlock.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("certificate %v contains invalid data, and must be created with 'kubectl create secret tls'", name)
+		return nil, fmt.Errorf("no certificate PEM data found, make sure certificate content starts with 'BEGIN CERTIFICATE'")
 	}
 
 	pemCert, err := x509.ParseCertificate(pemBlock.Bytes)
@@ -211,9 +89,8 @@ func CreateSSLCert(name string, cert, key, ca []byte) (*ingress.SSLCert, error) 
 		return nil, err
 	}
 
-	//Ensure that certificate and private key have a matching public key
 	if _, err := tls.X509KeyPair(cert, key); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("certificate and private key does not have a matching public key: %v", err)
 	}
 
 	cn := sets.NewString(pemCert.Subject.CommonName)
@@ -224,11 +101,11 @@ func CreateSSLCert(name string, cert, key, ca []byte) (*ingress.SSLCert, error) 
 	}
 
 	if len(pemCert.Extensions) > 0 {
-		glog.V(3).Info("parsing ssl certificate extensions")
+		klog.V(3).Info("parsing ssl certificate extensions")
 		for _, ext := range getExtension(pemCert, oidExtensionSubjectAltName) {
 			dns, _, _, err := parseSANExtension(ext.Value)
 			if err != nil {
-				glog.Warningf("unexpected error parsing certificate extensions: %v", err)
+				klog.Warningf("unexpected error parsing certificate extensions: %v", err)
 				continue
 			}
 
@@ -240,32 +117,128 @@ func CreateSSLCert(name string, cert, key, ca []byte) (*ingress.SSLCert, error) 
 		}
 	}
 
-	if len(ca) > 0 {
-		bundle := x509.NewCertPool()
-		bundle.AppendCertsFromPEM(ca)
-		opts := x509.VerifyOptions{
-			Roots: bundle,
-		}
-
-		_, err := pemCert.Verify(opts)
-		if err != nil {
-			oe := fmt.Sprintf("failed to verify certificate chain: \n\t%s\n", err)
-			return nil, errors.New(oe)
-		}
-
-		pemCertBuffer.Write([]byte("\n"))
-		pemCertBuffer.Write(ca)
-		pemCertBuffer.Write([]byte("\n"))
-	}
-
-	s := &ingress.SSLCert{
+	return &ingress.SSLCert{
 		Certificate: pemCert,
 		CN:          cn.List(),
 		ExpireTime:  pemCert.NotAfter,
 		PemCertKey:  pemCertBuffer.String(),
+	}, nil
+}
+
+// CreateCACert is similar to CreateSSLCert but it creates instance of SSLCert only based on given ca after
+// parsing and validating it
+func CreateCACert(ca []byte) (*ingress.SSLCert, error) {
+	pemCABlock, _ := pem.Decode(ca)
+	if pemCABlock == nil {
+		return nil, fmt.Errorf("no valid PEM formatted block found")
+	}
+	// If the first certificate does not start with 'BEGIN CERTIFICATE' it's invalid and must not be used.
+	if pemCABlock.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("no certificate PEM data found, make sure certificate content starts with 'BEGIN CERTIFICATE'")
 	}
 
-	return s, nil
+	pemCert, err := x509.ParseCertificate(pemCABlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ingress.SSLCert{
+		Certificate: pemCert,
+	}, nil
+}
+
+// StoreSSLCertOnDisk creates a .pem file with content PemCertKey from the given sslCert
+// and sets relevant remaining fields of sslCert object
+func StoreSSLCertOnDisk(fs file.Filesystem, name string, sslCert *ingress.SSLCert) error {
+	pemFileName, _ := getPemFileName(name)
+
+	pemFile, err := fs.Create(pemFileName)
+	if err != nil {
+		return fmt.Errorf("could not create PEM certificate file %v: %v", pemFileName, err)
+	}
+	defer pemFile.Close()
+
+	_, err = pemFile.Write([]byte(sslCert.PemCertKey))
+	if err != nil {
+		return fmt.Errorf("could not write data to PEM file %v: %v", pemFileName, err)
+	}
+
+	sslCert.PemFileName = pemFileName
+	sslCert.PemSHA = file.SHA1(pemFileName)
+
+	return nil
+}
+
+func isSSLCertStoredOnDisk(sslCert *ingress.SSLCert) bool {
+	return len(sslCert.PemFileName) > 0
+}
+
+// ConfigureCACertWithCertAndKey appends ca into existing PEM file consisting of cert and key
+// and sets relevant fields in sslCert object
+func ConfigureCACertWithCertAndKey(fs file.Filesystem, name string, ca []byte, sslCert *ingress.SSLCert) error {
+	err := verifyPemCertAgainstRootCA(sslCert.Certificate, ca)
+	if err != nil {
+		oe := fmt.Sprintf("failed to verify certificate chain: \n\t%s\n", err)
+		return errors.New(oe)
+	}
+
+	certAndKey, err := fs.ReadFile(sslCert.PemFileName)
+	if err != nil {
+		return fmt.Errorf("could not read file %v for writing additional CA chains: %v", sslCert.PemFileName, err)
+	}
+
+	f, err := fs.Create(sslCert.PemFileName)
+	if err != nil {
+		return fmt.Errorf("could not create PEM file %v: %v", sslCert.PemFileName, err)
+	}
+	defer f.Close()
+
+	_, err = f.Write(certAndKey)
+	if err != nil {
+		return fmt.Errorf("could not write cert and key bundle to cert file %v: %v", sslCert.PemFileName, err)
+	}
+
+	_, err = f.Write([]byte("\n"))
+	if err != nil {
+		return fmt.Errorf("could not append newline to cert file %v: %v", sslCert.PemFileName, err)
+	}
+
+	_, err = f.Write(ca)
+	if err != nil {
+		return fmt.Errorf("could not write ca data to cert file %v: %v", sslCert.PemFileName, err)
+	}
+
+	sslCert.CAFileName = sslCert.PemFileName
+	// since we updated sslCert.PemFileName we need to recalculate the checksum
+	sslCert.PemSHA = file.SHA1(sslCert.PemFileName)
+
+	return nil
+}
+
+// ConfigureCACert is similar to ConfigureCACertWithCertAndKey but it creates a separate file
+// for CA cert and writes only ca into it and then sets relevant fields in sslCert
+func ConfigureCACert(fs file.Filesystem, name string, ca []byte, sslCert *ingress.SSLCert) error {
+	caName := fmt.Sprintf("ca-%v.pem", name)
+	fileName := fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, caName)
+
+	f, err := fs.Create(fileName)
+	if err != nil {
+		return fmt.Errorf("could not write CA file %v: %v", fileName, err)
+	}
+	defer f.Close()
+
+	_, err = f.Write(ca)
+	if err != nil {
+		return fmt.Errorf("could not write CA file %v: %v", fileName, err)
+	}
+
+	sslCert.PemFileName = fileName
+	sslCert.CAFileName = fileName
+	sslCert.PemSHA = file.SHA1(fileName)
+
+	klog.V(3).Infof("Created CA Certificate for Authentication: %v", fileName)
+
+	return nil
 }
 
 func getExtension(c *x509.Certificate, id asn1.ObjectIdentifier) []pkix.Extension {
@@ -334,55 +307,13 @@ func parseSANExtension(value []byte) (dnsNames, emailAddresses []string, ipAddre
 	return
 }
 
-// AddCertAuth creates a .pem file with the specified CAs to be used in Cert Authentication
-// If it's already exists, it's clobbered.
-func AddCertAuth(name string, ca []byte, fs file.Filesystem) (*ingress.SSLCert, error) {
-
-	caName := fmt.Sprintf("ca-%v.pem", name)
-	caFileName := fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, caName)
-
-	pemCABlock, _ := pem.Decode(ca)
-	if pemCABlock == nil {
-		return nil, fmt.Errorf("no valid PEM formatted block found")
-	}
-	// If the first certificate does not start with 'BEGIN CERTIFICATE' it's invalid and must not be used.
-	if pemCABlock.Type != "CERTIFICATE" {
-		return nil, fmt.Errorf("CA file %v contains invalid data, and must be created only with PEM formatted certificates", name)
-	}
-
-	pemCert, err := x509.ParseCertificate(pemCABlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	caFile, err := fs.Create(caFileName)
-	if err != nil {
-		return nil, fmt.Errorf("could not write CA file %v: %v", caFileName, err)
-	}
-	defer caFile.Close()
-
-	_, err = caFile.Write(ca)
-	if err != nil {
-		return nil, fmt.Errorf("could not write CA file %v: %v", caFileName, err)
-	}
-
-	glog.V(3).Infof("Created CA Certificate for Authentication: %v", caFileName)
-	return &ingress.SSLCert{
-		Certificate: pemCert,
-		CAFileName:  caFileName,
-		PemFileName: caFileName,
-		PemSHA:      file.SHA1(caFileName),
-	}, nil
-}
-
 // AddOrUpdateDHParam creates a dh parameters file with the specified name
 func AddOrUpdateDHParam(name string, dh []byte, fs file.Filesystem) (string, error) {
-	pemName := fmt.Sprintf("%v.pem", name)
-	pemFileName := fmt.Sprintf("%v/%v", file.DefaultSSLDirectory, pemName)
+	pemFileName, pemName := getPemFileName(name)
 
 	tempPemFile, err := fs.TempFile(file.DefaultSSLDirectory, pemName)
 
-	glog.V(3).Infof("Creating temp file %v for DH param: %v", tempPemFile.Name(), pemName)
+	klog.V(3).Infof("Creating temp file %v for DH param: %v", tempPemFile.Name(), pemName)
 	if err != nil {
 		return "", fmt.Errorf("could not create temp pem file %v: %v", pemFileName, err)
 	}
@@ -432,7 +363,7 @@ func GetFakeSSLCert() ([]byte, []byte) {
 	priv, err = rsa.GenerateKey(rand.Reader, 2048)
 
 	if err != nil {
-		glog.Fatalf("failed to generate fake private key: %s", err)
+		klog.Fatalf("failed to generate fake private key: %v", err)
 	}
 
 	notBefore := time.Now()
@@ -443,7 +374,7 @@ func GetFakeSSLCert() ([]byte, []byte) {
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 
 	if err != nil {
-		glog.Fatalf("failed to generate fake serial number: %s", err)
+		klog.Fatalf("failed to generate fake serial number: %v", err)
 	}
 
 	template := x509.Certificate{
@@ -462,7 +393,7 @@ func GetFakeSSLCert() ([]byte, []byte) {
 	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.(*rsa.PrivateKey).PublicKey, priv)
 	if err != nil {
-		glog.Fatalf("Failed to create fake certificate: %s", err)
+		klog.Fatalf("Failed to create fake certificate: %v", err)
 	}
 
 	cert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
@@ -507,4 +438,22 @@ func FullChainCert(in string, fs file.Filesystem) ([]byte, error) {
 	}
 
 	return certUtil.EncodeCertificates(certs), nil
+}
+
+// IsValidHostname checks if a hostname is valid in a list of common names
+func IsValidHostname(hostname string, commonNames []string) bool {
+	for _, cn := range commonNames {
+		if strings.EqualFold(hostname, cn) {
+			return true
+		}
+
+		labels := strings.Split(hostname, ".")
+		labels[0] = "*"
+		candidate := strings.Join(labels, ".")
+		if strings.EqualFold(candidate, cn) {
+			return true
+		}
+	}
+
+	return false
 }

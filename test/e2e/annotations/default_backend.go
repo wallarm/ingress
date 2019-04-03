@@ -32,42 +32,41 @@ var _ = framework.IngressNginxDescribe("Annotations - custom default-backend", f
 	f := framework.NewDefaultFramework("default-backend")
 
 	BeforeEach(func() {
-		err := f.NewEchoDeployment()
-		Expect(err).NotTo(HaveOccurred())
+		f.NewEchoDeployment()
 	})
 
 	Context("when default backend annotation is enabled", func() {
 		It("should use a custom default backend as upstream", func() {
 			host := "default-backend"
-
 			annotations := map[string]string{
 				"nginx.ingress.kubernetes.io/default-backend": "http-svc",
 			}
-			ing, err := f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.IngressController.Namespace, "invalid", 80, &annotations))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ing).NotTo(BeNil())
+
+			ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "invalid", 80, &annotations)
+			f.EnsureIngress(ing)
 
 			time.Sleep(5 * time.Second)
 
-			err = f.WaitForNginxServer(host,
+			f.WaitForNginxServer(host,
 				func(server string) bool {
 					return Expect(server).Should(ContainSubstring(fmt.Sprintf("server_name %v", host)))
 				})
-			Expect(err).NotTo(HaveOccurred())
 
 			uri := "/alma/armud"
+			requestId := "something-unique"
 			resp, body, errs := gorequest.New().
-				Get(f.IngressController.HTTPURL+uri).
+				Get(f.GetURL(framework.HTTP)+uri).
 				Set("Host", host).
+				Set("x-request-id", requestId).
 				End()
 
-			Expect(len(errs)).Should(BeNumerically("==", 0))
+			Expect(errs).Should(BeEmpty())
 			Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 
 			Expect(body).To(ContainSubstring("x-code=503"))
 			Expect(body).To(ContainSubstring(fmt.Sprintf("x-ingress-name=%s", host)))
 			Expect(body).To(ContainSubstring("x-service-name=invalid"))
-			Expect(body).To(ContainSubstring(fmt.Sprintf("x-original-uri=%s", uri)))
+			Expect(body).To(ContainSubstring(fmt.Sprintf("x-request-id=%s", requestId)))
 		})
 	})
 })
