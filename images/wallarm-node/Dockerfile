@@ -35,7 +35,18 @@ RUN echo "mQINBFL1Xl4BEADEFCVumPx2W4hQJG+4RRS0Zjw503a0YKH8tKp3OEWIMKiWwWiaTcqxZg
 "HTfsgoZtSKAoyy4IFZUCK3kbwuZLeKPW8GSrfXmo6Z+y5DFYQZcWTGpW+ogWrHJME8h0TmaID3fo"\
 "3CVPX/MAhZfmeQy8Hb/NAw3/V7Dx5PWBguAbrNswjnf5w78RChPiCjRvA7wqK6eRCuw9Lg+C2Crq"\
 "a5M67AEGd9tOwE315L27lM9gViH+Pv4L0fJOtUsRyTftSx0nOLJF89XadRjmFVWZ5/1X8jaQ0vmN"\
-"LTrSJw61vH6hS/oaAZ/zmKdciNja23uQ5HK+nhIquQ==" \
+"LTrSJw61vH6hS/oaAZ/zmKdciNja23uQ5HK+nhIquYkCVQQTAQIAPwIbAwYLCQgHAwIGFQgCCQoL"\
+"BBYCAwECHgECF4AWIQR/CHrifuRAabXQ8n0JY9VBcrhl/QUCXEZGWQUJErbpewAKCRAJY9VBcrhl"\
+"/bHnEACEwY8WnKIn8k4dki1nG+9yocJQPs4SEIfJA/mjGvMt3ButNYQ7RZIVUaOgB4RxetbBA+20"\
+"wvSiqJkwQQZ8G88NLVIG0iBbKFEbnrKPuYhL8a07js3jU6Tq6FAl5zxp8n8QpN5MIfWhen5rdCDO"\
+"2MP0eq/3em1StZA+srUzivrx0lLqAjNJY1kprgRBhXJ99w79APkg9ZOraMbRPwXr1S+YamWrGhEI"\
+"ipsFdpC2Gfrx3GuZKRO5CF7IeI6w3ganKJGOg0jJ5pRFs9MMeTs06OfaELS4vC3tvVoQmFjJxc1u"\
+"7p4T+qh+y8LX45lj/9bCYcSc2f1fLBL2pNzs3HDaoPJVEdiAhvN0zFP1RNoqn8TT7OMTJD4qROkk"\
+"+fbTbzrbbIY8SzTb22PRZ1aAuuO08TdEbxzqAyYnF2ZHZNEl7h+tJ7dapUoAh4THpGYS4C18gorz"\
+"SH5E3dE8e4N+STApKuE3GyNG9nMsv9gN8QEaPZyzSWsf4w119PW4UzidE72eHq8a9MWqDIVepcxX"\
+"CUpAdQrbXjJnhgWdx8KjaMauxlof2COd+d3MDkdt/Zm5G68W48bMGDGWLzYp9J0BBSfECjgoLhSe"\
+"+rX8UUJlg1E+ZX4/4T5QfLqMKdMIWikFQJ9Zqc1vmFOwWraAPQVrm8hULwvfpu9V12Qqt7CJQwvF"\
+"umteeg==" \
         | base64 -d > /etc/apt/trusted.gpg.d/wallarm.gpg \
     && echo 'deb http://repo.wallarm.com/debian/wallarm-node stretch/' \
         > /etc/apt/sources.list.d/wallarm.list \
@@ -45,4 +56,3 @@ RUN echo "mQINBFL1Xl4BEADEFCVumPx2W4hQJG+4RRS0Zjw503a0YKH8tKp3OEWIMKiWwWiaTcqxZg
         wallarm-node \
     && chown www-data:www-data /var/lib/nginx /var/lib/wallarm-tarantool \
     && find /var/lib/apt -type f -delete
-
