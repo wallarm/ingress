@@ -14,7 +14,7 @@
 # limitations under the License.
 
 BASETAG ?= 0.64
-TAG ?= 1.1.0
+TAG ?= 1.2.0
 REGISTRY ?= wallarm
 ARCH ?= $(shell go env GOARCH)
 DOCKER ?= docker
@@ -34,7 +34,7 @@ IMAGE = $(REGISTRY)/$(IMGNAME)
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
 
 # Set default base image dynamically for each arch
-BASEIMAGE?=quay.io/kubernetes-ingress-controller/nginx-$(ARCH):$(BASETAG)
+BASEIMAGE?=wallarm/nginx-$(ARCH):$(BASETAG)
 
 TEMP_DIR := $(shell mktemp -d)
 
