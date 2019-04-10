@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-BASETAG ?= 0.64
-TAG ?= 1.2.0
+BASETAG ?= 0.83
+TAG ?= 1.2.100
 REGISTRY ?= wallarm
 ARCH ?= $(shell go env GOARCH)
 DOCKER ?= docker
