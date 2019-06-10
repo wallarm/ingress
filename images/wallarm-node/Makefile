@@ -14,7 +14,7 @@
 # limitations under the License.
 
 BASETAG ?= 0.83
-TAG ?= 1.2.100
+TAG ?= 1.3.0
 REGISTRY ?= wallarm
 ARCH ?= $(shell go env GOARCH)
 DOCKER ?= docker
