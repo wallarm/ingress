@@ -31,10 +31,13 @@ var luaRestyWAFModes = map[string]bool{"ACTIVE": true, "INACTIVE": true, "SIMULA
 
 // Config returns lua-resty-waf configuration for an Ingress rule
 type Config struct {
-	Mode               string   `json:"mode"`
-	Debug              bool     `json:"debug"`
-	IgnoredRuleSets    []string `json:"ignored-rulesets"`
-	ExtraRulesetString string   `json:"extra-ruleset-string"`
+	Mode                     string   `json:"mode"`
+	Debug                    bool     `json:"debug"`
+	IgnoredRuleSets          []string `json:"ignored-rulesets"`
+	ExtraRulesetString       string   `json:"extra-ruleset-string"`
+	ScoreThreshold           int      `json:"score-threshold"`
+	AllowUnknownContentTypes bool     `json:"allow-unknown-content-types"`
+	ProcessMultipartBody     bool     `json:"process-multipart-body"`
 }
 
 // Equal tests for equality between two Config types
@@ -57,6 +60,15 @@ func (e1 *Config) Equal(e2 *Config) bool {
 	if e1.ExtraRulesetString != e2.ExtraRulesetString {
 		return false
 	}
+	if e1.ScoreThreshold != e2.ScoreThreshold {
+		return false
+	}
+	if e1.AllowUnknownContentTypes != e2.AllowUnknownContentTypes {
+		return false
+	}
+	if e1.ProcessMultipartBody != e2.ProcessMultipartBody {
+		return false
+	}
 
 	return true
 }
@@ -74,31 +86,38 @@ func NewParser(r resolver.Resolver) parser.IngressAnnotation {
 // used to indicate if the location/s contains a fragment of
 // configuration to be included inside the paths of the rules
 func (a luarestywaf) Parse(ing *extensions.Ingress) (interface{}, error) {
+	var err error
+	config := &Config{}
+
 	mode, err := parser.GetStringAnnotation("lua-resty-waf", ing)
 	if err != nil {
 		return &Config{}, err
 	}
 
-	mode = strings.ToUpper(mode)
-	if _, ok := luaRestyWAFModes[mode]; !ok {
+	config.Mode = strings.ToUpper(mode)
+	if _, ok := luaRestyWAFModes[config.Mode]; !ok {
 		return &Config{}, errors.NewInvalidAnnotationContent("lua-resty-waf", mode)
 	}
 
-	debug, _ := parser.GetBoolAnnotation("lua-resty-waf-debug", ing)
+	config.Debug, _ = parser.GetBoolAnnotation("lua-resty-waf-debug", ing)
 
 	ignoredRuleSetsStr, _ := parser.GetStringAnnotation("lua-resty-waf-ignore-rulesets", ing)
-	ignoredRuleSets := strings.FieldsFunc(ignoredRuleSetsStr, func(c rune) bool {
+	config.IgnoredRuleSets = strings.FieldsFunc(ignoredRuleSetsStr, func(c rune) bool {
 		strC := string(c)
 		return strC == "," || strC == " "
 	})
 
 	// TODO(elvinefendi) maybe validate the ruleset string here
-	extraRulesetString, _ := parser.GetStringAnnotation("lua-resty-waf-extra-rules", ing)
+	config.ExtraRulesetString, _ = parser.GetStringAnnotation("lua-resty-waf-extra-rules", ing)
 
-	return &Config{
-		Mode:               mode,
-		Debug:              debug,
-		IgnoredRuleSets:    ignoredRuleSets,
-		ExtraRulesetString: extraRulesetString,
-	}, nil
+	config.ScoreThreshold, _ = parser.GetIntAnnotation("lua-resty-waf-score-threshold", ing)
+
+	config.AllowUnknownContentTypes, _ = parser.GetBoolAnnotation("lua-resty-waf-allow-unknown-content-types", ing)
+
+	config.ProcessMultipartBody, err = parser.GetBoolAnnotation("lua-resty-waf-process-multipart-body", ing)
+	if err != nil {
+		config.ProcessMultipartBody = true
+	}
+
+	return config, nil
 }

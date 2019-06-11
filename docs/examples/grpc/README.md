@@ -17,7 +17,7 @@ nginx controller.
    for grpc support.
 4. You have a backend application running a gRPC server and listening for TCP
    traffic.  If you prefer, you can use the
-   [fortune-teller](https://github.com/kubernetes/ingress-nginx/images/grpc-fortune-teller)
+   [fortune-teller](https://github.com/kubernetes/ingress-nginx/tree/master/images/grpc-fortune-teller)
    application provided here as an example. 
 
 ### Step 1: kubernetes `Deployment`
@@ -30,7 +30,7 @@ This is a standard kubernetes deployment object.  It is running a grpc service
 listening on port `50051`.
 
 The sample application
-[fortune-teller-app](https://github.com/kubernetes/ingress-nginx/images/grpc-fortune-teller)
+[fortune-teller-app](https://github.com/kubernetes/ingress-nginx/tree/master/images/grpc-fortune-teller)
 is a grpc server implemented in go. Here's the stripped-down implementation:
 
 ```go
@@ -48,8 +48,7 @@ inside the cluster and arrive "insecure").
 
 For your own application you may or may not want to do this.  If you prefer to
 forward encrypted traffic to your POD and terminate TLS at the gRPC server
-itself, add the ingress annotation `nginx.ingress.kubernetes.io/secure-backends:
-"true"`.
+itself, add the ingress annotation `nginx.ingress.kubernetes.io/backend-protocol: "GRPCS"`.
 
 ### Step 2: the kubernetes `Service`
 
@@ -69,7 +68,7 @@ $ kubectl create -f ingress.yaml
 A few things to note:
 
 1. We've tagged the ingress with the annotation
-   `nginx.ingress.kubernetes.io/grpc-backend: "true"`.  This is the magic
+   `nginx.ingress.kubernetes.io/backend-protocol: "GRPC"`.  This is the magic
    ingredient that sets up the appropriate nginx configuration to route http/2
    traffic to our service.
 1. We're terminating TLS at the ingress and have configured an SSL certificate

@@ -30,7 +30,9 @@ The following table shows a configuration option's name, type, and the default v
 |[add-headers](#add-headers)|string|""|
 |[allow-backend-server-header](#allow-backend-server-header)|bool|"false"|
 |[hide-headers](#hide-headers)|string array|empty|
+|[access-log-params](#access-log-params)|string|""|
 |[access-log-path](#access-log-path)|string|"/var/log/nginx/access.log"|
+|[enable-access-log-for-default-backend](#enable-access-log-for-default-backend)|bool|"false"|
 |[error-log-path](#error-log-path)|string|"/var/log/nginx/error.log"|
 |[enable-dynamic-tls-records](#enable-dynamic-tls-records)|bool|"true"|
 |[enable-modsecurity](#enable-modsecurity)|bool|"false"|
@@ -57,11 +59,12 @@ The following table shows a configuration option's name, type, and the default v
 |[keep-alive-requests](#keep-alive-requests)|int|100|
 |[large-client-header-buffers](#large-client-header-buffers)|string|"4 8k"|
 |[log-format-escape-json](#log-format-escape-json)|bool|"false"|
-|[log-format-upstream](#log-format-upstream)|string|`%v - [$the_real_ip] - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time [$proxy_upstream_name] $upstream_addr $upstream_response_length $upstream_response_time $upstream_status`|
+|[log-format-upstream](#log-format-upstream)|string|`%v - [$the_real_ip] - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time [$proxy_upstream_name] $upstream_addr $upstream_response_length $upstream_response_time $upstream_status $req_id`|
 |[log-format-stream](#log-format-stream)|string|`[$time_local] $protocol $status $bytes_sent $bytes_received $session_time`|
 |[enable-multi-accept](#enable-multi-accept)|bool|"true"|
 |[max-worker-connections](#max-worker-connections)|int|16384|
-|[map-hash-bucket-size](#max-worker-connections)|int|64|
+|[max-worker-open-files](#max-worker-open-files)|int|0|
+|[map-hash-bucket-size](#max-hash-bucket-size)|int|64|
 |[nginx-status-ipv4-whitelist](#nginx-status-ipv4-whitelist)|[]string|"127.0.0.1"|
 |[nginx-status-ipv6-whitelist](#nginx-status-ipv6-whitelist)|[]string|"::1"|
 |[proxy-real-ip-cidr](#proxy-real-ip-cidr)|[]string|"0.0.0.0/0"|
@@ -86,6 +89,7 @@ The following table shows a configuration option's name, type, and the default v
 |[proxy-protocol-header-timeout](#proxy-protocol-header-timeout)|string|"5s"|
 |[use-gzip](#use-gzip)|bool|"true"|
 |[use-geoip](#use-geoip)|bool|"true"|
+|[use-geoip2](#use-geoip2)|bool|"false"|
 |[enable-brotli](#enable-brotli)|bool|"false"|
 |[brotli-level](#brotli-level)|int|4|
 |[brotli-types](#brotli-types)|string|"application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component"|
@@ -99,11 +103,13 @@ The following table shows a configuration option's name, type, and the default v
 |[variables-hash-bucket-size](#variables-hash-bucket-size)|int|128|
 |[variables-hash-max-size](#variables-hash-max-size)|int|2048|
 |[upstream-keepalive-connections](#upstream-keepalive-connections)|int|32|
+|[upstream-keepalive-timeout](#upstream-keepalive-timeout)|int|60|
+|[upstream-keepalive-requests](#upstream-keepalive-requests)|int|100|
 |[limit-conn-zone-variable](#limit-conn-zone-variable)|string|"$binary_remote_addr"|
 |[proxy-stream-timeout](#proxy-stream-timeout)|string|"600s"|
 |[proxy-stream-responses](#proxy-stream-responses)|int|1|
 |[bind-address](#bind-address)|[]string|""|
-|[use-forwarded-headers](#use-forwarded-headers)|bool|"true"|
+|[use-forwarded-headers](#use-forwarded-headers)|bool|"false"|
 |[forwarded-for-header](#forwarded-for-header)|string|"X-Forwarded-For"|
 |[compute-full-forwarded-for](#compute-full-forwarded-for)|bool|"false"|
 |[proxy-add-original-uri-header](#proxy-add-original-uri-header)|bool|"true"|
@@ -127,6 +133,7 @@ The following table shows a configuration option's name, type, and the default v
 |[proxy-connect-timeout](#proxy-connect-timeout)|int|5|
 |[proxy-read-timeout](#proxy-read-timeout)|int|60|
 |[proxy-send-timeout](#proxy-send-timeout)|int|60|
+|[proxy-buffers-number](#proxy-buffers-number)|int|4|
 |[proxy-buffer-size](#proxy-buffer-size)|string|"4k"|
 |[proxy-cookie-path](#proxy-cookie-path)|string|"off"|
 |[proxy-cookie-domain](#proxy-cookie-domain)|string|"off"|
@@ -142,6 +149,7 @@ The following table shows a configuration option's name, type, and the default v
 |[http-redirect-code](#http-redirect-code)|int|308|
 |[proxy-buffering](#proxy-buffering)|string|"off"|
 |[limit-req-status-code](#limit-req-status-code)|int|503|
+|[limit-conn-status-code](#limit-conn-status-code)|int|503|
 |[no-tls-redirect-locations](#no-tls-redirect-locations)|string|"/.well-known/acme-challenge"|
 |[no-auth-locations](#no-auth-locations)|string|"/.well-known/acme-challenge"|
 |[enable-wallarm](#enable-wallarm)|bool|"true"|
@@ -172,11 +180,22 @@ _**default:**_ empty
 _References:_
 [http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_hide_header](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_hide_header)
 
+## access-log-params
+
+Additional params for access_log. For example, buffer=16k, gzip, flush=1m
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_log_module.html#access_log](http://nginx.org/en/docs/http/ngx_http_log_module.html#access_log)
+
 ## access-log-path
 
 Access log path. Goes to `/var/log/nginx/access.log` by default.
 
 __Note:__ the file `/var/log/nginx/access.log` is a symlink to `/dev/stdout`
+
+## enable-access-log-for-default-backend
+
+Enables logging access to default backend. _**default:**_ is disabled. 
 
 ## error-log-path
 
@@ -364,7 +383,18 @@ _References:_
 
 ## max-worker-connections
 
-Sets the maximum number of simultaneous connections that can be opened by each [worker process](http://nginx.org/en/docs/ngx_core_module.html#worker_connections)
+Sets the [maximum number of simultaneous connections](http://nginx.org/en/docs/ngx_core_module.html#worker_connections) that can be opened by each worker process.
+0 will use the value of [max-worker-open-files](#max-worker-open-files).
+_**default:**_ 16384
+
+!!! tip
+    Using 0 in scenarios of high load improves performance at the cost of increasing RAM utilization (even on idle).
+
+## max-worker-open-files
+
+Sets the [maximum number of files](http://nginx.org/en/docs/ngx_core_module.html#worker_rlimit_nofile) that can be opened by each worker process.
+The default of 0 means "max open files (system's limit) / [worker-processes](#worker-processes) - 1024".
+_**default:**_ 0
 
 ## map-hash-bucket-size
 
@@ -504,6 +534,13 @@ The default mime type list to compress is: `application/atom+xml application/jav
 Enables or disables ["geoip" module](http://nginx.org/en/docs/http/ngx_http_geoip_module.html) that creates variables with values depending on the client IP address, using the precompiled MaxMind databases.
 _**default:**_ true
 
+> __Note:__ MaxMind legacy databases are discontinued and will not receive updates after 2019-01-02, cf. [discontinuation notice](https://support.maxmind.com/geolite-legacy-discontinuation-notice/). Consider [use-geoip2](#use-geoip2) below.
+
+## use-geoip2
+
+Enables the [geoip2 module](https://github.com/leev/ngx_http_geoip2_module) for NGINX.
+_**default:**_ false
+
 ## enable-brotli
 
 Enables or disables compression of HTTP responses using the ["brotli" module](https://github.com/google/ngx_brotli).
@@ -581,11 +618,34 @@ _References:_
 
 ## upstream-keepalive-connections
 
-Activates the cache for connections to upstream servers. The connections parameter sets the maximum number of idle keepalive connections to upstream servers that are preserved in the cache of each worker process. When this
-number is exceeded, the least recently used connections are closed. _**default:**_ 32
+Activates the cache for connections to upstream servers. The connections parameter sets the maximum number of idle
+keepalive connections to upstream servers that are preserved in the cache of each worker process. When this number is
+exceeded, the least recently used connections are closed. 
+_**default:**_ 32
 
 _References:_
 [http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive](http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive)
+
+
+## upstream-keepalive-timeout
+
+Sets a timeout during which an idle keepalive connection to an upstream server will stay open.
+ _**default:**_ 60
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_timeout](http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_timeout)
+
+
+## upstream-keepalive-requests
+
+Sets the maximum number of requests that can be served through one keepalive connection. After the maximum number of
+requests is made, the connection is closed.
+_**default:**_ 100
+	
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_requests](http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_requests)
+
 
 ## limit-conn-zone-variable
 
@@ -716,6 +776,10 @@ Sets the timeout in seconds for [reading a response from the proxied server](htt
 
 Sets the timeout in seconds for [transmitting a request to the proxied server](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_send_timeout). The timeout is set only between two successive write operations, not for the transmission of the whole request.
 
+## proxy-buffers-number
+
+Sets the number of the buffer used for [reading the first part of the response](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffers) received from the proxied server. This part usually contains a small response header.
+
 ## proxy-buffer-size
 
 Sets the size of the buffer used for [reading the first part of the response](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffer_size) received from the proxied server. This part usually contains a small response header.
@@ -793,6 +857,10 @@ Enables or disables [buffering of responses from the proxied server](http://ngin
 
 Sets the [status code to return in response to rejected requests](http://nginx.org/en/docs/http/ngx_http_limit_req_module.html#limit_req_status). _**default:**_ 503
 
+## limit-conn-status-code
+
+Sets the [status code to return in response to rejected connections](http://nginx.org/en/docs/http/ngx_http_limit_conn_module.html#limit_conn_status). _**default:**_ 503
+
 ## no-tls-redirect-locations
 
 A comma-separated list of locations on which http requests will never get redirected to their https counterpart.
@@ -859,14 +927,14 @@ _References:_
 
 ## block-cidrs
 
-A comma-separated list of IP addresses (or subnets), requestst from which have to be blocked globally.
+A comma-separated list of IP addresses (or subnets), request from which have to be blocked globally.
 
 _References:_
 [http://nginx.org/en/docs/http/ngx_http_access_module.html#deny](http://nginx.org/en/docs/http/ngx_http_access_module.html#deny)
 
 ## block-user-agents
 
-A comma-separated list of User-Agent, requestst from which have to be blocked globally.
+A comma-separated list of User-Agent, request from which have to be blocked globally.
 It's possible to use here full strings and regular expressions. More details about valid patterns can be found at `map` Nginx directive documentation.
 
 _References:_
@@ -874,7 +942,7 @@ _References:_
 
 ## block-referers
 
-A comma-separated list of Referers, requestst from which have to be blocked globally.
+A comma-separated list of Referers, request from which have to be blocked globally.
 It's possible to use here full strings and regular expressions. More details about valid patterns can be found at `map` Nginx directive documentation.
 
 _References:_

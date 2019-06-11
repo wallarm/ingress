@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/klog"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/ingress-nginx/internal/ingress"
@@ -46,6 +46,8 @@ type Controller struct {
 
 	constLabels prometheus.Labels
 	labels      prometheus.Labels
+
+	leaderElection *prometheus.GaugeVec
 }
 
 // NewController creates a new prometheus collector for the
@@ -112,6 +114,15 @@ func NewController(pod, namespace, class string) *Controller {
 			},
 			sslLabelHost,
 		),
+		leaderElection: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace:   PrometheusNamespace,
+				Name:        "leader_election_status",
+				Help:        "Gauge reporting status of the leader election, 0 indicates follower, 1 indicates leader. 'name' is the string used to identify the lease",
+				ConstLabels: constLabels,
+			},
+			[]string{"name"},
+		),
 	}
 
 	return cm
@@ -125,6 +136,16 @@ func (cm *Controller) IncReloadCount() {
 // IncReloadErrorCount increment the reload error counter
 func (cm *Controller) IncReloadErrorCount() {
 	cm.reloadOperationErrors.With(cm.constLabels).Inc()
+}
+
+// OnStartedLeading indicates the pod was elected as the leader
+func (cm *Controller) OnStartedLeading(electionID string) {
+	cm.leaderElection.WithLabelValues(electionID).Set(1.0)
+}
+
+// OnStoppedLeading indicates the pod stopped being the leader
+func (cm *Controller) OnStoppedLeading(electionID string) {
+	cm.leaderElection.WithLabelValues(electionID).Set(0)
 }
 
 // ConfigSuccess set a boolean flag according to the output of the controller configuration reload
@@ -150,6 +171,7 @@ func (cm Controller) Describe(ch chan<- *prometheus.Desc) {
 	cm.reloadOperation.Describe(ch)
 	cm.reloadOperationErrors.Describe(ch)
 	cm.sslExpireTime.Describe(ch)
+	cm.leaderElection.Describe(ch)
 }
 
 // Collect implements the prometheus.Collector interface.
@@ -160,6 +182,7 @@ func (cm Controller) Collect(ch chan<- prometheus.Metric) {
 	cm.reloadOperation.Collect(ch)
 	cm.reloadOperationErrors.Collect(ch)
 	cm.sslExpireTime.Collect(ch)
+	cm.leaderElection.Collect(ch)
 }
 
 // SetSSLExpireTime sets the expiration time of SSL Certificates
@@ -177,15 +200,23 @@ func (cm *Controller) SetSSLExpireTime(servers []*ingress.Server) {
 	}
 }
 
-// RemoveMetrics removes metrics for hostames not available anymore
+// RemoveMetrics removes metrics for hostnames not available anymore
 func (cm *Controller) RemoveMetrics(hosts []string, registry prometheus.Gatherer) {
+	cm.removeSSLExpireMetrics(true, hosts, registry)
+}
+
+// RemoveAllSSLExpireMetrics removes metrics for expiration of SSL Certificates
+func (cm *Controller) RemoveAllSSLExpireMetrics(registry prometheus.Gatherer) {
+	cm.removeSSLExpireMetrics(false, []string{}, registry)
+}
+
+func (cm *Controller) removeSSLExpireMetrics(onlyDefinedHosts bool, hosts []string, registry prometheus.Gatherer) {
 	mfs, err := registry.Gather()
 	if err != nil {
-		glog.Errorf("Error gathering metrics: %v", err)
+		klog.Errorf("Error gathering metrics: %v", err)
 		return
 	}
 
-	glog.V(2).Infof("removing SSL certificate metrics for %v hosts", hosts)
 	toRemove := sets.NewString(hosts...)
 
 	for _, mf := range mfs {
@@ -208,14 +239,14 @@ func (cm *Controller) RemoveMetrics(hosts []string, registry prometheus.Gatherer
 				continue
 			}
 
-			if !toRemove.Has(host) {
+			if onlyDefinedHosts && !toRemove.Has(host) {
 				continue
 			}
 
-			glog.V(2).Infof("Removing prometheus metric from gauge %v for host %v", metricName, host)
+			klog.V(2).Infof("Removing prometheus metric from gauge %v for host %v", metricName, host)
 			removed := cm.sslExpireTime.Delete(labels)
 			if !removed {
-				glog.V(2).Infof("metric %v for host %v with labels not removed: %v", metricName, host, labels)
+				klog.V(2).Infof("metric %v for host %v with labels not removed: %v", metricName, host, labels)
 			}
 		}
 	}

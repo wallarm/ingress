@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-BASETAG ?= 0.64
-TAG ?= 1.2.0
+BASETAG ?= 0.83
+TAG ?= 1.3.0
 REGISTRY ?= wallarm
 ARCH ?= $(shell go env GOARCH)
 DOCKER ?= docker
@@ -27,7 +27,7 @@ ifeq ($(GOHOSTOS),darwin)
   SED_I=sed -i ''
 endif
 
-QEMUVERSION=v2.12.0
+QEMUVERSION=v3.0.0
 
 IMGNAME = node-k8s
 IMAGE = $(REGISTRY)/$(IMGNAME)

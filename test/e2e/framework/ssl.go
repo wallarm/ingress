@@ -32,7 +32,9 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/api/core/v1"
+	. "github.com/onsi/gomega"
+
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -51,21 +53,24 @@ func CreateIngressTLSSecret(client kubernetes.Interface, hosts []string, secretN
 		return nil, fmt.Errorf("require a non-empty host for client hello")
 	}
 
-	var k, c bytes.Buffer
+	var serverKey, serverCert bytes.Buffer
+	var data map[string][]byte
 	host := strings.Join(hosts, ",")
-	if err := generateRSACert(host, true, &k, &c); err != nil {
+
+	if err := generateRSACert(host, true, &serverKey, &serverCert); err != nil {
 		return nil, err
 	}
 
-	cert, key := c.Bytes(), k.Bytes()
+	data = map[string][]byte{
+		v1.TLSCertKey:       serverCert.Bytes(),
+		v1.TLSPrivateKeyKey: serverKey.Bytes(),
+	}
+
 	newSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 		},
-		Data: map[string][]byte{
-			v1.TLSCertKey:       cert,
-			v1.TLSPrivateKeyKey: key,
-		},
+		Data: data,
 	}
 
 	var apierr error
@@ -81,12 +86,65 @@ func CreateIngressTLSSecret(client kubernetes.Interface, hosts []string, secretN
 	}
 
 	serverName := hosts[0]
-	return tlsConfig(serverName, cert)
+	return tlsConfig(serverName, serverCert.Bytes())
+}
+
+// CreateIngressMASecret creates or updates a Secret containing a Mutual Auth
+// certificate-chain for the given Ingress and returns a TLS configuration suitable
+// for HTTP clients to use against that particular Ingress.
+func CreateIngressMASecret(client kubernetes.Interface, host string, secretName, namespace string) (*tls.Config, error) {
+	if len(host) == 0 {
+		return nil, fmt.Errorf("requires a non-empty host")
+	}
+
+	var caCert, serverKey, serverCert, clientKey, clientCert bytes.Buffer
+	var data map[string][]byte
+
+	if err := generateRSAMutualAuthCerts(host, &caCert, &serverKey, &serverCert, &clientKey, &clientCert); err != nil {
+		return nil, err
+	}
+
+	data = map[string][]byte{
+		v1.TLSCertKey:       serverCert.Bytes(),
+		v1.TLSPrivateKeyKey: serverKey.Bytes(),
+		"ca.crt":            caCert.Bytes(),
+	}
+
+	newSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: secretName,
+		},
+		Data: data,
+	}
+
+	var apierr error
+	curSecret, err := client.CoreV1().Secrets(namespace).Get(secretName, metav1.GetOptions{})
+	if err == nil && curSecret != nil {
+		curSecret.Data = newSecret.Data
+		_, apierr = client.CoreV1().Secrets(namespace).Update(curSecret)
+	} else {
+		_, apierr = client.CoreV1().Secrets(namespace).Create(newSecret)
+	}
+	if apierr != nil {
+		return nil, apierr
+	}
+
+	clientPair, err := tls.X509KeyPair(clientCert.Bytes(), clientKey.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return &tls.Config{
+		ServerName:         host,
+		Certificates:       []tls.Certificate{clientPair},
+		InsecureSkipVerify: true,
+	}, nil
 }
 
 // WaitForTLS waits until the TLS handshake with a given server completes successfully.
-func WaitForTLS(url string, tlsConfig *tls.Config) error {
-	return wait.Poll(Poll, 30*time.Second, matchTLSServerName(url, tlsConfig))
+func WaitForTLS(url string, tlsConfig *tls.Config) {
+	err := wait.Poll(Poll, DefaultTimeout, matchTLSServerName(url, tlsConfig))
+	Expect(err).NotTo(HaveOccurred(), "timeout waiting for TLS configuration in URL %s", url)
 }
 
 // generateRSACert generates a basic self signed certificate using a key length
@@ -141,8 +199,125 @@ func generateRSACert(host string, isCA bool, keyOut, certOut io.Writer) error {
 		return fmt.Errorf("failed creating cert: %v", err)
 	}
 	if err := pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}); err != nil {
-		return fmt.Errorf("failed creating keay: %v", err)
+		return fmt.Errorf("failed creating key: %v", err)
 	}
+
+	return nil
+}
+
+// generateRSAMutualAuthCerts generates a complete basic self-signed certificate-chain (ca, server, client) using a
+// key-length of rsaBits, valid for validFor time.
+func generateRSAMutualAuthCerts(host string, caCertOut, serverKeyOut, serverCertOut, clientKeyOut, clientCertOut io.Writer) error {
+	notBefore := time.Now()
+	notAfter := notBefore.Add(validFor)
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return fmt.Errorf("failed to generate serial number: %s", err)
+	}
+
+	// Generate the CA key and CA cert
+	caKey, err := rsa.GenerateKey(rand.Reader, rsaBits)
+	if err != nil {
+		return fmt.Errorf("failed to generate key: %v", err)
+	}
+
+	caTemplate := x509.Certificate{
+		Subject: pkix.Name{
+			CommonName:   host + "-ca",
+			Organization: []string{"Acme Co"},
+		},
+		SerialNumber: serialNumber,
+		NotBefore:    notBefore,
+		NotAfter:     notAfter,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+	}
+
+	caTemplate.IsCA = true
+	caTemplate.KeyUsage |= x509.KeyUsageCertSign
+
+	caBytes, err := x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &caKey.PublicKey, caKey)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %s", err)
+	}
+	if err := pem.Encode(caCertOut, &pem.Block{Type: "CERTIFICATE", Bytes: caBytes}); err != nil {
+		return fmt.Errorf("failed creating cert: %v", err)
+	}
+
+	// Generate the Server Key and CSR for the server
+	serverKey, err := rsa.GenerateKey(rand.Reader, rsaBits)
+	if err != nil {
+		return fmt.Errorf("failed to generate key: %v", err)
+	}
+
+	// Create the server cert and sign with the csr
+	serialNumber, err = rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return fmt.Errorf("failed to generate serial number: %s", err)
+	}
+
+	serverTemplate := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName:   host,
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+	}
+
+	serverBytes, err := x509.CreateCertificate(rand.Reader, &serverTemplate, &caTemplate, &serverKey.PublicKey, caKey)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %s", err)
+	}
+	if err := pem.Encode(serverCertOut, &pem.Block{Type: "CERTIFICATE", Bytes: serverBytes}); err != nil {
+		return fmt.Errorf("failed creating cert: %v", err)
+	}
+	if err := pem.Encode(serverKeyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(serverKey)}); err != nil {
+		return fmt.Errorf("failed creating key: %v", err)
+	}
+
+	// Create the client key and certificate
+	clientKey, err := rsa.GenerateKey(rand.Reader, rsaBits)
+	if err != nil {
+		return fmt.Errorf("failed to generate key: %v", err)
+	}
+
+	serialNumber, err = rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return fmt.Errorf("failed to generate serial number: %s", err)
+	}
+	clientTemplate := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName:   host + "-client",
+			Organization: []string{"Acme Co"},
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+	}
+
+	clientBytes, err := x509.CreateCertificate(rand.Reader, &clientTemplate, &caTemplate, &clientKey.PublicKey, caKey)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %s", err)
+	}
+	if err := pem.Encode(clientCertOut, &pem.Block{Type: "CERTIFICATE", Bytes: clientBytes}); err != nil {
+		return fmt.Errorf("failed creating cert: %v", err)
+	}
+	if err := pem.Encode(clientKeyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(clientKey)}); err != nil {
+		return fmt.Errorf("failed creating key: %v", err)
+	}
+
 	return nil
 }
 
@@ -163,19 +338,24 @@ func tlsConfig(serverName string, pemCA []byte) (*tls.Config, error) {
 // given URL using the given TLS configuration and returns whether the TLS
 // handshake completed successfully.
 func matchTLSServerName(url string, tlsConfig *tls.Config) wait.ConditionFunc {
-	return func() (ready bool, err error) {
+	return func() (bool, error) {
 		u, err := net_url.Parse(url)
 		if err != nil {
-			return
+			return false, err
 		}
 
-		conn, err := tls.Dial("tcp", u.Host, tlsConfig)
+		port := u.Port()
+		if port == "" {
+			port = "443"
+		}
+
+		conn, err := tls.Dial("tcp", fmt.Sprintf("%v:%v", u.Host, port), tlsConfig)
 		if err != nil {
+			Logf("Unexpected TLS error: %v", err)
 			return false, nil
 		}
 		conn.Close()
 
-		ready = true
-		return
+		return true, nil
 	}
 }

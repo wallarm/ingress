@@ -1,4 +1,5 @@
 local ffi = require("ffi")
+local lua_ingress = require("lua_ingress")
 
 -- without this we get errors such as "attempt to redefine XXX"
 local old_cdef = ffi.cdef
@@ -31,5 +32,7 @@ end
 
 ngx.log = function(...) end
 ngx.print = function(...) end
+
+lua_ingress.init_worker()
 
 require "busted.runner"({ standalone = false })

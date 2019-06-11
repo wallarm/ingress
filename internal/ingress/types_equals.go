@@ -56,7 +56,6 @@ func (c1 *Configuration) Equal(c2 *Configuration) bool {
 	if len(c1.TCPEndpoints) != len(c2.TCPEndpoints) {
 		return false
 	}
-
 	for _, tcp1 := range c1.TCPEndpoints {
 		found := false
 		for _, tcp2 := range c2.TCPEndpoints {
@@ -73,7 +72,6 @@ func (c1 *Configuration) Equal(c2 *Configuration) bool {
 	if len(c1.UDPEndpoints) != len(c2.UDPEndpoints) {
 		return false
 	}
-
 	for _, udp1 := range c1.UDPEndpoints {
 		found := false
 		for _, udp2 := range c2.UDPEndpoints {
@@ -90,7 +88,6 @@ func (c1 *Configuration) Equal(c2 *Configuration) bool {
 	if len(c1.PassthroughBackends) != len(c2.PassthroughBackends) {
 		return false
 	}
-
 	for _, ptb1 := range c1.PassthroughBackends {
 		found := false
 		for _, ptb2 := range c2.PassthroughBackends {
@@ -119,6 +116,10 @@ func (c1 *Configuration) Equal(c2 *Configuration) bool {
 		return false
 	}
 
+	if c1.ControllerPodsCount != c2.ControllerPodsCount {
+		return false
+	}
+
 	return true
 }
 
@@ -131,6 +132,9 @@ func (b1 *Backend) Equal(b2 *Backend) bool {
 		return false
 	}
 	if b1.Name != b2.Name {
+		return false
+	}
+	if b1.NoServer != b2.NoServer {
 		return false
 	}
 
@@ -147,9 +151,6 @@ func (b1 *Backend) Equal(b2 *Backend) bool {
 	}
 
 	if b1.Port != b2.Port {
-		return false
-	}
-	if b1.Secure != b2.Secure {
 		return false
 	}
 	if !(&b1.SecureCACert).Equal(&b2.SecureCACert) {
@@ -176,6 +177,23 @@ func (b1 *Backend) Equal(b2 *Backend) bool {
 		found := false
 		for _, udp2 := range b2.Endpoints {
 			if (&udp1).Equal(&udp2) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	if !b1.TrafficShapingPolicy.Equal(b2.TrafficShapingPolicy) {
+		return false
+	}
+
+	for _, vb1 := range b1.AlternativeBackends {
+		found := false
+		for _, vb2 := range b2.AlternativeBackends {
+			if vb1 == vb2 {
 				found = true
 				break
 			}
@@ -217,7 +235,34 @@ func (csa1 *CookieSessionAffinity) Equal(csa2 *CookieSessionAffinity) bool {
 	if csa1.Name != csa2.Name {
 		return false
 	}
-	if csa1.Hash != csa2.Hash {
+	if csa1.Path != csa2.Path {
+		return false
+	}
+	if csa1.Expires != csa2.Expires {
+		return false
+	}
+	if csa1.MaxAge != csa2.MaxAge {
+		return false
+	}
+
+	return true
+}
+
+//Equal checks the equality between UpstreamByConfig types
+func (u1 *UpstreamHashByConfig) Equal(u2 *UpstreamHashByConfig) bool {
+	if u1 == u2 {
+		return true
+	}
+	if u1 == nil || u2 == nil {
+		return false
+	}
+	if u1.UpstreamHashBy != u2.UpstreamHashBy {
+		return false
+	}
+	if u1.UpstreamHashBySubset != u2.UpstreamHashBySubset {
+		return false
+	}
+	if u1.UpstreamHashBySubsetSize != u2.UpstreamHashBySubsetSize {
 		return false
 	}
 
@@ -238,12 +283,6 @@ func (e1 *Endpoint) Equal(e2 *Endpoint) bool {
 	if e1.Port != e2.Port {
 		return false
 	}
-	if e1.MaxFails != e2.MaxFails {
-		return false
-	}
-	if e1.FailTimeout != e2.FailTimeout {
-		return false
-	}
 
 	if e1.Target != e2.Target {
 		if e1.Target == nil || e2.Target == nil {
@@ -255,6 +294,24 @@ func (e1 *Endpoint) Equal(e2 *Endpoint) bool {
 		if e1.Target.ResourceVersion != e2.Target.ResourceVersion {
 			return false
 		}
+	}
+
+	return true
+}
+
+// Equal checks for equality between two TrafficShapingPolicies
+func (tsp1 TrafficShapingPolicy) Equal(tsp2 TrafficShapingPolicy) bool {
+	if tsp1.Weight != tsp2.Weight {
+		return false
+	}
+	if tsp1.Header != tsp2.Header {
+		return false
+	}
+	if tsp1.HeaderValue != tsp2.HeaderValue {
+		return false
+	}
+	if tsp1.Cookie != tsp2.Cookie {
+		return false
 	}
 
 	return true
@@ -355,6 +412,9 @@ func (l1 *Location) Equal(l2 *Location) bool {
 	if !(&l1.ExternalAuth).Equal(&l2.ExternalAuth) {
 		return false
 	}
+	if l1.HTTP2PushPreload != l2.HTTP2PushPreload {
+		return false
+	}
 	if !(&l1.RateLimit).Equal(&l2.RateLimit) {
 		return false
 	}
@@ -391,9 +451,6 @@ func (l1 *Location) Equal(l2 *Location) bool {
 	if !(&l1.Logs).Equal(&l2.Logs) {
 		return false
 	}
-	if l1.GRPC != l2.GRPC {
-		return false
-	}
 	if !(&l1.LuaRestyWAF).Equal(&l2.LuaRestyWAF) {
 		return false
 	}
@@ -402,6 +459,38 @@ func (l1 *Location) Equal(l2 *Location) bool {
 		return false
 	}
 	if !(&l1.Wallarm).Equal(&l2.Wallarm) {
+		return false
+	}
+
+	if l1.BackendProtocol != l2.BackendProtocol {
+		return false
+	}
+
+	if len(l1.CustomHTTPErrors) != len(l2.CustomHTTPErrors) {
+		return false
+	}
+	for _, code1 := range l1.CustomHTTPErrors {
+		found := false
+		for _, code2 := range l2.CustomHTTPErrors {
+			if code1 == code2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	if !(&l1.ModSecurity).Equal(&l2.ModSecurity) {
+		return false
+	}
+
+	if l1.Satisfy != l2.Satisfy {
+		return false
+	}
+
+	if l1.DefaultBackendUpstreamName != l2.DefaultBackendUpstreamName {
 		return false
 	}
 

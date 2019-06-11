@@ -34,11 +34,8 @@ var _ = framework.IngressNginxDescribe("X-Forwarded headers", func() {
 	setting := "use-forwarded-headers"
 
 	BeforeEach(func() {
-		err := f.NewEchoDeployment()
-		Expect(err).NotTo(HaveOccurred())
-
-		err = f.UpdateNginxConfigMapData(setting, "false")
-		Expect(err).NotTo(HaveOccurred())
+		f.NewEchoDeployment()
+		f.UpdateNginxConfigMapData(setting, "false")
 	})
 
 	AfterEach(func() {
@@ -47,21 +44,19 @@ var _ = framework.IngressNginxDescribe("X-Forwarded headers", func() {
 	It("should trust X-Forwarded headers when setting is true", func() {
 		host := "forwarded-headers"
 
-		err := f.UpdateNginxConfigMapData(setting, "true")
-		Expect(err).NotTo(HaveOccurred())
+		f.UpdateNginxConfigMapData(setting, "true")
 
-		ing, err := f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.IngressController.Namespace, "http-svc", 80, nil))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ing).NotTo(BeNil())
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, nil)
+		f.EnsureIngress(ing)
 
-		err = f.WaitForNginxServer(host,
+		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, "server_name forwarded-headers")
 			})
-		Expect(err).NotTo(HaveOccurred())
 
+		By("ensuring single values are parsed correctly")
 		resp, body, errs := gorequest.New().
-			Get(f.IngressController.HTTPURL).
+			Get(f.GetURL(framework.HTTP)).
 			Set("Host", host).
 			Set("X-Forwarded-Port", "1234").
 			Set("X-Forwarded-Proto", "myproto").
@@ -69,32 +64,44 @@ var _ = framework.IngressNginxDescribe("X-Forwarded headers", func() {
 			Set("X-Forwarded-Host", "myhost").
 			End()
 
-		Expect(len(errs)).Should(BeNumerically("==", 0))
+		Expect(errs).Should(BeEmpty())
 		Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("host=myhost")))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-host=myhost")))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-proto=myproto")))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-port=1234")))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-for=1.2.3.4")))
+
+		By("ensuring that first entry in X-Forwarded-Host is used as the best host")
+		resp, body, errs = gorequest.New().
+			Get(f.GetURL(framework.HTTP)).
+			Set("Host", host).
+			Set("X-Forwarded-Port", "1234").
+			Set("X-Forwarded-Proto", "myproto").
+			Set("X-Forwarded-For", "1.2.3.4").
+			Set("X-Forwarded-Host", "myhost.com, another.host,example.net").
+			End()
+
+		Expect(errs).Should(BeEmpty())
+		Expect(resp.StatusCode).Should(Equal(http.StatusOK))
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("host=myhost.com")))
+		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-host=myhost.com")))
+
 	})
 	It("should not trust X-Forwarded headers when setting is false", func() {
 		host := "forwarded-headers"
 
-		err := f.UpdateNginxConfigMapData(setting, "false")
-		Expect(err).NotTo(HaveOccurred())
+		f.UpdateNginxConfigMapData(setting, "false")
 
-		ing, err := f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.IngressController.Namespace, "http-svc", 80, nil))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ing).NotTo(BeNil())
+		f.EnsureIngress(framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, nil))
 
-		err = f.WaitForNginxServer(host,
+		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, "server_name forwarded-headers")
 			})
-		Expect(err).NotTo(HaveOccurred())
 
 		resp, body, errs := gorequest.New().
-			Get(f.IngressController.HTTPURL).
+			Get(f.GetURL(framework.HTTP)).
 			Set("Host", host).
 			Set("X-Forwarded-Port", "1234").
 			Set("X-Forwarded-Proto", "myproto").
@@ -102,7 +109,7 @@ var _ = framework.IngressNginxDescribe("X-Forwarded headers", func() {
 			Set("X-Forwarded-Host", "myhost").
 			End()
 
-		Expect(len(errs)).Should(BeNumerically("==", 0))
+		Expect(errs).Should(BeEmpty())
 		Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("host=forwarded-headers")))
 		Expect(body).Should(ContainSubstring(fmt.Sprintf("x-forwarded-port=80")))

@@ -21,11 +21,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/golang/glog"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 )
 
 // ParseNameNS parses a string searching a namespace and name
@@ -42,7 +42,7 @@ func ParseNameNS(input string) (string, string, error) {
 func GetNodeIPOrName(kubeClient clientset.Interface, name string, useInternalIP bool) string {
 	node, err := kubeClient.CoreV1().Nodes().Get(name, metav1.GetOptions{})
 	if err != nil {
-		glog.Errorf("Error getting node %v: %v", name, err)
+		klog.Errorf("Error getting node %v: %v", name, err)
 		return ""
 	}
 
@@ -71,7 +71,6 @@ func GetNodeIPOrName(kubeClient clientset.Interface, name string, useInternalIP 
 type PodInfo struct {
 	Name      string
 	Namespace string
-	NodeIP    string
 	// Labels selectors of the running pod
 	// This is used to search for other Ingress controller pods
 	Labels map[string]string
@@ -95,7 +94,6 @@ func GetPodDetails(kubeClient clientset.Interface) (*PodInfo, error) {
 	return &PodInfo{
 		Name:      podName,
 		Namespace: podNs,
-		NodeIP:    GetNodeIPOrName(kubeClient, pod.Spec.NodeName, true),
 		Labels:    pod.GetLabels(),
 	}, nil
 }
@@ -104,7 +102,7 @@ func GetPodDetails(kubeClient clientset.Interface) (*PodInfo, error) {
 func MetaNamespaceKey(obj interface{}) string {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		glog.Warning(err)
+		klog.Warning(err)
 	}
 
 	return key

@@ -29,6 +29,7 @@ type Config struct {
 	ConnectTimeout    int    `json:"connectTimeout"`
 	SendTimeout       int    `json:"sendTimeout"`
 	ReadTimeout       int    `json:"readTimeout"`
+	BuffersNumber     int    `json:"buffersNumber"`
 	BufferSize        string `json:"bufferSize"`
 	CookieDomain      string `json:"cookieDomain"`
 	CookiePath        string `json:"cookiePath"`
@@ -58,6 +59,9 @@ func (l1 *Config) Equal(l2 *Config) bool {
 		return false
 	}
 	if l1.ReadTimeout != l2.ReadTimeout {
+		return false
+	}
+	if l1.BuffersNumber != l2.BuffersNumber {
 		return false
 	}
 	if l1.BufferSize != l2.BufferSize {
@@ -103,72 +107,80 @@ func NewParser(r resolver.Resolver) parser.IngressAnnotation {
 // ParseAnnotations parses the annotations contained in the ingress
 // rule used to configure upstream check parameters
 func (a proxy) Parse(ing *extensions.Ingress) (interface{}, error) {
-
 	defBackend := a.r.GetDefaultBackend()
-	ct, err := parser.GetIntAnnotation("proxy-connect-timeout", ing)
+	config := &Config{}
+
+	var err error
+
+	config.ConnectTimeout, err = parser.GetIntAnnotation("proxy-connect-timeout", ing)
 	if err != nil {
-		ct = defBackend.ProxyConnectTimeout
+		config.ConnectTimeout = defBackend.ProxyConnectTimeout
 	}
 
-	st, err := parser.GetIntAnnotation("proxy-send-timeout", ing)
+	config.SendTimeout, err = parser.GetIntAnnotation("proxy-send-timeout", ing)
 	if err != nil {
-		st = defBackend.ProxySendTimeout
+		config.SendTimeout = defBackend.ProxySendTimeout
 	}
 
-	rt, err := parser.GetIntAnnotation("proxy-read-timeout", ing)
+	config.ReadTimeout, err = parser.GetIntAnnotation("proxy-read-timeout", ing)
 	if err != nil {
-		rt = defBackend.ProxyReadTimeout
+		config.ReadTimeout = defBackend.ProxyReadTimeout
 	}
 
-	bufs, err := parser.GetStringAnnotation("proxy-buffer-size", ing)
-	if err != nil || bufs == "" {
-		bufs = defBackend.ProxyBufferSize
-	}
-
-	cp, err := parser.GetStringAnnotation("proxy-cookie-path", ing)
-	if err != nil || cp == "" {
-		cp = defBackend.ProxyCookiePath
-	}
-
-	cd, err := parser.GetStringAnnotation("proxy-cookie-domain", ing)
-	if err != nil || cd == "" {
-		cd = defBackend.ProxyCookieDomain
-	}
-
-	bs, err := parser.GetStringAnnotation("proxy-body-size", ing)
-	if err != nil || bs == "" {
-		bs = defBackend.ProxyBodySize
-	}
-
-	nu, err := parser.GetStringAnnotation("proxy-next-upstream", ing)
-	if err != nil || nu == "" {
-		nu = defBackend.ProxyNextUpstream
-	}
-
-	nut, err := parser.GetIntAnnotation("proxy-next-upstream-tries", ing)
+	config.BuffersNumber, err = parser.GetIntAnnotation("proxy-buffers-number", ing)
 	if err != nil {
-		nut = defBackend.ProxyNextUpstreamTries
+		config.BuffersNumber = defBackend.ProxyBuffersNumber
 	}
 
-	rb, err := parser.GetStringAnnotation("proxy-request-buffering", ing)
-	if err != nil || rb == "" {
-		rb = defBackend.ProxyRequestBuffering
+	config.BufferSize, err = parser.GetStringAnnotation("proxy-buffer-size", ing)
+	if err != nil {
+		config.BufferSize = defBackend.ProxyBufferSize
 	}
 
-	prf, err := parser.GetStringAnnotation("proxy-redirect-from", ing)
-	if err != nil || prf == "" {
-		prf = defBackend.ProxyRedirectFrom
+	config.CookiePath, err = parser.GetStringAnnotation("proxy-cookie-path", ing)
+	if err != nil {
+		config.CookiePath = defBackend.ProxyCookiePath
 	}
 
-	prt, err := parser.GetStringAnnotation("proxy-redirect-to", ing)
-	if err != nil || rb == "" {
-		prt = defBackend.ProxyRedirectTo
+	config.CookieDomain, err = parser.GetStringAnnotation("proxy-cookie-domain", ing)
+	if err != nil {
+		config.CookieDomain = defBackend.ProxyCookieDomain
 	}
 
-	pb, err := parser.GetStringAnnotation("proxy-buffering", ing)
-	if err != nil || pb == "" {
-		pb = defBackend.ProxyBuffering
+	config.BodySize, err = parser.GetStringAnnotation("proxy-body-size", ing)
+	if err != nil {
+		config.BodySize = defBackend.ProxyBodySize
 	}
 
-	return &Config{bs, ct, st, rt, bufs, cd, cp, nu, nut, prf, prt, rb, pb}, nil
+	config.NextUpstream, err = parser.GetStringAnnotation("proxy-next-upstream", ing)
+	if err != nil {
+		config.NextUpstream = defBackend.ProxyNextUpstream
+	}
+
+	config.NextUpstreamTries, err = parser.GetIntAnnotation("proxy-next-upstream-tries", ing)
+	if err != nil {
+		config.NextUpstreamTries = defBackend.ProxyNextUpstreamTries
+	}
+
+	config.RequestBuffering, err = parser.GetStringAnnotation("proxy-request-buffering", ing)
+	if err != nil {
+		config.RequestBuffering = defBackend.ProxyRequestBuffering
+	}
+
+	config.ProxyRedirectFrom, err = parser.GetStringAnnotation("proxy-redirect-from", ing)
+	if err != nil {
+		config.ProxyRedirectFrom = defBackend.ProxyRedirectFrom
+	}
+
+	config.ProxyRedirectTo, err = parser.GetStringAnnotation("proxy-redirect-to", ing)
+	if err != nil {
+		config.ProxyRedirectTo = defBackend.ProxyRedirectTo
+	}
+
+	config.ProxyBuffering, err = parser.GetStringAnnotation("proxy-buffering", ing)
+	if err != nil {
+		config.ProxyBuffering = defBackend.ProxyBuffering
+	}
+
+	return config, nil
 }

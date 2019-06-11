@@ -29,10 +29,13 @@ import (
 	"fmt"
 
 	jsoniter "github.com/json-iterator/go"
+	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/ingress-nginx/internal/file"
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/authreq"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/influxdb"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/luarestywaf"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/ratelimit"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/rewrite"
 	"k8s.io/ingress-nginx/internal/ingress/controller/config"
 )
@@ -40,42 +43,25 @@ import (
 var (
 	// TODO: add tests for SSLPassthrough
 	tmplFuncTestcases = map[string]struct {
-		Path                        string
-		Target                      string
-		Location                    string
-		ProxyPass                   string
-		AddBaseURL                  bool
-		BaseURLScheme               string
-		Sticky                      bool
-		XForwardedPrefix            bool
-		DynamicConfigurationEnabled bool
-		SecureBackend               bool
-		enforceRegex                bool
+		Path             string
+		Target           string
+		Location         string
+		ProxyPass        string
+		Sticky           bool
+		XForwardedPrefix string
+		SecureBackend    bool
+		enforceRegex     bool
 	}{
 		"when secure backend enabled": {
 			"/",
 			"/",
 			"/",
-			"proxy_pass https://upstream-name;",
-			false,
-			"",
-			false,
-			false,
-			false,
-			true,
-			false},
-		"when secure backend and stickeness enabled": {
-			"/",
-			"/",
-			"/",
-			"proxy_pass https://sticky-upstream-name;",
+			"proxy_pass https://upstream_balancer;",
 			false,
 			"",
 			true,
 			false,
-			false,
-			true,
-			false},
+		},
 		"when secure backend and dynamic config enabled": {
 			"/",
 			"/",
@@ -83,23 +69,19 @@ var (
 			"proxy_pass https://upstream_balancer;",
 			false,
 			"",
-			false,
-			false,
 			true,
-			true,
-			false},
+			false,
+		},
 		"when secure backend, stickeness and dynamic config enabled": {
 			"/",
 			"/",
 			"/",
 			"proxy_pass https://upstream_balancer;",
-			false,
+			true,
 			"",
 			true,
 			false,
-			true,
-			true,
-			false},
+		},
 		"invalid redirect / to / with dynamic config enabled": {
 			"/",
 			"/",
@@ -109,245 +91,88 @@ var (
 			"",
 			false,
 			false,
-			true,
-			false,
-			false},
+		},
 		"invalid redirect / to /": {
 			"/",
 			"/",
 			"/",
-			"proxy_pass http://upstream-name;",
+			"proxy_pass http://upstream_balancer;",
 			false,
 			"",
 			false,
 			false,
-			false,
-			false,
-			false},
+		},
 		"redirect / to /jenkins": {
 			"/",
 			"/jenkins",
-			"~* ^/",
+			`~* "^/"`,
 			`
-rewrite "(?i)/(.*)" /jenkins/$1 break;
-rewrite "(?i)/$" /jenkins/ break;
-proxy_pass http://upstream-name;
-`,
+rewrite "(?i)/" /jenkins break;
+proxy_pass http://upstream_balancer;`,
 			false,
 			"",
 			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect /something to /": {
-			"/something",
-			"/",
-			`~* "^/something\/?(?<baseuri>.*)"`,
-			`
-rewrite "(?i)/something/(.*)" /$1 break;
-rewrite "(?i)/something$" / break;
-proxy_pass http://upstream-name;
-`,
-			false,
-			"",
-			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect /end-with-slash/ to /not-root": {
-			"/end-with-slash/",
-			"/not-root",
-			`~* "^/end-with-slash/(?<baseuri>.*)"`,
-			`
-rewrite "(?i)/end-with-slash/(.*)" /not-root/$1 break;
-rewrite "(?i)/end-with-slash/$" /not-root/ break;
-proxy_pass http://upstream-name;
-`,
-			false,
-			"",
-			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect /something-complex to /not-root": {
-			"/something-complex",
-			"/not-root",
-			`~* "^/something-complex\/?(?<baseuri>.*)"`,
-			`
-rewrite "(?i)/something-complex/(.*)" /not-root/$1 break;
-rewrite "(?i)/something-complex$" /not-root/ break;
-proxy_pass http://upstream-name;
-`,
-			false,
-			"",
-			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect / to /jenkins and rewrite": {
-			"/",
-			"/jenkins",
-			"~* ^/",
-			`
-rewrite "(?i)/(.*)" /jenkins/$1 break;
-rewrite "(?i)/$" /jenkins/ break;
-proxy_pass http://upstream-name;
-
-set_escape_uri $escaped_base_uri $baseuri;
-subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="$scheme://$http_host/$escaped_base_uri">' ro;
-`,
 			true,
-			"",
-			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect /something to / and rewrite": {
-			"/something",
-			"/",
-			`~* "^/something\/?(?<baseuri>.*)"`,
-			`
-rewrite "(?i)/something/(.*)" /$1 break;
-rewrite "(?i)/something$" / break;
-proxy_pass http://upstream-name;
-
-set_escape_uri $escaped_base_uri $baseuri;
-subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="$scheme://$http_host/something/$escaped_base_uri">' ro;
-`,
-			true,
-			"",
-			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect /end-with-slash/ to /not-root and rewrite": {
-			"/end-with-slash/",
-			"/not-root",
-			`~* "^/end-with-slash/(?<baseuri>.*)"`,
-			`
-rewrite "(?i)/end-with-slash/(.*)" /not-root/$1 break;
-rewrite "(?i)/end-with-slash/$" /not-root/ break;
-proxy_pass http://upstream-name;
-
-set_escape_uri $escaped_base_uri $baseuri;
-subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="$scheme://$http_host/end-with-slash/$escaped_base_uri">' ro;
-`,
-			true,
-			"",
-			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect /something-complex to /not-root and rewrite": {
-			"/something-complex",
-			"/not-root",
-			`~* "^/something-complex\/?(?<baseuri>.*)"`,
-			`
-rewrite "(?i)/something-complex/(.*)" /not-root/$1 break;
-rewrite "(?i)/something-complex$" /not-root/ break;
-proxy_pass http://upstream-name;
-
-set_escape_uri $escaped_base_uri $baseuri;
-subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="$scheme://$http_host/something-complex/$escaped_base_uri">' ro;
-`,
-			true,
-			"",
-			false,
-			false,
-			false,
-			false,
-			true},
-		"redirect /something to / and rewrite with specific scheme": {
-			"/something",
-			"/",
-			`~* "^/something\/?(?<baseuri>.*)"`,
-			`
-rewrite "(?i)/something/(.*)" /$1 break;
-rewrite "(?i)/something$" / break;
-proxy_pass http://upstream-name;
-
-set_escape_uri $escaped_base_uri $baseuri;
-subs_filter '(<(?:H|h)(?:E|e)(?:A|a)(?:D|d)(?:[^">]|"[^"]*")*>)' '$1<base href="http://$http_host/something/$escaped_base_uri">' ro;
-`,
-			true,
-			"http",
-			false,
-			false,
-			false,
-			false,
-			true},
+		},
 		"redirect / to /something with sticky enabled": {
 			"/",
 			"/something",
-			`~* ^/`,
+			`~* "^/"`,
 			`
-rewrite "(?i)/(.*)" /something/$1 break;
-rewrite "(?i)/$" /something/ break;
-proxy_pass http://sticky-upstream-name;
-`,
-			false,
-			"http",
+rewrite "(?i)/" /something break;
+proxy_pass http://upstream_balancer;`,
 			true,
+			"",
 			false,
-			false,
-			false,
-			true},
+			true,
+		},
 		"redirect / to /something with sticky and dynamic config enabled": {
 			"/",
 			"/something",
-			`~* ^/`,
+			`~* "^/"`,
 			`
-rewrite "(?i)/(.*)" /something/$1 break;
-rewrite "(?i)/$" /something/ break;
-proxy_pass http://upstream_balancer;
-`,
-			false,
-			"http",
+rewrite "(?i)/" /something break;
+proxy_pass http://upstream_balancer;`,
 			true,
+			"",
 			false,
 			true,
-			false,
-			true},
+		},
 		"add the X-Forwarded-Prefix header": {
 			"/there",
 			"/something",
-			`~* "^/there\/?(?<baseuri>.*)"`,
+			`~* "^/there"`,
 			`
-rewrite "(?i)/there/(.*)" /something/$1 break;
-rewrite "(?i)/there$" /something/ break;
-proxy_set_header X-Forwarded-Prefix "/there/";
-proxy_pass http://sticky-upstream-name;
-`,
-			false,
-			"http",
+rewrite "(?i)/there" /something break;
+proxy_set_header X-Forwarded-Prefix "/there";
+proxy_pass http://upstream_balancer;`,
 			true,
+			"/there",
+			false,
 			true,
-			false,
-			false,
-			true},
+		},
 		"use ~* location modifier when ingress does not use rewrite/regex target but at least one other ingress does": {
 			"/something",
 			"/something",
 			`~* "^/something"`,
-			"proxy_pass http://upstream-name;",
+			"proxy_pass http://upstream_balancer;",
 			false,
 			"",
 			false,
-			false,
-			false,
-			false,
-			true},
+			true,
+		},
 	}
 )
 
 func TestBuildLuaSharedDictionaries(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildLuaSharedDictionaries(invalidType, true)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	servers := []*ingress.Server{
 		{
 			Hostname:  "foo.bar",
@@ -359,11 +184,7 @@ func TestBuildLuaSharedDictionaries(t *testing.T) {
 		},
 	}
 
-	config := buildLuaSharedDictionaries(servers, false, false)
-	if config != "" {
-		t.Errorf("expected to not configure any lua shared dictionary, but generated %s", config)
-	}
-	config = buildLuaSharedDictionaries(servers, true, false)
+	config := buildLuaSharedDictionaries(servers, false)
 	if !strings.Contains(config, "lua_shared_dict configuration_data") {
 		t.Errorf("expected to include 'configuration_data' but got %s", config)
 	}
@@ -372,18 +193,9 @@ func TestBuildLuaSharedDictionaries(t *testing.T) {
 	}
 
 	servers[1].Locations[0].LuaRestyWAF = luarestywaf.Config{Mode: "ACTIVE"}
-	config = buildLuaSharedDictionaries(servers, false, false)
+	config = buildLuaSharedDictionaries(servers, false)
 	if !strings.Contains(config, "lua_shared_dict waf_storage") {
 		t.Errorf("expected to configure 'waf_storage', but got %s", config)
-	}
-	config = buildLuaSharedDictionaries(servers, true, false)
-	if !strings.Contains(config, "lua_shared_dict waf_storage") {
-		t.Errorf("expected to configure 'waf_storage', but got %s", config)
-	}
-
-	config = buildLuaSharedDictionaries(servers, false, true)
-	if config != "" {
-		t.Errorf("expected to not configure any lua shared dictionary, but generated %s", config)
 	}
 }
 
@@ -407,10 +219,18 @@ func TestFormatIP(t *testing.T) {
 }
 
 func TestBuildLocation(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := "/"
+	actual := buildLocation(invalidType, true)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	for k, tc := range tmplFuncTestcases {
 		loc := &ingress.Location{
 			Path:    tc.Path,
-			Rewrite: rewrite.Config{Target: tc.Target, AddBaseURL: tc.AddBaseURL},
+			Rewrite: rewrite.Config{Target: tc.Target},
 		}
 
 		newLoc := buildLocation(loc, tc.enforceRegex)
@@ -427,14 +247,17 @@ func TestBuildProxyPass(t *testing.T) {
 	for k, tc := range tmplFuncTestcases {
 		loc := &ingress.Location{
 			Path:             tc.Path,
-			Rewrite:          rewrite.Config{Target: tc.Target, AddBaseURL: tc.AddBaseURL, BaseURLScheme: tc.BaseURLScheme},
+			Rewrite:          rewrite.Config{Target: tc.Target},
 			Backend:          defaultBackend,
 			XForwardedPrefix: tc.XForwardedPrefix,
 		}
 
+		if tc.SecureBackend {
+			loc.BackendProtocol = "HTTPS"
+		}
+
 		backend := &ingress.Backend{
-			Name:   defaultBackend,
-			Secure: tc.SecureBackend,
+			Name: defaultBackend,
 		}
 
 		if tc.Sticky {
@@ -450,7 +273,7 @@ func TestBuildProxyPass(t *testing.T) {
 
 		backends := []*ingress.Backend{backend}
 
-		pp := buildProxyPass(defaultHost, backends, loc, tc.DynamicConfigurationEnabled)
+		pp := buildProxyPass(defaultHost, backends, loc)
 		if !strings.EqualFold(tc.ProxyPass, pp) {
 			t.Errorf("%s: expected \n'%v'\nbut returned \n'%v'", k, tc.ProxyPass, pp)
 		}
@@ -458,6 +281,14 @@ func TestBuildProxyPass(t *testing.T) {
 }
 
 func TestBuildAuthLocation(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildAuthLocation(invalidType)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	authURL := "foo.com/auth"
 
 	loc := &ingress.Location{
@@ -470,7 +301,7 @@ func TestBuildAuthLocation(t *testing.T) {
 	str := buildAuthLocation(loc)
 
 	encodedAuthURL := strings.Replace(base64.URLEncoding.EncodeToString([]byte(loc.Path)), "=", "", -1)
-	expected := fmt.Sprintf("/_external-auth-%v", encodedAuthURL)
+	expected = fmt.Sprintf("/_external-auth-%v", encodedAuthURL)
 
 	if str != expected {
 		t.Errorf("Expected \n'%v'\nbut returned \n'%v'", expected, str)
@@ -478,11 +309,19 @@ func TestBuildAuthLocation(t *testing.T) {
 }
 
 func TestBuildAuthResponseHeaders(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := []string{}
+	actual := buildAuthResponseHeaders(invalidType)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	loc := &ingress.Location{
 		ExternalAuth: authreq.Config{ResponseHeaders: []string{"h1", "H-With-Caps-And-Dashes"}},
 	}
 	headers := buildAuthResponseHeaders(loc)
-	expected := []string{
+	expected = []string{
 		"auth_request_set $authHeader0 $upstream_http_h1;",
 		"proxy_set_header 'h1' $authHeader0;",
 		"auth_request_set $authHeader1 $upstream_http_h_with_caps_and_dashes;",
@@ -573,6 +412,14 @@ func BenchmarkTemplateWithData(b *testing.B) {
 }
 
 func TestBuildDenyVariable(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildDenyVariable(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	a := buildDenyVariable("host1.example.com_/.well-known/acme-challenge")
 	b := buildDenyVariable("host1.example.com_/.well-known/acme-challenge")
 	if !reflect.DeepEqual(a, b) {
@@ -580,46 +427,45 @@ func TestBuildDenyVariable(t *testing.T) {
 	}
 }
 
-func TestBuildClientBodyBufferSize(t *testing.T) {
-	a := isValidClientBodyBufferSize("1000")
-	if !a {
-		t.Errorf("Expected '%v' but returned '%v'", true, a)
+func TestBuildByteSize(t *testing.T) {
+	cases := []struct {
+		value    interface{}
+		isOffset bool
+		expected bool
+	}{
+		{"1000", false, true},
+		{"1000k", false, true},
+		{"1m", false, true},
+		{"10g", false, false},
+		{" 1m ", false, true},
+		{"1000kk", false, false},
+		{"1000km", false, false},
+		{"1mm", false, false},
+		{nil, false, false},
+		{"", false, false},
+		{"    ", false, false},
+		{"1G", true, true},
+		{"1000kk", true, false},
+		{"", true, false},
 	}
-	b := isValidClientBodyBufferSize("1000k")
-	if !b {
-		t.Errorf("Expected '%v' but returned '%v'", true, b)
-	}
-	c := isValidClientBodyBufferSize("1000m")
-	if !c {
-		t.Errorf("Expected '%v' but returned '%v'", true, c)
-	}
-	d := isValidClientBodyBufferSize("1000km")
-	if d {
-		t.Errorf("Expected '%v' but returned '%v'", false, d)
-	}
-	e := isValidClientBodyBufferSize("1000mk")
-	if e {
-		t.Errorf("Expected '%v' but returned '%v'", false, e)
-	}
-	f := isValidClientBodyBufferSize("1000kk")
-	if f {
-		t.Errorf("Expected '%v' but returned '%v'", false, f)
-	}
-	g := isValidClientBodyBufferSize("1000mm")
-	if g {
-		t.Errorf("Expected '%v' but returned '%v'", false, g)
-	}
-	h := isValidClientBodyBufferSize(nil)
-	if h {
-		t.Errorf("Expected '%v' but returned '%v'", false, h)
-	}
-	i := isValidClientBodyBufferSize("")
-	if i {
-		t.Errorf("Expected '%v' but returned '%v'", false, i)
+
+	for _, tc := range cases {
+		val := isValidByteSize(tc.value, tc.isOffset)
+		if tc.expected != val {
+			t.Errorf("Expected '%v' but returned '%v'", tc.expected, val)
+		}
 	}
 }
 
 func TestIsLocationAllowed(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := false
+	actual := isLocationAllowed(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	loc := ingress.Location{
 		Denied: nil,
 	}
@@ -631,23 +477,47 @@ func TestIsLocationAllowed(t *testing.T) {
 }
 
 func TestBuildForwardedFor(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildForwardedFor(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	inputStr := "X-Forwarded-For"
-	outputStr := buildForwardedFor(inputStr)
+	expected = "$http_x_forwarded_for"
+	actual = buildForwardedFor(inputStr)
 
-	validStr := "$http_x_forwarded_for"
-
-	if outputStr != validStr {
-		t.Errorf("Expected '%v' but returned '%v'", validStr, outputStr)
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
 	}
 }
 
 func TestBuildResolversForLua(t *testing.T) {
+
 	ipOne := net.ParseIP("192.0.0.1")
 	ipTwo := net.ParseIP("2001:db8:1234:0000:0000:0000:0000:0000")
 	ipList := []net.IP{ipOne, ipTwo}
 
-	expected := "\"192.0.0.1\", \"2001:db8:1234::\""
-	actual := buildResolversForLua(ipList, false)
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildResolversForLua(invalidType, false)
+
+	// Invalid Type for []net.IP
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	actual = buildResolversForLua(ipList, invalidType)
+
+	// Invalid Type for bool
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	expected = "\"192.0.0.1\", \"[2001:db8:1234::]\""
+	actual = buildResolversForLua(ipList, false)
 
 	if expected != actual {
 		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
@@ -666,6 +536,22 @@ func TestBuildResolvers(t *testing.T) {
 	ipTwo := net.ParseIP("2001:db8:1234:0000:0000:0000:0000:0000")
 	ipList := []net.IP{ipOne, ipTwo}
 
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildResolvers(invalidType, false)
+
+	// Invalid Type for []net.IP
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	actual = buildResolvers(ipList, invalidType)
+
+	// Invalid Type for bool
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	validResolver := "resolver 192.0.0.1 [2001:db8:1234::] valid=30s;"
 	resolver := buildResolvers(ipList, false)
 
@@ -682,6 +568,14 @@ func TestBuildResolvers(t *testing.T) {
 }
 
 func TestBuildNextUpstream(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildNextUpstream(invalidType, "")
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	cases := map[string]struct {
 		NextUpstream  string
 		NonIdempotent bool
@@ -720,6 +614,14 @@ func TestBuildNextUpstream(t *testing.T) {
 }
 
 func TestBuildRateLimit(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := []string{}
+	actual := buildRateLimit(invalidType)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	loc := &ingress.Location{}
 
 	loc.RateLimit.Connections.Name = "con"
@@ -751,9 +653,45 @@ func TestBuildRateLimit(t *testing.T) {
 			t.Errorf("Expected '%v' but returned '%v'", validLimits, limits)
 		}
 	}
+
+	// Invalid limit
+	limits = buildRateLimit(&ingress.Ingress{})
+	if !reflect.DeepEqual(expected, limits) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, limits)
+	}
+}
+
+// TODO: Needs more tests
+func TestBuildRateLimitZones(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := []string{}
+	actual := buildRateLimitZones(invalidType)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+}
+
+// TODO: Needs more tests
+func TestFilterRateLimits(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := []ratelimit.Config{}
+	actual := filterRateLimits(invalidType)
+
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
 }
 
 func TestBuildAuthSignURL(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildAuthSignURL(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	cases := map[string]struct {
 		Input, Output string
 	}{
@@ -770,6 +708,13 @@ func TestBuildAuthSignURL(t *testing.T) {
 }
 
 func TestIsLocationInLocationList(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := false
+	actual := isLocationInLocationList(invalidType, "")
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
 
 	testCases := []struct {
 		location        *ingress.Location
@@ -793,29 +738,36 @@ func TestIsLocationInLocationList(t *testing.T) {
 }
 
 func TestBuildUpstreamName(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildUpstreamName(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
 	defaultBackend := "upstream-name"
 	defaultHost := "example.com"
 
 	for k, tc := range tmplFuncTestcases {
 		loc := &ingress.Location{
 			Path:             tc.Path,
-			Rewrite:          rewrite.Config{Target: tc.Target, AddBaseURL: tc.AddBaseURL, BaseURLScheme: tc.BaseURLScheme},
+			Rewrite:          rewrite.Config{Target: tc.Target},
 			Backend:          defaultBackend,
 			XForwardedPrefix: tc.XForwardedPrefix,
 		}
 
+		if tc.SecureBackend {
+			loc.BackendProtocol = "HTTPS"
+		}
+
 		backend := &ingress.Backend{
-			Name:   defaultBackend,
-			Secure: tc.SecureBackend,
+			Name: defaultBackend,
 		}
 
 		expected := defaultBackend
 
 		if tc.Sticky {
-			if !tc.DynamicConfigurationEnabled {
-				expected = fmt.Sprintf("sticky-" + expected)
-			}
-
 			backend.SessionAffinity = ingress.SessionAffinityConfig{
 				AffinityType: "cookie",
 				CookieSessionAffinity: ingress.CookieSessionAffinity{
@@ -826,11 +778,382 @@ func TestBuildUpstreamName(t *testing.T) {
 			}
 		}
 
-		backends := []*ingress.Backend{backend}
-
-		pp := buildUpstreamName(defaultHost, backends, loc, tc.DynamicConfigurationEnabled)
+		pp := buildUpstreamName(loc)
 		if !strings.EqualFold(expected, pp) {
 			t.Errorf("%s: expected \n'%v'\nbut returned \n'%v'", k, expected, pp)
 		}
+	}
+}
+
+func TestEscapeLiteralDollar(t *testing.T) {
+	escapedPath := escapeLiteralDollar("/$")
+	expected := "/${literal_dollar}"
+	if escapedPath != expected {
+		t.Errorf("Expected %v but returned %v", expected, escapedPath)
+	}
+
+	escapedPath = escapeLiteralDollar("/hello-$/world-$/")
+	expected = "/hello-${literal_dollar}/world-${literal_dollar}/"
+	if escapedPath != expected {
+		t.Errorf("Expected %v but returned %v", expected, escapedPath)
+	}
+
+	leaveUnchagned := "/leave-me/unchagned"
+	escapedPath = escapeLiteralDollar(leaveUnchagned)
+	if escapedPath != leaveUnchagned {
+		t.Errorf("Expected %v but returned %v", leaveUnchagned, escapedPath)
+	}
+
+	escapedPath = escapeLiteralDollar(false)
+	expected = ""
+	if escapedPath != expected {
+		t.Errorf("Expected %v but returned %v", expected, escapedPath)
+	}
+}
+
+func TestOpentracingPropagateContext(t *testing.T) {
+	tests := map[interface{}]string{
+		&ingress.Location{BackendProtocol: "HTTP"}:  "opentracing_propagate_context",
+		&ingress.Location{BackendProtocol: "HTTPS"}: "opentracing_propagate_context",
+		&ingress.Location{BackendProtocol: "GRPC"}:  "opentracing_grpc_propagate_context",
+		&ingress.Location{BackendProtocol: "GRPCS"}: "opentracing_grpc_propagate_context",
+		&ingress.Location{BackendProtocol: "AJP"}:   "opentracing_propagate_context",
+		"not a location": "opentracing_propagate_context",
+	}
+
+	for loc, expectedDirective := range tests {
+		actualDirective := opentracingPropagateContext(loc)
+		if actualDirective != expectedDirective {
+			t.Errorf("Expected %v but returned %v", expectedDirective, actualDirective)
+		}
+	}
+}
+
+func TestGetIngressInformation(t *testing.T) {
+	validIngress := &ingress.Ingress{}
+	invalidIngress := "wrongtype"
+	host := "host1"
+	validPath := "/ok"
+	invalidPath := 10
+
+	info := getIngressInformation(invalidIngress, host, validPath)
+	expected := &ingressInformation{}
+	if !info.Equal(expected) {
+		t.Errorf("Expected %v, but got %v", expected, info)
+	}
+
+	info = getIngressInformation(validIngress, host, invalidPath)
+	if !info.Equal(expected) {
+		t.Errorf("Expected %v, but got %v", expected, info)
+	}
+
+	// Setup Ingress Resource
+	validIngress.Namespace = "default"
+	validIngress.Name = "validIng"
+	validIngress.Annotations = map[string]string{
+		"ingress.annotation": "ok",
+	}
+	validIngress.Spec.Backend = &extensions.IngressBackend{
+		ServiceName: "a-svc",
+	}
+
+	info = getIngressInformation(validIngress, host, validPath)
+	expected = &ingressInformation{
+		Namespace: "default",
+		Rule:      "validIng",
+		Annotations: map[string]string{
+			"ingress.annotation": "ok",
+		},
+		Service: "a-svc",
+	}
+	if !info.Equal(expected) {
+		t.Errorf("Expected %v, but got %v", expected, info)
+	}
+
+	validIngress.Spec.Backend = nil
+	validIngress.Spec.Rules = []extensions.IngressRule{
+		{
+			Host: host,
+			IngressRuleValue: extensions.IngressRuleValue{
+				HTTP: &extensions.HTTPIngressRuleValue{
+					Paths: []extensions.HTTPIngressPath{
+						{
+							Path: "/ok",
+							Backend: extensions.IngressBackend{
+								ServiceName: "b-svc",
+							},
+						},
+					},
+				},
+			},
+		},
+		{},
+	}
+
+	info = getIngressInformation(validIngress, host, validPath)
+	expected = &ingressInformation{
+		Namespace: "default",
+		Rule:      "validIng",
+		Annotations: map[string]string{
+			"ingress.annotation": "ok",
+		},
+		Service: "b-svc",
+	}
+	if !info.Equal(expected) {
+		t.Errorf("Expected %v, but got %v", expected, info)
+	}
+
+	validIngress.Spec.Rules = append(validIngress.Spec.Rules, extensions.IngressRule{
+		Host: "host2",
+		IngressRuleValue: extensions.IngressRuleValue{
+			HTTP: &extensions.HTTPIngressRuleValue{
+				Paths: []extensions.HTTPIngressPath{
+					{
+						Path: "/ok",
+						Backend: extensions.IngressBackend{
+							ServiceName: "c-svc",
+						},
+					},
+				},
+			},
+		},
+	})
+
+	info = getIngressInformation(validIngress, host, validPath)
+	if !info.Equal(expected) {
+		t.Errorf("Expected %v, but got %v", expected, info)
+	}
+
+	info = getIngressInformation(validIngress, "host2", validPath)
+	expected.Service = "c-svc"
+	if !info.Equal(expected) {
+		t.Errorf("Expected %v, but got %v", expected, info)
+	}
+}
+
+func TestBuildCustomErrorLocationsPerServer(t *testing.T) {
+	testCases := []struct {
+		server          interface{}
+		expectedResults []errorLocation
+	}{
+		{ // Single ingress
+			&ingress.Server{Locations: []*ingress.Location{
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-backend",
+					CustomHTTPErrors:           []int{401, 402},
+				},
+			}},
+			[]errorLocation{
+				{
+					UpstreamName: "custom-default-backend-test-backend",
+					Codes:        []int{401, 402},
+				},
+			},
+		},
+		{ // Two ingresses, overlapping error codes, same backend
+			&ingress.Server{Locations: []*ingress.Location{
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-backend",
+					CustomHTTPErrors:           []int{401, 402},
+				},
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-backend",
+					CustomHTTPErrors:           []int{402, 403},
+				},
+			}},
+			[]errorLocation{
+				{
+					UpstreamName: "custom-default-backend-test-backend",
+					Codes:        []int{401, 402, 403},
+				},
+			},
+		},
+		{ // Two ingresses, overlapping error codes, different backends
+			&ingress.Server{Locations: []*ingress.Location{
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-one",
+					CustomHTTPErrors:           []int{401, 402},
+				},
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-two",
+					CustomHTTPErrors:           []int{402, 403},
+				},
+			}},
+			[]errorLocation{
+				{
+					UpstreamName: "custom-default-backend-test-one",
+					Codes:        []int{401, 402},
+				},
+				{
+					UpstreamName: "custom-default-backend-test-two",
+					Codes:        []int{402, 403},
+				},
+			},
+		},
+		{ // Many ingresses, overlapping error codes, different backends
+			&ingress.Server{Locations: []*ingress.Location{
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-one",
+					CustomHTTPErrors:           []int{401, 402},
+				},
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-one",
+					CustomHTTPErrors:           []int{501, 502},
+				},
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-two",
+					CustomHTTPErrors:           []int{409, 410},
+				},
+				{
+					DefaultBackendUpstreamName: "custom-default-backend-test-two",
+					CustomHTTPErrors:           []int{504, 505},
+				},
+			}},
+			[]errorLocation{
+				{
+					UpstreamName: "custom-default-backend-test-one",
+					Codes:        []int{401, 402, 501, 502},
+				},
+				{
+					UpstreamName: "custom-default-backend-test-two",
+					Codes:        []int{409, 410, 504, 505},
+				},
+			},
+		},
+	}
+
+	for _, c := range testCases {
+		response := buildCustomErrorLocationsPerServer(c.server)
+		if results, ok := response.([]errorLocation); ok {
+			if !reflect.DeepEqual(c.expectedResults, results) {
+				t.Errorf("Expected %+v but got %+v", c.expectedResults, results)
+			}
+		} else {
+			t.Error("Unable to convert to []errorLocation")
+		}
+	}
+}
+
+func TestProxySetHeader(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := "proxy_set_header"
+	actual := proxySetHeader(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	grpcBackend := &ingress.Location{
+		BackendProtocol: "GRPC",
+	}
+
+	expected = "grpc_set_header"
+	actual = proxySetHeader(grpcBackend)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+}
+
+func TestBuildInfluxDB(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildInfluxDB(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	cfg := influxdb.Config{
+		InfluxDBEnabled:     true,
+		InfluxDBServerName:  "ok.com",
+		InfluxDBHost:        "host.com",
+		InfluxDBPort:        "5252",
+		InfluxDBMeasurement: "ok",
+	}
+	expected = "influxdb server_name=ok.com host=host.com port=5252 measurement=ok enabled=true;"
+	actual = buildInfluxDB(cfg)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+}
+
+func TestBuildOpenTracing(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildOpentracing(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	cfgJaeger := config.Configuration{
+		EnableOpentracing:   true,
+		JaegerCollectorHost: "jaeger-host.com",
+	}
+	expected = "opentracing_load_tracer /usr/local/lib/libjaegertracing_plugin.so /etc/nginx/opentracing.json;\r\n"
+	actual = buildOpentracing(cfgJaeger)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	cfgZipkin := config.Configuration{
+		EnableOpentracing:   true,
+		ZipkinCollectorHost: "zipkin-host.com",
+	}
+	expected = "opentracing_load_tracer /usr/local/lib/libzipkin_opentracing.so /etc/nginx/opentracing.json;\r\n"
+	actual = buildOpentracing(cfgZipkin)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	cfgDatadog := config.Configuration{
+		EnableOpentracing:    true,
+		DatadogCollectorHost: "datadog-host.com",
+	}
+	expected = "opentracing_load_tracer /usr/local/lib/libdd_opentracing.so /etc/nginx/opentracing.json;\r\n"
+	actual = buildOpentracing(cfgDatadog)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+}
+
+func TestEnforceRegexModifier(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := false
+	actual := enforceRegexModifier(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	locs := []*ingress.Location{
+		{
+			Rewrite: rewrite.Config{
+				Target:   "/alright",
+				UseRegex: true,
+			},
+			Path: "/ok",
+		},
+	}
+	expected = true
+	actual = enforceRegexModifier(locs)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+}
+
+func TestStripLocationModifer(t *testing.T) {
+	expected := "ok.com"
+	actual := stripLocationModifer("~*ok.com")
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
 	}
 }

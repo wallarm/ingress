@@ -40,7 +40,7 @@ if [ "$missing" = true ];then
   exit 1
 fi
 
-E2E_IMAGE=quay.io/kubernetes-ingress-controller/e2e:v10042018-c8abff1
+E2E_IMAGE=quay.io/kubernetes-ingress-controller/e2e:v03262019-b033fbf0b
 
 DOCKER_OPTS=${DOCKER_OPTS:-""}
 
@@ -50,29 +50,31 @@ tee .env << EOF
 PKG=${PKG:-""}
 ARCH=${ARCH:-""}
 GIT_COMMIT=${GIT_COMMIT:-""}
-E2E_NODES=${E2E_NODES:-4}
-FOCUS=${FOCUS:-.*}
 TAG=${TAG:-"0.0"}
 HOME=${HOME:-/root}
-KUBECONFIG=${HOME}/.kube/config
 GOARCH=${GOARCH}
 GOBUILD_FLAGS=${GOBUILD_FLAGS:-"-v"}
 PWD=${PWD}
 BUSTED_ARGS=${BUSTED_ARGS:-""}
 REPO_INFO=${REPO_INFO:-local}
-NODE_IP=${NODE_IP:-127.0.0.1}
-SLOW_E2E_THRESHOLD=${SLOW_E2E_THRESHOLD:-40}
 EOF
+
+MINIKUBE_PATH=${HOME}/.minikube
+MINIKUBE_VOLUME="-v ${MINIKUBE_PATH}:${MINIKUBE_PATH}"
+if [ ! -d ${MINIKUBE_PATH} ]; then
+    echo "Minikube directory not found! Volume will be excluded from docker build."
+    MINIKUBE_VOLUME=""
+fi
 
 docker run                                       \
     --tty                                        \
     --rm                                         \
     ${DOCKER_OPTS}                               \
     -v ${HOME}/.kube:/${HOME}/.kube              \
-    -v ${HOME}/.minikube:${HOME}/.minikube       \
     -v ${PWD}:/go/src/${PKG}                     \
     -v ${PWD}/.gocache:${HOME}/.cache/go-build   \
     -v ${PWD}/bin/${ARCH}:/go/bin/linux_${ARCH}  \
+    ${MINIKUBE_VOLUME}                           \
     -w /go/src/${PKG}                            \
     --env-file .env                              \
     --entrypoint ${FLAGS}                        \

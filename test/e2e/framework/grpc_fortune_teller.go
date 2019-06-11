@@ -17,13 +17,10 @@ limitations under the License.
 package framework
 
 import (
-	"fmt"
-	"time"
+	. "github.com/onsi/gomega"
 
-	"github.com/pkg/errors"
-
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -31,19 +28,19 @@ import (
 
 // NewGRPCFortuneTellerDeployment creates a new single replica
 // deployment of the fortune teller image in a particular namespace
-func (f *Framework) NewGRPCFortuneTellerDeployment() error {
-	return f.NewNewGRPCFortuneTellerDeploymentWithReplicas(1)
+func (f *Framework) NewGRPCFortuneTellerDeployment() {
+	f.NewNewGRPCFortuneTellerDeploymentWithReplicas(1)
 }
 
 // NewNewGRPCFortuneTellerDeploymentWithReplicas creates a new deployment of the
 // fortune teller image in a particular namespace. Number of replicas is configurable
-func (f *Framework) NewNewGRPCFortuneTellerDeploymentWithReplicas(replicas int32) error {
-	deployment := &extensions.Deployment{
+func (f *Framework) NewNewGRPCFortuneTellerDeploymentWithReplicas(replicas int32) {
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fortune-teller",
-			Namespace: f.IngressController.Namespace,
+			Namespace: f.Namespace,
 		},
-		Spec: extensions.DeploymentSpec{
+		Spec: appsv1.DeploymentSpec{
 			Replicas: NewInt32(replicas),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -77,25 +74,18 @@ func (f *Framework) NewNewGRPCFortuneTellerDeploymentWithReplicas(replicas int32
 	}
 
 	d, err := f.EnsureDeployment(deployment)
-	if err != nil {
-		return err
-	}
+	Expect(err).NotTo(HaveOccurred())
+	Expect(d).NotTo(BeNil(), "expected a fortune-teller deployment")
 
-	if d == nil {
-		return fmt.Errorf("unexpected error creating deployement for fortune-teller")
-	}
-
-	err = WaitForPodsReady(f.KubeClientSet, 5*time.Minute, int(replicas), f.IngressController.Namespace, metav1.ListOptions{
+	err = WaitForPodsReady(f.KubeClientSet, DefaultTimeout, int(replicas), f.Namespace, metav1.ListOptions{
 		LabelSelector: fields.SelectorFromSet(fields.Set(d.Spec.Template.ObjectMeta.Labels)).String(),
 	})
-	if err != nil {
-		return errors.Wrap(err, "failed to wait for to become ready")
-	}
+	Expect(err).NotTo(HaveOccurred(), "failed to wait for to become ready")
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fortune-teller",
-			Namespace: f.IngressController.Namespace,
+			Namespace: f.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -112,14 +102,5 @@ func (f *Framework) NewNewGRPCFortuneTellerDeploymentWithReplicas(replicas int32
 		},
 	}
 
-	s, err := f.EnsureService(service)
-	if err != nil {
-		return err
-	}
-
-	if s == nil {
-		return fmt.Errorf("unexpected error creating service for fortune-teller deployment")
-	}
-
-	return nil
+	f.EnsureService(service)
 }
