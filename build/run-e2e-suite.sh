@@ -15,7 +15,7 @@
 # limitations under the License.
 
 if ! [ -z "$DEBUG" ]; then
-	set -x
+  set -x
 fi
 
 set -o errexit
@@ -79,5 +79,13 @@ kubectl run --rm \
   --env="FOCUS=${FOCUS}" \
   --env="E2E_CHECK_LEAKS=${E2E_CHECK_LEAKS}" \
   --env="SLOW_E2E_THRESHOLD=${SLOW_E2E_THRESHOLD}" \
+  --env="REGISTRY=${REGISTRY}" \
+  --env="TAG=${TAG}" \
+  --env="IC_TYPE=${IC_TYPE}" \
+  --env="WALLARM_API_UUID=${WALLARM_API_UUID}" \
+  --env="WALLARM_API_SECRET=${WALLARM_API_SECRET}" \
+  --env="WALLARM_API_HOST=${WALLARM_API_HOST}" \
+  --env="WALLARM_API_PORT=${WALLARM_API_PORT}" \
+  --env="WALLARM_API_USE_SSL=${WALLARM_API_USE_SSL}" \
   --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e"}}' \
   e2e --image=nginx-ingress-controller:e2e

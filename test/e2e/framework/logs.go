@@ -1,5 +1,6 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2017 The Kubernetes Authors,
+          2019 Wallarm Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,6 +20,7 @@ package framework
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,11 +33,14 @@ func Logs(pod *corev1.Pod) (string, error) {
 		execErr bytes.Buffer
 	)
 
-	if len(pod.Spec.Containers) != 1 {
+	if len(pod.Spec.Containers) != 1 && os.Getenv("IC_TYPE") != "wallarm" {
 		return "", fmt.Errorf("could not determine which container to use")
 	}
 
 	cmd := exec.Command("/bin/bash", "-c", fmt.Sprintf("%v logs --namespace %s %s", KubectlPath, pod.Namespace, pod.Name))
+	if os.Getenv("IC_TYPE") == "wallarm" {
+		cmd.Args[len(cmd.Args)-1] += " -c nginx-ingress-controller"
+	}
 	cmd.Stdout = &execOut
 	cmd.Stderr = &execErr
 

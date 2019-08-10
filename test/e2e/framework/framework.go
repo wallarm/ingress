@@ -1,5 +1,6 @@
 /*
-Copyright 2017 Jetstack Ltd.
+Copyright 2017 Jetstack Ltd,
+          2019 Wallarm Inc.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,6 +16,7 @@ package framework
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -64,6 +66,8 @@ type Framework struct {
 	cleanupHandle CleanupActionHandle
 
 	Namespace string
+
+	WallarmFramework
 }
 
 // NewDefaultFramework makes a new framework and sets up a BeforeEach/AfterEach for
@@ -101,12 +105,33 @@ func (f *Framework) BeforeEach() {
 
 	f.Namespace = ingressNamespace
 
-	By("Starting new ingress controller")
-	err = f.NewIngressController(f.Namespace, f.BaseName)
-	Expect(err).NotTo(HaveOccurred())
+	if os.Getenv("IC_TYPE") == "wallarm" {
+		By("Creating new wallarm api")
+		err := f.NewWallarmAPI()
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Creating new wallarm node")
+		err = f.NewCloudNode(f.Namespace)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Starting new ingress controller")
+		err = f.WallarmNewIngressController(f.Namespace, f.BaseName, f.Node.Token)
+		Expect(err).NotTo(HaveOccurred())
+	} else {
+		By("Starting new ingress controller")
+		err = f.NewIngressController(f.Namespace, f.BaseName)
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	if os.Getenv("IC_TYPE") == "wallarm" {
+		err = WaitForPodsReady(f.KubeClientSet, DefaultTimeout, 1, f.Namespace, metav1.ListOptions{
+			LabelSelector: "component=controller-wallarm-tarantool",
+		})
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	err = WaitForPodsReady(f.KubeClientSet, DefaultTimeout, 1, f.Namespace, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/name=ingress-nginx",
+		LabelSelector: "component=controller",
 	})
 	Expect(err).NotTo(HaveOccurred())
 }
@@ -114,6 +139,17 @@ func (f *Framework) BeforeEach() {
 // AfterEach deletes the namespace, after reading its events.
 func (f *Framework) AfterEach() {
 	RemoveCleanupAction(f.cleanupHandle)
+
+	if os.Getenv("IC_TYPE") == "wallarm" {
+		By("Removing wallarm node")
+		err := f.DestroyNode()
+		Expect(err).NotTo(HaveOccurred())
+		if f.WApp != nil {
+			By("Removing wallarm application")
+			err := f.DestroyApp()
+			Expect(err).NotTo(HaveOccurred())
+		}
+	}
 
 	By("Waiting for test namespace to no longer exist")
 	err := DeleteKubeNamespace(f.KubeClientSet, f.Namespace)
@@ -156,7 +192,7 @@ func (f *Framework) GetNginxIP() string {
 	s, err := f.KubeClientSet.
 		CoreV1().
 		Services(f.Namespace).
-		Get("ingress-nginx", metav1.GetOptions{})
+		Get("nginx-ingress-controller", metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "unexpected error obtaining NGINX IP address")
 	return s.Spec.ClusterIP
 }
@@ -166,7 +202,7 @@ func (f *Framework) GetNginxPodIP() []string {
 	e, err := f.KubeClientSet.
 		CoreV1().
 		Endpoints(f.Namespace).
-		Get("ingress-nginx", metav1.GetOptions{})
+		Get("nginx-ingress-controller", metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred(), "unexpected error obtaining NGINX IP address")
 	eips := make([]string, 0)
 	for _, s := range e.Subsets {
@@ -260,7 +296,7 @@ func (f *Framework) matchNginxConditions(name string, matcher func(cfg string) b
 }
 
 func (f *Framework) getNginxConfigMap() (*v1.ConfigMap, error) {
-	return f.getConfigMap("nginx-configuration")
+	return f.getConfigMap("nginx-ingress-controller")
 }
 
 func (f *Framework) getConfigMap(name string) (*v1.ConfigMap, error) {
@@ -294,7 +330,7 @@ func (f *Framework) GetNginxConfigMapData() (map[string]string, error) {
 
 // SetNginxConfigMapData sets ingress-nginx's nginx-configuration configMap data
 func (f *Framework) SetNginxConfigMapData(cmData map[string]string) {
-	f.SetConfigMapData("nginx-configuration", cmData)
+	f.SetConfigMapData("nginx-ingress-controller", cmData)
 }
 
 func (f *Framework) SetConfigMapData(name string, cmData map[string]string) {
@@ -521,6 +557,10 @@ func NewSingleCatchAllIngress(name, ns, service string, port int, annotations ma
 func newSingleIngress(name, ns string, annotations map[string]string, spec networking.IngressSpec) *networking.Ingress {
 	if annotations == nil {
 		annotations = make(map[string]string)
+	}
+
+	if os.Getenv("IC_TYPE") == "wallarm" && annotations["nginx.ingress.kubernetes.io/wallarm-mode"] == "" {
+		annotations["nginx.ingress.kubernetes.io/wallarm-mode"] = "monitoring"
 	}
 
 	ing := &networking.Ingress{
