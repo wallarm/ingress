@@ -21,12 +21,13 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	extensions "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
+	typednetworking "k8s.io/client-go/kubernetes/typed/networking/v1beta1"
+
 	"k8s.io/ingress-nginx/cmd/plugin/util"
 )
 
@@ -52,7 +53,7 @@ func GetNamedPod(flags *genericclioptions.ConfigFlags, name string) (apiv1.Pod, 
 		}
 	}
 
-	return apiv1.Pod{}, fmt.Errorf("Pod %v not found in namespace %v", name, util.GetNamespace(flags))
+	return apiv1.Pod{}, fmt.Errorf("pod %v not found in namespace %v", name, util.GetNamespace(flags))
 }
 
 // GetDeploymentPod finds a pod from a given deployment
@@ -63,7 +64,7 @@ func GetDeploymentPod(flags *genericclioptions.ConfigFlags, deployment string) (
 	}
 
 	if len(ings) == 0 {
-		return apiv1.Pod{}, fmt.Errorf("No pods for deployment %v found in namespace %v", deployment, util.GetNamespace(flags))
+		return apiv1.Pod{}, fmt.Errorf("no pods for deployment %v found in namespace %v", deployment, util.GetNamespace(flags))
 	}
 
 	return ings[0], nil
@@ -90,20 +91,20 @@ func GetDeployments(flags *genericclioptions.ConfigFlags, namespace string) ([]a
 }
 
 // GetIngressDefinitions returns an array of Ingress resource definitions
-func GetIngressDefinitions(flags *genericclioptions.ConfigFlags, namespace string) ([]v1beta1.Ingress, error) {
+func GetIngressDefinitions(flags *genericclioptions.ConfigFlags, namespace string) ([]networking.Ingress, error) {
 	rawConfig, err := flags.ToRESTConfig()
 	if err != nil {
-		return make([]v1beta1.Ingress, 0), err
+		return make([]networking.Ingress, 0), err
 	}
 
-	api, err := extensions.NewForConfig(rawConfig)
+	api, err := typednetworking.NewForConfig(rawConfig)
 	if err != nil {
-		return make([]v1beta1.Ingress, 0), err
+		return make([]networking.Ingress, 0), err
 	}
 
 	pods, err := api.Ingresses(namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return make([]v1beta1.Ingress, 0), err
+		return make([]networking.Ingress, 0), err
 	}
 
 	return pods.Items, nil
@@ -191,7 +192,7 @@ func tryAllNamespacesEndpointsCache(flags *genericclioptions.ConfigFlags) {
 }
 
 func tryFilteringEndpointsFromAllNamespacesCache(flags *genericclioptions.ConfigFlags, namespace string) *[]apiv1.Endpoints {
-	allEndpoints, _ := endpointsCache[""]
+	allEndpoints := endpointsCache[""]
 	if allEndpoints != nil {
 		endpoints := make([]apiv1.Endpoints, 0)
 		for _, thisEndpoints := range *allEndpoints {
@@ -221,7 +222,7 @@ func GetServiceByName(flags *genericclioptions.ConfigFlags, name string, service
 		}
 	}
 
-	return apiv1.Service{}, fmt.Errorf("Could not find service %v in namespace %v", name, util.GetNamespace(flags))
+	return apiv1.Service{}, fmt.Errorf("could not find service %v in namespace %v", name, util.GetNamespace(flags))
 }
 
 func getPods(flags *genericclioptions.ConfigFlags) ([]apiv1.Pod, error) {
@@ -253,7 +254,7 @@ func getDeploymentPods(flags *genericclioptions.ConfigFlags, deployment string) 
 
 	ingressPods := make([]apiv1.Pod, 0)
 	for _, pod := range pods {
-		if pod.Spec.Containers[0].Name == deployment {
+		if util.PodInDeployment(pod, deployment) {
 			ingressPods = append(ingressPods, pod)
 		}
 	}

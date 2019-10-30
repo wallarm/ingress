@@ -40,7 +40,7 @@ var _ = framework.IngressNginxDescribe("Debug Tool", func() {
 	It("should list the backend servers", func() {
 		annotations := map[string]string{}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxConfiguration(func(cfg string) bool {
@@ -60,7 +60,7 @@ var _ = framework.IngressNginxDescribe("Debug Tool", func() {
 	It("should get information for a specific backend server", func() {
 		annotations := map[string]string{}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxConfiguration(func(cfg string) bool {
@@ -76,6 +76,7 @@ var _ = framework.IngressNginxDescribe("Debug Tool", func() {
 
 		getCmd := "/dbg backends get " + backends[0]
 		output, err = f.ExecIngressPod(getCmd)
+		Expect(err).Should(BeNil())
 
 		var f map[string]interface{}
 		unmarshalErr := json.Unmarshal([]byte(output), &f)
@@ -88,7 +89,7 @@ var _ = framework.IngressNginxDescribe("Debug Tool", func() {
 	It("should produce valid JSON for /dbg general", func() {
 		annotations := map[string]string{}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		cmd := "/dbg general"

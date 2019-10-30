@@ -22,16 +22,15 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"text/template"
 	"time"
@@ -46,8 +45,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/filesystem"
 
+	adm_controler "k8s.io/ingress-nginx/internal/admission/controller"
 	"k8s.io/ingress-nginx/internal/file"
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/class"
@@ -68,14 +67,11 @@ import (
 
 const (
 	tempNginxPattern = "nginx-cfg"
-)
-
-var (
-	tmplPath = "/etc/nginx/template/nginx.tmpl"
+	emptyUID         = "-1"
 )
 
 // NewNGINXController creates a new NGINX Ingress controller.
-func NewNGINXController(config *Configuration, mc metric.Collector, fs file.Filesystem) *NGINXController {
+func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXController {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{
@@ -101,15 +97,25 @@ func NewNGINXController(config *Configuration, mc metric.Collector, fs file.File
 		stopCh:   make(chan struct{}),
 		updateCh: channels.NewRingChannel(1024),
 
-		stopLock: &sync.Mutex{},
+		ngxErrCh: make(chan error),
 
-		fileSystem: fs,
+		stopLock: &sync.Mutex{},
 
 		runningConfig: new(ingress.Configuration),
 
 		Proxy: &TCPProxy{},
 
 		metricCollector: mc,
+
+		command: NewNginxCommand(),
+	}
+
+	if n.cfg.ValidationWebhook != "" {
+		n.validationWebhookServer = &http.Server{
+			Addr:      config.ValidationWebhook,
+			Handler:   adm_controler.NewAdmissionControllerServer(&adm_controler.IngressAdmission{Checker: n}),
+			TLSConfig: ssl.NewTLSListener(n.cfg.ValidationWebhookCertPath, n.cfg.ValidationWebhookKeyPath).TLSConfig(),
+		}
 	}
 
 	pod, err := k8s.GetPodDetails(config.Client)
@@ -119,7 +125,6 @@ func NewNGINXController(config *Configuration, mc metric.Collector, fs file.File
 	n.podInfo = pod
 
 	n.store = store.New(
-		config.EnableSSLChainCompletion,
 		config.Namespace,
 		config.ConfigMapName,
 		config.TCPConfigMapName,
@@ -127,9 +132,7 @@ func NewNGINXController(config *Configuration, mc metric.Collector, fs file.File
 		config.DefaultSSLCertificate,
 		config.ResyncPeriod,
 		config.Client,
-		fs,
 		n.updateCh,
-		config.DynamicCertificatesEnabled,
 		pod,
 		config.DisableCatchAll)
 
@@ -149,7 +152,7 @@ func NewNGINXController(config *Configuration, mc metric.Collector, fs file.File
 	}
 
 	onTemplateChange := func() {
-		template, err := ngx_template.NewTemplate(tmplPath, fs)
+		template, err := ngx_template.NewTemplate(nginx.TemplatePath)
 		if err != nil {
 			// this error is different from the rest because it must be clear why nginx is not working
 			klog.Errorf(`
@@ -165,21 +168,16 @@ Error loading new template: %v
 		n.syncQueue.EnqueueTask(task.GetDummyObject("template-change"))
 	}
 
-	ngxTpl, err := ngx_template.NewTemplate(tmplPath, fs)
+	ngxTpl, err := ngx_template.NewTemplate(nginx.TemplatePath)
 	if err != nil {
 		klog.Fatalf("Invalid NGINX configuration template: %v", err)
 	}
 
 	n.t = ngxTpl
 
-	if _, ok := fs.(filesystem.DefaultFs); !ok {
-		// do not setup watchers on tests
-		return n
-	}
-
-	_, err = watch.NewFileWatcher(tmplPath, onTemplateChange)
+	_, err = watch.NewFileWatcher(nginx.TemplatePath, onTemplateChange)
 	if err != nil {
-		klog.Fatalf("Error creating file watcher for %v: %v", tmplPath, err)
+		klog.Fatalf("Error creating file watcher for %v: %v", nginx.TemplatePath, err)
 	}
 
 	filesToWatch := []string{}
@@ -241,7 +239,7 @@ type NGINXController struct {
 	// runningConfig contains the running configuration in the Backend
 	runningConfig *ingress.Configuration
 
-	t *ngx_template.Template
+	t ngx_template.TemplateWriter
 
 	resolver []net.IP
 
@@ -253,11 +251,11 @@ type NGINXController struct {
 
 	store store.Storer
 
-	fileSystem filesystem.Filesystem
-
 	metricCollector metric.Collector
 
-	currentLeader uint32
+	validationWebhookServer *http.Server
+
+	command NginxExecTester
 }
 
 // Start starts a new NGINX master process running in the foreground.
@@ -281,21 +279,19 @@ func (n *NGINXController) Start() {
 				go n.syncStatus.Run(stopCh)
 			}
 
-			n.setLeader(true)
 			n.metricCollector.OnStartedLeading(electionID)
 			// manually update SSL expiration metrics
 			// (to not wait for a reload)
 			n.metricCollector.SetSSLExpireTime(n.runningConfig.Servers)
 		},
 		OnStoppedLeading: func() {
-			n.setLeader(false)
 			n.metricCollector.OnStoppedLeading(electionID)
 		},
 		PodName:      n.podInfo.Name,
 		PodNamespace: n.podInfo.Namespace,
 	})
 
-	cmd := nginxExecCommand()
+	cmd := n.command.ExecCommand()
 
 	// put NGINX in another process group to prevent it
 	// to receive signals meant for the controller
@@ -327,6 +323,13 @@ func (n *NGINXController) Start() {
 		}
 	}()
 
+	if n.validationWebhookServer != nil {
+		klog.Infof("Starting validation webhook on %s with keys %s %s", n.validationWebhookServer.Addr, n.cfg.ValidationWebhookCertPath, n.cfg.ValidationWebhookKeyPath)
+		go func() {
+			klog.Error(n.validationWebhookServer.ListenAndServeTLS("", ""))
+		}()
+	}
+
 	for {
 		select {
 		case err := <-n.ngxErrCh:
@@ -344,7 +347,7 @@ func (n *NGINXController) Start() {
 				// release command resources
 				cmd.Process.Release()
 				// start a new nginx master process if the controller is not being stopped
-				cmd = nginxExecCommand()
+				cmd = n.command.ExecCommand()
 				cmd.SysProcAttr = &syscall.SysProcAttr{
 					Setpgid: true,
 					Pgid:    0,
@@ -391,9 +394,17 @@ func (n *NGINXController) Stop() error {
 		n.syncStatus.Shutdown()
 	}
 
+	if n.validationWebhookServer != nil {
+		klog.Info("Stopping admission controller")
+		err := n.validationWebhookServer.Close()
+		if err != nil {
+			return err
+		}
+	}
+
 	// send stop signal to NGINX
 	klog.Info("Stopping NGINX process")
-	cmd := nginxExecCommand("-s", "quit")
+	cmd := n.command.ExecCommand("-s", "quit")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
@@ -404,7 +415,7 @@ func (n *NGINXController) Stop() error {
 	// wait for the NGINX process to terminate
 	timer := time.NewTicker(time.Second * 1)
 	for range timer.C {
-		if !process.IsNginxRunning() {
+		if !nginx.IsRunning() {
 			klog.Info("NGINX process has stopped")
 			timer.Stop()
 			break
@@ -437,45 +448,8 @@ func (n NGINXController) DefaultEndpoint() ingress.Endpoint {
 	}
 }
 
-// testTemplate checks if the NGINX configuration inside the byte array is valid
-// running the command "nginx -t" using a temporal file.
-func (n NGINXController) testTemplate(cfg []byte) error {
-	if len(cfg) == 0 {
-		return fmt.Errorf("invalid NGINX configuration (empty)")
-	}
-	tmpfile, err := ioutil.TempFile("", tempNginxPattern)
-	if err != nil {
-		return err
-	}
-	defer tmpfile.Close()
-	err = ioutil.WriteFile(tmpfile.Name(), cfg, file.ReadWriteByUser)
-	if err != nil {
-		return err
-	}
-	out, err := nginxTestCommand(tmpfile.Name()).CombinedOutput()
-	if err != nil {
-		// this error is different from the rest because it must be clear why nginx is not working
-		oe := fmt.Sprintf(`
--------------------------------------------------------------------------------
-Error: %v
-%v
--------------------------------------------------------------------------------
-`, err, string(out))
-
-		return errors.New(oe)
-	}
-
-	os.Remove(tmpfile.Name())
-	return nil
-}
-
-// OnUpdate is called by the synchronization loop whenever configuration
-// changes were detected. The received backend Configuration is merged with the
-// configuration ConfigMap before generating the final configuration file.
-// Returns nil in case the backend was successfully reloaded.
-func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
-	cfg := n.store.GetBackendConfiguration()
-	cfg.Resolver = n.resolver
+// generateTemplate returns the nginx configuration file content
+func (n NGINXController) generateTemplate(cfg ngx_config.Configuration, ingressCfg ingress.Configuration) ([]byte, error) {
 
 	if n.cfg.EnableSSLPassthrough {
 		servers := []*TCPServer{}
@@ -561,7 +535,7 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 	}
 
 	if cfg.MaxWorkerConnections == 0 {
-		maxWorkerConnections := int(math.Ceil(float64(cfg.MaxWorkerOpenFiles * 3.0 / 4)))
+		maxWorkerConnections := int(float64(cfg.MaxWorkerOpenFiles * 3.0 / 4))
 		klog.V(3).Infof("Adjusting MaxWorkerConnections variable to %d", maxWorkerConnections)
 		cfg.MaxWorkerConnections = maxWorkerConnections
 	}
@@ -571,9 +545,9 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 		cmap, err := n.store.GetConfigMap(cfg.ProxySetHeaders)
 		if err != nil {
 			klog.Warningf("Error reading ConfigMap %q from local store: %v", cfg.ProxySetHeaders, err)
+		} else {
+			setHeaders = cmap.Data
 		}
-
-		setHeaders = cmap.Data
 	}
 
 	addHeaders := map[string]string{}
@@ -581,9 +555,9 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 		cmap, err := n.store.GetConfigMap(cfg.AddHeaders)
 		if err != nil {
 			klog.Warningf("Error reading ConfigMap %q from local store: %v", cfg.AddHeaders, err)
+		} else {
+			addHeaders = cmap.Data
 		}
-
-		addHeaders = cmap.Data
 	}
 
 	sslDHParam := ""
@@ -597,7 +571,7 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 			nsSecName := strings.Replace(secretName, "/", "-", -1)
 			dh, ok := secret.Data["dhparam.pem"]
 			if ok {
-				pemFileName, err := ssl.AddOrUpdateDHParam(nsSecName, dh, n.fileSystem)
+				pemFileName, err := ssl.AddOrUpdateDHParam(nsSecName, dh)
 				if err != nil {
 					klog.Warningf("Error adding or updating dhparam file %v: %v", nsSecName, err)
 				} else {
@@ -609,36 +583,80 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 
 	cfg.SSLDHParam = sslDHParam
 
-	tc := ngx_config.TemplateConfig{
-		ProxySetHeaders:            setHeaders,
-		AddHeaders:                 addHeaders,
-		BacklogSize:                sysctlSomaxconn(),
-		Backends:                   ingressCfg.Backends,
-		PassthroughBackends:        ingressCfg.PassthroughBackends,
-		Servers:                    ingressCfg.Servers,
-		TCPBackends:                ingressCfg.TCPEndpoints,
-		UDPBackends:                ingressCfg.UDPEndpoints,
-		Cfg:                        cfg,
-		IsIPV6Enabled:              n.isIPV6Enabled && !cfg.DisableIpv6,
-		NginxStatusIpv4Whitelist:   cfg.NginxStatusIpv4Whitelist,
-		NginxStatusIpv6Whitelist:   cfg.NginxStatusIpv6Whitelist,
-		RedirectServers:            buildRedirects(ingressCfg.Servers),
-		IsSSLPassthroughEnabled:    n.cfg.EnableSSLPassthrough,
-		ListenPorts:                n.cfg.ListenPorts,
-		PublishService:             n.GetPublishService(),
-		DynamicCertificatesEnabled: n.cfg.DynamicCertificatesEnabled,
-		EnableMetrics:              n.cfg.EnableMetrics,
+	cfg.DefaultSSLCertificate = n.getDefaultSSLCertificate()
 
-		HealthzURI:   nginx.HealthPath,
-		PID:          nginx.PID,
-		StatusSocket: nginx.StatusSocket,
-		StatusPath:   nginx.StatusPath,
-		StreamSocket: nginx.StreamSocket,
+	tc := ngx_config.TemplateConfig{
+		ProxySetHeaders:          setHeaders,
+		AddHeaders:               addHeaders,
+		BacklogSize:              sysctlSomaxconn(),
+		Backends:                 ingressCfg.Backends,
+		PassthroughBackends:      ingressCfg.PassthroughBackends,
+		Servers:                  ingressCfg.Servers,
+		TCPBackends:              ingressCfg.TCPEndpoints,
+		UDPBackends:              ingressCfg.UDPEndpoints,
+		Cfg:                      cfg,
+		IsIPV6Enabled:            n.isIPV6Enabled && !cfg.DisableIpv6,
+		NginxStatusIpv4Whitelist: cfg.NginxStatusIpv4Whitelist,
+		NginxStatusIpv6Whitelist: cfg.NginxStatusIpv6Whitelist,
+		RedirectServers:          buildRedirects(ingressCfg.Servers),
+		IsSSLPassthroughEnabled:  n.cfg.EnableSSLPassthrough,
+		ListenPorts:              n.cfg.ListenPorts,
+		PublishService:           n.GetPublishService(),
+		EnableMetrics:            n.cfg.EnableMetrics,
+
+		HealthzURI: nginx.HealthPath,
+		PID:        nginx.PID,
+		StatusPath: nginx.StatusPath,
+		StatusPort: nginx.StatusPort,
+		StreamPort: nginx.StreamPort,
 	}
 
 	tc.Cfg.Checksum = ingressCfg.ConfigurationChecksum
 
-	content, err := n.t.Write(tc)
+	return n.t.Write(tc)
+}
+
+// testTemplate checks if the NGINX configuration inside the byte array is valid
+// running the command "nginx -t" using a temporal file.
+func (n NGINXController) testTemplate(cfg []byte) error {
+	if len(cfg) == 0 {
+		return fmt.Errorf("invalid NGINX configuration (empty)")
+	}
+	tmpfile, err := ioutil.TempFile("", tempNginxPattern)
+	if err != nil {
+		return err
+	}
+	defer tmpfile.Close()
+	err = ioutil.WriteFile(tmpfile.Name(), cfg, file.ReadWriteByUser)
+	if err != nil {
+		return err
+	}
+	out, err := n.command.Test(tmpfile.Name())
+	if err != nil {
+		// this error is different from the rest because it must be clear why nginx is not working
+		oe := fmt.Sprintf(`
+-------------------------------------------------------------------------------
+Error: %v
+%v
+-------------------------------------------------------------------------------
+`, err, string(out))
+
+		return errors.New(oe)
+	}
+
+	os.Remove(tmpfile.Name())
+	return nil
+}
+
+// OnUpdate is called by the synchronization loop whenever configuration
+// changes were detected. The received backend Configuration is merged with the
+// configuration ConfigMap before generating the final configuration file.
+// Returns nil in case the backend was successfully reloaded.
+func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
+	cfg := n.store.GetBackendConfiguration()
+	cfg.Resolver = n.resolver
+
+	content, err := n.generateTemplate(cfg, ingressCfg)
 	if err != nil {
 		return err
 	}
@@ -670,7 +688,12 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 
 			diffOutput, err := exec.Command("diff", "-u", cfgPath, tmpfile.Name()).CombinedOutput()
 			if err != nil {
-				klog.Warningf("Failed to executing diff command: %v", err)
+				if exitError, ok := err.(*exec.ExitError); ok {
+					ws := exitError.Sys().(syscall.WaitStatus)
+					if ws.ExitStatus() == 2 {
+						klog.Warningf("Failed to executing diff command: %v", err)
+					}
+				}
 			}
 
 			klog.Infof("NGINX configuration diff:\n%v", string(diffOutput))
@@ -686,7 +709,7 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 		return err
 	}
 
-	o, err := nginxExecCommand("-s", "reload").CombinedOutput()
+	o, err := n.command.ExecCommand("-s", "reload").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%v\n%v", err, string(o))
 	}
@@ -772,7 +795,7 @@ func clearCertificates(config *ingress.Configuration) {
 	var clearedServers []*ingress.Server
 	for _, server := range config.Servers {
 		copyOfServer := *server
-		copyOfServer.SSLCert = ingress.SSLCert{PemFileName: copyOfServer.SSLCert.PemFileName}
+		copyOfServer.SSLCert = nil
 		clearedServers = append(clearedServers, &copyOfServer)
 	}
 	config.Servers = clearedServers
@@ -820,20 +843,112 @@ func (n *NGINXController) IsDynamicConfigurationEnough(pcfg *ingress.Configurati
 	copyOfRunningConfig.ControllerPodsCount = 0
 	copyOfPcfg.ControllerPodsCount = 0
 
-	if n.cfg.DynamicCertificatesEnabled {
-		clearCertificates(&copyOfRunningConfig)
-		clearCertificates(&copyOfPcfg)
-	}
+	clearCertificates(&copyOfRunningConfig)
+	clearCertificates(&copyOfPcfg)
 
 	return copyOfRunningConfig.Equal(&copyOfPcfg)
 }
 
 // configureDynamically encodes new Backends in JSON format and POSTs the
 // payload to an internal HTTP endpoint handled by Lua.
-func configureDynamically(pcfg *ingress.Configuration, isDynamicCertificatesEnabled bool) error {
-	backends := make([]*ingress.Backend, len(pcfg.Backends))
+func (n *NGINXController) configureDynamically(pcfg *ingress.Configuration) error {
+	backendsChanged := !reflect.DeepEqual(n.runningConfig.Backends, pcfg.Backends)
+	if backendsChanged {
+		err := configureBackends(pcfg.Backends)
+		if err != nil {
+			return err
+		}
+	}
 
-	for i, backend := range pcfg.Backends {
+	streamConfigurationChanged := !reflect.DeepEqual(n.runningConfig.TCPEndpoints, pcfg.TCPEndpoints) || !reflect.DeepEqual(n.runningConfig.UDPEndpoints, pcfg.UDPEndpoints)
+	if streamConfigurationChanged {
+		err := updateStreamConfiguration(pcfg.TCPEndpoints, pcfg.UDPEndpoints)
+		if err != nil {
+			return err
+		}
+	}
+
+	if n.runningConfig.ControllerPodsCount != pcfg.ControllerPodsCount {
+		statusCode, _, err := nginx.NewPostStatusRequest("/configuration/general", "application/json", ingress.GeneralConfig{
+			ControllerPodsCount: pcfg.ControllerPodsCount,
+		})
+		if err != nil {
+			return err
+		}
+		if statusCode != http.StatusCreated {
+			return fmt.Errorf("unexpected error code: %d", statusCode)
+		}
+	}
+
+	serversChanged := !reflect.DeepEqual(n.runningConfig.Servers, pcfg.Servers)
+	if serversChanged {
+		err := configureCertificates(pcfg.Servers)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func updateStreamConfiguration(TCPEndpoints []ingress.L4Service, UDPEndpoints []ingress.L4Service) error {
+	streams := make([]ingress.Backend, 0)
+	for _, ep := range TCPEndpoints {
+		var service *apiv1.Service
+		if ep.Service != nil {
+			service = &apiv1.Service{Spec: ep.Service.Spec}
+		}
+
+		key := fmt.Sprintf("tcp-%v-%v-%v", ep.Backend.Namespace, ep.Backend.Name, ep.Backend.Port.String())
+		streams = append(streams, ingress.Backend{
+			Name:      key,
+			Endpoints: ep.Endpoints,
+			Port:      intstr.FromInt(ep.Port),
+			Service:   service,
+		})
+	}
+	for _, ep := range UDPEndpoints {
+		var service *apiv1.Service
+		if ep.Service != nil {
+			service = &apiv1.Service{Spec: ep.Service.Spec}
+		}
+
+		key := fmt.Sprintf("udp-%v-%v-%v", ep.Backend.Namespace, ep.Backend.Name, ep.Backend.Port.String())
+		streams = append(streams, ingress.Backend{
+			Name:      key,
+			Endpoints: ep.Endpoints,
+			Port:      intstr.FromInt(ep.Port),
+			Service:   service,
+		})
+	}
+
+	buf, err := json.Marshal(streams)
+	if err != nil {
+		return err
+	}
+
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%v", nginx.StreamPort))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	_, err = conn.Write(buf)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(conn, "\r\n")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configureBackends(rawBackends []*ingress.Backend) error {
+	backends := make([]*ingress.Backend, len(rawBackends))
+
+	for i, backend := range rawBackends {
 		var service *apiv1.Service
 		if backend.Service != nil {
 			service = &apiv1.Service{Spec: backend.Service.Spec}
@@ -872,121 +987,54 @@ func configureDynamically(pcfg *ingress.Configuration, isDynamicCertificatesEnab
 		return fmt.Errorf("unexpected error code: %d", statusCode)
 	}
 
-	streams := make([]ingress.Backend, 0)
-	for _, ep := range pcfg.TCPEndpoints {
-		var service *apiv1.Service
-		if ep.Service != nil {
-			service = &apiv1.Service{Spec: ep.Service.Spec}
-		}
-
-		key := fmt.Sprintf("tcp-%v-%v-%v", ep.Backend.Namespace, ep.Backend.Name, ep.Backend.Port.String())
-		streams = append(streams, ingress.Backend{
-			Name:      key,
-			Endpoints: ep.Endpoints,
-			Port:      intstr.FromInt(ep.Port),
-			Service:   service,
-		})
-	}
-	for _, ep := range pcfg.UDPEndpoints {
-		var service *apiv1.Service
-		if ep.Service != nil {
-			service = &apiv1.Service{Spec: ep.Service.Spec}
-		}
-
-		key := fmt.Sprintf("udp-%v-%v-%v", ep.Backend.Namespace, ep.Backend.Name, ep.Backend.Port.String())
-		streams = append(streams, ingress.Backend{
-			Name:      key,
-			Endpoints: ep.Endpoints,
-			Port:      intstr.FromInt(ep.Port),
-			Service:   service,
-		})
-	}
-
-	err = updateStreamConfiguration(streams)
-	if err != nil {
-		return err
-	}
-
-	statusCode, _, err = nginx.NewPostStatusRequest("/configuration/general", "application/json", ingress.GeneralConfig{
-		ControllerPodsCount: pcfg.ControllerPodsCount,
-	})
-	if err != nil {
-		return err
-	}
-
-	if statusCode != http.StatusCreated {
-		return fmt.Errorf("unexpected error code: %d", statusCode)
-	}
-
-	if isDynamicCertificatesEnabled {
-		err = configureCertificates(pcfg)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-func updateStreamConfiguration(streams []ingress.Backend) error {
-	conn, err := net.Dial("unix", nginx.StreamSocket)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	buf, err := json.Marshal(streams)
-	if err != nil {
-		return err
-	}
-
-	_, err = conn.Write(buf)
-	if err != nil {
-		return err
-	}
-	_, err = fmt.Fprintf(conn, "\r\n")
-	if err != nil {
-		return err
-	}
-
-	return nil
+type sslConfiguration struct {
+	Certificates map[string]string `json:"certificates"`
+	Servers      map[string]string `json:"servers"`
 }
 
 // configureCertificates JSON encodes certificates and POSTs it to an internal HTTP endpoint
 // that is handled by Lua
-func configureCertificates(pcfg *ingress.Configuration) error {
-	var servers []*ingress.Server
+func configureCertificates(rawServers []*ingress.Server) error {
+	configuration := &sslConfiguration{
+		Certificates: map[string]string{},
+		Servers:      map[string]string{},
+	}
 
-	for _, server := range pcfg.Servers {
-		servers = append(servers, &ingress.Server{
-			Hostname: server.Hostname,
-			SSLCert: ingress.SSLCert{
-				PemCertKey: server.SSLCert.PemCertKey,
-			},
-		})
+	configure := func(hostname string, sslCert *ingress.SSLCert) {
+		uid := emptyUID
 
-		if server.Alias != "" && server.SSLCert.PemCertKey != "" &&
-			ssl.IsValidHostname(server.Alias, server.SSLCert.CN) {
-			servers = append(servers, &ingress.Server{
-				Hostname: server.Alias,
-				SSLCert: ingress.SSLCert{
-					PemCertKey: server.SSLCert.PemCertKey,
-				},
-			})
+		if sslCert != nil {
+			uid = sslCert.UID
+
+			if _, ok := configuration.Certificates[uid]; !ok {
+				configuration.Certificates[uid] = sslCert.PemCertKey
+			}
+		}
+
+		configuration.Servers[hostname] = uid
+	}
+
+	for _, rawServer := range rawServers {
+		configure(rawServer.Hostname, rawServer.SSLCert)
+
+		for _, alias := range rawServer.Aliases {
+			if rawServer.SSLCert != nil && ssl.IsValidHostname(alias, rawServer.SSLCert.CN) {
+				configuration.Servers[alias] = rawServer.SSLCert.UID
+			} else {
+				configuration.Servers[alias] = emptyUID
+			}
 		}
 	}
 
-	redirects := buildRedirects(pcfg.Servers)
+	redirects := buildRedirects(rawServers)
 	for _, redirect := range redirects {
-		servers = append(servers, &ingress.Server{
-			Hostname: redirect.From,
-			SSLCert: ingress.SSLCert{
-				PemCertKey: redirect.SSLCert.PemCertKey,
-			},
-		})
+		configure(redirect.From, redirect.SSLCert)
 	}
 
-	statusCode, _, err := nginx.NewPostStatusRequest("/configuration/servers", "application/json", servers)
+	statusCode, _, err := nginx.NewPostStatusRequest("/configuration/servers", "application/json", configuration)
 	if err != nil {
 		return err
 	}
@@ -1009,11 +1057,18 @@ const jaegerTmpl = `{
   "service_name": "{{ .JaegerServiceName }}",
   "sampler": {
 	"type": "{{ .JaegerSamplerType }}",
-	"param": {{ .JaegerSamplerParam }}
+	"param": {{ .JaegerSamplerParam }},
+	"samplingServerURL": "{{ .JaegerSamplerHost }}:{{ .JaegerSamplerPort }}/sampling"
   },
   "reporter": {
 	"localAgentHostPort": "{{ .JaegerCollectorHost }}:{{ .JaegerCollectorPort }}"
-  }
+  },
+  "headers": {
+	"TraceContextHeaderName": "{{ .JaegerTraceContextHeaderName }}",
+	"jaegerDebugHeader": "{{ .JaegerDebugHeader }}",
+	"jaegerBaggageHeader": "{{ .JaegerBaggageHeader }}",
+	"traceBaggageHeaderPrefix": "{{ .JaegerTraceBaggageHeaderPrefix }}"
+  },
 }`
 
 const datadogTmpl = `{
@@ -1053,7 +1108,7 @@ func createOpentracingCfg(cfg ngx_config.Configuration) error {
 	}
 
 	// Expand possible environment variables before writing the configuration to file.
-	expanded := os.ExpandEnv(string(tmplBuf.Bytes()))
+	expanded := os.ExpandEnv(tmplBuf.String())
 
 	return ioutil.WriteFile("/etc/nginx/opentracing.json", []byte(expanded), file.ReadWriteByUser)
 }
@@ -1090,7 +1145,7 @@ func cleanTempNginxCfg() error {
 type redirect struct {
 	From    string
 	To      string
-	SSLCert ingress.SSLCert
+	SSLCert *ingress.SSLCert
 }
 
 func buildRedirects(servers []*ingress.Server) []*redirect {
@@ -1134,7 +1189,7 @@ func buildRedirects(servers []*ingress.Server) []*redirect {
 			To:   to,
 		}
 
-		if srv.SSLCert.PemSHA != "" {
+		if srv.SSLCert != nil {
 			if ssl.IsValidHostname(from, srv.SSLCert.CN) {
 				r.SSLCert = srv.SSLCert
 			} else {
@@ -1147,16 +1202,4 @@ func buildRedirects(servers []*ingress.Server) []*redirect {
 	}
 
 	return redirectServers
-}
-
-func (n *NGINXController) setLeader(leader bool) {
-	var i uint32
-	if leader {
-		i = 1
-	}
-	atomic.StoreUint32(&n.currentLeader, i)
-}
-
-func (n *NGINXController) isLeader() bool {
-	return atomic.LoadUint32(&n.currentLeader) != 0
 }
