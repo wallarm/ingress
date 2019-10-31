@@ -48,11 +48,11 @@ RUN echo "mQINBFL1Xl4BEADEFCVumPx2W4hQJG+4RRS0Zjw503a0YKH8tKp3OEWIMKiWwWiaTcqxZg
 "+rX8UUJlg1E+ZX4/4T5QfLqMKdMIWikFQJ9Zqc1vmFOwWraAPQVrm8hULwvfpu9V12Qqt7CJQwvF"\
 "umteeg==" \
         | base64 -d > /etc/apt/trusted.gpg.d/wallarm.gpg \
-    && echo 'deb http://repo.wallarm.com/debian/wallarm-node stretch/' \
+    && echo 'deb http://repo.wallarm.com/debian/wallarm-node buster/' \
         > /etc/apt/sources.list.d/wallarm.list \
     && apt-get -qq update \
     && apt-get -qq --no-install-recommends install \
         nginx-module-wallarm-k8s-ingress \
         wallarm-node \
-    && chown www-data:www-data /var/lib/nginx /var/lib/wallarm-tarantool \
+    && chown www-data:www-data /var/lib/wallarm-tarantool \
     && find /var/lib/apt -type f -delete

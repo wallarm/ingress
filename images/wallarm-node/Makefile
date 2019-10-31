@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-BASETAG ?= 0.83
-TAG ?= 1.3.0
+BASETAG ?= 0.92
+TAG ?= 1.4.0
 REGISTRY ?= wallarm
 ARCH ?= $(shell go env GOARCH)
 DOCKER ?= docker
@@ -34,7 +34,8 @@ IMAGE = $(REGISTRY)/$(IMGNAME)
 MULTI_ARCH_IMG = $(IMAGE)-$(ARCH)
 
 # Set default base image dynamically for each arch
-BASEIMAGE?=wallarm/nginx-$(ARCH):$(BASETAG)
+# BASEIMAGE?=wallarm/nginx-$(ARCH):$(BASETAG)
+BASEIMAGE?=$(REGISTRY)/nginx-$(ARCH):$(BASETAG)
 
 TEMP_DIR := $(shell mktemp -d)
 

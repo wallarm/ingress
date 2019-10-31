@@ -19,13 +19,15 @@ package defaultbackend
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"net/http"
+	"strings"
+
 	"github.com/parnurzeal/gorequest"
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/ingress-nginx/test/e2e/framework"
-	"net/http"
-	"strings"
 )
 
 var _ = framework.IngressNginxDescribe("Default backend with hosts", func() {
@@ -52,8 +54,8 @@ var _ = framework.IngressNginxDescribe("Default backend with hosts", func() {
 			},
 			Spec: extensions.IngressSpec{
 				Backend: &extensions.IngressBackend{
-					ServiceName: "http-svc",
-					ServicePort: intstr.FromInt(8080),
+					ServiceName: framework.EchoService,
+					ServicePort: intstr.FromInt(80),
 				},
 				Rules: []extensions.IngressRule{
 					{

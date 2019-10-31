@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/parnurzeal/gorequest"
 
-	"k8s.io/api/extensions/v1beta1"
+	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -50,7 +50,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 			"nginx.ingress.kubernetes.io/session-cookie-name": "SERVERID",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -76,7 +76,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 			"nginx.ingress.kubernetes.io/session-cookie-name": "SERVERID",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -116,7 +116,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 			"nginx.ingress.kubernetes.io/session-cookie-name": "SERVERID",
 		}
 
-		ing := framework.NewSingleIngress(host, "/something", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/something", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -142,30 +142,30 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 			"nginx.ingress.kubernetes.io/session-cookie-name": "SERVERID",
 		}
 
-		f.EnsureIngress(&v1beta1.Ingress{
+		f.EnsureIngress(&extensions.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        host,
 				Namespace:   f.Namespace,
 				Annotations: annotations,
 			},
-			Spec: v1beta1.IngressSpec{
-				Rules: []v1beta1.IngressRule{
+			Spec: extensions.IngressSpec{
+				Rules: []extensions.IngressRule{
 					{
 						Host: host,
-						IngressRuleValue: v1beta1.IngressRuleValue{
-							HTTP: &v1beta1.HTTPIngressRuleValue{
-								Paths: []v1beta1.HTTPIngressPath{
+						IngressRuleValue: extensions.IngressRuleValue{
+							HTTP: &extensions.HTTPIngressRuleValue{
+								Paths: []extensions.HTTPIngressPath{
 									{
 										Path: "/something",
-										Backend: v1beta1.IngressBackend{
-											ServiceName: "http-svc",
+										Backend: extensions.IngressBackend{
+											ServiceName: framework.EchoService,
 											ServicePort: intstr.FromInt(80),
 										},
 									},
 									{
 										Path: "/somewhereelese",
-										Backend: v1beta1.IngressBackend{
-											ServiceName: "http-svc",
+										Backend: extensions.IngressBackend{
+											ServiceName: framework.EchoService,
 											ServicePort: intstr.FromInt(80),
 										},
 									},
@@ -211,7 +211,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 			"nginx.ingress.kubernetes.io/session-cookie-max-age": "259200",
 		}
 
-		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -247,7 +247,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 			"nginx.ingress.kubernetes.io/session-cookie-path": "/foo/bar",
 		}
 
-		ing := framework.NewSingleIngress(host, "/foo/.*", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/foo/.*", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -275,7 +275,7 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 			"nginx.ingress.kubernetes.io/use-regex":           "true",
 		}
 
-		ing := framework.NewSingleIngress(host, "/foo/.*", host, f.Namespace, "http-svc", 80, &annotations)
+		ing := framework.NewSingleIngress(host, "/foo/.*", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing)
 
 		f.WaitForNginxServer(host,
@@ -303,10 +303,10 @@ var _ = framework.IngressNginxDescribe("Annotations - Affinity/Sticky Sessions",
 		annotations := map[string]string{
 			"nginx.ingress.kubernetes.io/affinity": "cookie",
 		}
-		ing1 := framework.NewSingleIngress("ingress1", "/foo/bar", host, f.Namespace, "http-svc", 80, &annotations)
+		ing1 := framework.NewSingleIngress("ingress1", "/foo/bar", host, f.Namespace, framework.EchoService, 80, &annotations)
 		f.EnsureIngress(ing1)
 
-		ing2 := framework.NewSingleIngress("ingress2", "/foo", host, f.Namespace, "http-svc", 80, &map[string]string{})
+		ing2 := framework.NewSingleIngress("ingress2", "/foo", host, f.Namespace, framework.EchoService, 80, &map[string]string{})
 		f.EnsureIngress(ing2)
 
 		f.WaitForNginxServer(host,
