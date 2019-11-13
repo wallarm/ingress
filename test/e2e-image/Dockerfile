@@ -1,4 +1,4 @@
-FROM quay.io/kubernetes-ingress-controller/e2e:v03262019-b033fbf0b AS BASE
+FROM quay.io/kubernetes-ingress-controller/e2e:v09052019-38b985663 AS BASE
 
 FROM quay.io/kubernetes-ingress-controller/debian-base-amd64:0.1
 
@@ -9,13 +9,17 @@ RUN clean-install \
     tzdata
 
 RUN curl -Lo /usr/local/bin/kubectl \
-    https://storage.googleapis.com/kubernetes-release/release/v1.13.3/bin/linux/amd64/kubectl \
+    https://storage.googleapis.com/kubernetes-release/release/v1.15.0/bin/linux/amd64/kubectl \
     && chmod +x /usr/local/bin/kubectl
 
 COPY --from=BASE /go/bin/ginkgo /usr/local/bin/
 
 COPY e2e.sh             /e2e.sh
-COPY manifests          /manifests
+COPY cloud-generic      /cloud-generic
+COPY cluster-wide       /cluster-wide
+COPY overlay            /overlay
+COPY namespace-overlays /namespace-overlays
+RUN sed -E -i 's|^- .*deploy/cloud-generic$|- ../cloud-generic|' /overlay/kustomization.yaml
 COPY wait-for-nginx.sh  /
 COPY e2e.test           /
 

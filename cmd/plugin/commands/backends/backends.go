@@ -18,6 +18,7 @@ package backends
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -79,6 +80,6 @@ func backends(flags *genericclioptions.ConfigFlags, podName string, deployment s
 		return err
 	}
 
-	fmt.Printf(out)
+	fmt.Print(out)
 	return nil
 }
