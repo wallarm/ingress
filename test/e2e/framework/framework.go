@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	apiextcs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -103,16 +103,13 @@ func (f *Framework) BeforeEach() {
 	f.Namespace = ingressNamespace
 
 	By("Starting new ingress controller")
-	err = f.NewIngressController(f.Namespace)
+	err = f.NewIngressController(f.Namespace, f.BaseName)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = WaitForPodsReady(f.KubeClientSet, DefaultTimeout, 1, f.Namespace, metav1.ListOptions{
 		LabelSelector: "app.kubernetes.io/name=ingress-nginx",
 	})
 	Expect(err).NotTo(HaveOccurred())
-
-	// we wait for any change in the informers and SSL certificate generation
-	time.Sleep(5 * time.Second)
 }
 
 // AfterEach deletes the namespace, after reading its events.
@@ -128,12 +125,31 @@ func (f *Framework) AfterEach() {
 		Expect(err).ToNot(HaveOccurred())
 		By("Dumping NGINX logs after a failure running a test")
 		Logf("%v", log)
+
+		pod, err := getIngressNGINXPod(f.Namespace, f.KubeClientSet)
+		if err != nil {
+			return
+		}
+
+		cmd := fmt.Sprintf("cat /etc/nginx/nginx.conf")
+		o, err := f.ExecCommand(pod, cmd)
+		if err != nil {
+			return
+		}
+
+		By("Dumping NGINX configuration after a failure running a test")
+		Logf("%v", o)
 	}
 }
 
 // IngressNginxDescribe wrapper function for ginkgo describe. Adds namespacing.
 func IngressNginxDescribe(text string, body func()) bool {
-	return Describe("[nginx-ingress] "+text, body)
+	return Describe("[ingress-nginx] "+text, body)
+}
+
+// MemoryLeakIt is wrapper function for ginkgo It.  Adds "[MemoryLeak]" tag and makes static analysis easier.
+func MemoryLeakIt(text string, body interface{}, timeout ...float64) bool {
+	return It(text+" [MemoryLeak]", body, timeout...)
 }
 
 // GetNginxIP returns the number of TCP port where NGINX is running
@@ -142,8 +158,25 @@ func (f *Framework) GetNginxIP() string {
 		CoreV1().
 		Services(f.Namespace).
 		Get("ingress-nginx", metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred(), "unexpected error obtaning NGINX IP address")
+	Expect(err).NotTo(HaveOccurred(), "unexpected error obtaining NGINX IP address")
 	return s.Spec.ClusterIP
+}
+
+// GetNginxPodIP returns the IP addres/es of the running pods
+func (f *Framework) GetNginxPodIP() []string {
+	e, err := f.KubeClientSet.
+		CoreV1().
+		Endpoints(f.Namespace).
+		Get("ingress-nginx", metav1.GetOptions{})
+	Expect(err).NotTo(HaveOccurred(), "unexpected error obtaining NGINX IP address")
+	eips := make([]string, 0)
+	for _, s := range e.Subsets {
+		for _, a := range s.Addresses {
+			eips = append(eips, a.IP)
+		}
+	}
+
+	return eips
 }
 
 // GetURL returns the URL should be used to make a request to NGINX
@@ -228,6 +261,10 @@ func (f *Framework) matchNginxConditions(name string, matcher func(cfg string) b
 }
 
 func (f *Framework) getNginxConfigMap() (*v1.ConfigMap, error) {
+	return f.getConfigMap("nginx-configuration")
+}
+
+func (f *Framework) getConfigMap(name string) (*v1.ConfigMap, error) {
 	if f.KubeClientSet == nil {
 		return nil, fmt.Errorf("KubeClientSet not initialized")
 	}
@@ -235,7 +272,7 @@ func (f *Framework) getNginxConfigMap() (*v1.ConfigMap, error) {
 	config, err := f.KubeClientSet.
 		CoreV1().
 		ConfigMaps(f.Namespace).
-		Get("nginx-configuration", metav1.GetOptions{})
+		Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -258,9 +295,11 @@ func (f *Framework) GetNginxConfigMapData() (map[string]string, error) {
 
 // SetNginxConfigMapData sets ingress-nginx's nginx-configuration configMap data
 func (f *Framework) SetNginxConfigMapData(cmData map[string]string) {
-	// Needs to do a Get and Set, Update will not take just the Data field
-	// or a configMap that is not the very last revision
-	config, err := f.getNginxConfigMap()
+	f.SetConfigMapData("nginx-configuration", cmData)
+}
+
+func (f *Framework) SetConfigMapData(name string, cmData map[string]string) {
+	config, err := f.getConfigMap(name)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(config).NotTo(BeNil(), "expected a configmap but none returned")
 
@@ -273,6 +312,17 @@ func (f *Framework) SetNginxConfigMapData(cmData map[string]string) {
 	Expect(err).NotTo(HaveOccurred())
 
 	time.Sleep(5 * time.Second)
+}
+
+func (f *Framework) CreateConfigMap(name string, data map[string]string) {
+	_, err := f.KubeClientSet.CoreV1().ConfigMaps(f.Namespace).Create(&v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: f.Namespace,
+		},
+		Data: data,
+	})
+	Expect(err).NotTo(HaveOccurred(), "failed to create configMap")
 }
 
 // UpdateNginxConfigMapData updates single field in ingress-nginx's nginx-configuration map data
@@ -306,8 +356,8 @@ func (f *Framework) DeleteNGINXPod(grace int64) {
 }
 
 // UpdateDeployment runs the given updateFunc on the deployment and waits for it to be updated
-func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name string, replicas int, updateFunc func(d *appsv1beta1.Deployment) error) error {
-	deployment, err := kubeClientSet.AppsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
+func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name string, replicas int, updateFunc func(d *appsv1.Deployment) error) error {
+	deployment, err := kubeClientSet.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -320,13 +370,13 @@ func UpdateDeployment(kubeClientSet kubernetes.Interface, namespace string, name
 
 	if *deployment.Spec.Replicas != int32(replicas) {
 		klog.Infof("updating replica count from %v to %v...", *deployment.Spec.Replicas, replicas)
-		deployment, err := kubeClientSet.AppsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
+		deployment, err := kubeClientSet.AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		deployment.Spec.Replicas = NewInt32(int32(replicas))
-		_, err = kubeClientSet.AppsV1beta1().Deployments(namespace).Update(deployment)
+		_, err = kubeClientSet.AppsV1().Deployments(namespace).Update(deployment)
 		if err != nil {
 			return errors.Wrapf(err, "scaling the number of replicas to %v", replicas)
 		}

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 	apiv1 "k8s.io/api/core/v1"
@@ -44,27 +45,12 @@ func PrintError(e error) {
 	}
 }
 
-func printWithError(s string, e error) {
-	if e != nil {
-		fmt.Println(e)
-	}
-	fmt.Print(s)
-}
-
-func printOrError(s string, e error) error {
-	if e != nil {
-		return e
-	}
-	fmt.Print(s)
-	return nil
-}
-
-// ParseVersionString returns the major, minor, and patch numbers of a verison string
+// ParseVersionString returns the major, minor, and patch numbers of a version string
 func ParseVersionString(v string) (int, int, int, error) {
 	parts := versionRegex.FindStringSubmatch(v)
 
 	if len(parts) != 4 {
-		return 0, 0, 0, fmt.Errorf("Could not parse %v as a version string (like 0.20.3)", v)
+		return 0, 0, 0, fmt.Errorf("could not parse %v as a version string (like 0.20.3)", v)
 	}
 
 	major, _ := strconv.Atoi(parts[1])
@@ -99,6 +85,25 @@ func isVersionLessThan(a, b string) bool {
 	}
 
 	return aPatch < bPatch
+}
+
+// PodInDeployment returns whether a pod is part of a deployment with the given name
+// a pod is considered to be in {deployment} if it is owned by a replicaset with a name of format {deployment}-otherchars
+func PodInDeployment(pod apiv1.Pod, deployment string) bool {
+	for _, owner := range pod.OwnerReferences {
+		if owner.Controller == nil || !*owner.Controller || owner.Kind != "ReplicaSet" {
+			continue
+		}
+
+		if strings.Count(owner.Name, "-") != strings.Count(deployment, "-")+1 {
+			continue
+		}
+
+		if strings.HasPrefix(owner.Name, deployment+"-") {
+			return true
+		}
+	}
+	return false
 }
 
 // AddPodFlag adds a --pod flag to a cobra command

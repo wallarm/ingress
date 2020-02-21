@@ -56,6 +56,7 @@ func getEndpoints(s *corev1.Service, port *corev1.ServicePort, proto corev1.Prot
 			return upsServers
 		}
 
+		// if the externalName is not an IP address we need to validate is a valid FQDN
 		if net.ParseIP(s.Spec.ExternalName) == nil {
 			_, err := net.LookupHost(s.Spec.ExternalName)
 			if err != nil {

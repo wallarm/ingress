@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	apiv1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -33,6 +33,7 @@ var (
 	annotationSecureVerifyCACert   = parser.GetAnnotationWithPrefix("secure-verify-ca-secret")
 	annotationPassthrough          = parser.GetAnnotationWithPrefix("ssl-passthrough")
 	annotationAffinityType         = parser.GetAnnotationWithPrefix("affinity")
+	annotationAffinityMode         = parser.GetAnnotationWithPrefix("affinity-mode")
 	annotationCorsEnabled          = parser.GetAnnotationWithPrefix("enable-cors")
 	annotationCorsAllowMethods     = parser.GetAnnotationWithPrefix("cors-allow-methods")
 	annotationCorsAllowHeaders     = parser.GetAnnotationWithPrefix("cors-allow-headers")
@@ -68,34 +69,34 @@ func (m mockCfg) GetAuthCertificate(name string) (*resolver.AuthSSLCert, error) 
 		return &resolver.AuthSSLCert{
 			Secret:     name,
 			CAFileName: "/opt/ca.pem",
-			PemSHA:     "123",
+			CASHA:      "123",
 		}, nil
 	}
 	return nil, nil
 }
 
-func buildIngress() *extensions.Ingress {
-	defaultBackend := extensions.IngressBackend{
+func buildIngress() *networking.Ingress {
+	defaultBackend := networking.IngressBackend{
 		ServiceName: "default-backend",
 		ServicePort: intstr.FromInt(80),
 	}
 
-	return &extensions.Ingress{
+	return &networking.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
 			Namespace: apiv1.NamespaceDefault,
 		},
-		Spec: extensions.IngressSpec{
-			Backend: &extensions.IngressBackend{
+		Spec: networking.IngressSpec{
+			Backend: &networking.IngressBackend{
 				ServiceName: "default-backend",
 				ServicePort: intstr.FromInt(80),
 			},
-			Rules: []extensions.IngressRule{
+			Rules: []networking.IngressRule{
 				{
 					Host: "foo.bar.com",
-					IngressRuleValue: extensions.IngressRuleValue{
-						HTTP: &extensions.HTTPIngressRuleValue{
-							Paths: []extensions.HTTPIngressPath{
+					IngressRuleValue: networking.IngressRuleValue{
+						HTTP: &networking.HTTPIngressRuleValue{
+							Paths: []networking.HTTPIngressPath{
 								{
 									Path:    "/foo",
 									Backend: defaultBackend,
@@ -199,19 +200,24 @@ func TestAffinitySession(t *testing.T) {
 	fooAnns := []struct {
 		annotations  map[string]string
 		affinitytype string
+		affinitymode string
 		name         string
 	}{
-		{map[string]string{annotationAffinityType: "cookie", annotationAffinityCookieName: "route"}, "cookie", "route"},
-		{map[string]string{annotationAffinityType: "cookie", annotationAffinityCookieName: "route1"}, "cookie", "route1"},
-		{map[string]string{annotationAffinityType: "cookie", annotationAffinityCookieName: ""}, "cookie", "INGRESSCOOKIE"},
-		{map[string]string{}, "", ""},
-		{nil, "", ""},
+		{map[string]string{annotationAffinityType: "cookie", annotationAffinityMode: "balanced", annotationAffinityCookieName: "route"}, "cookie", "balanced", "route"},
+		{map[string]string{annotationAffinityType: "cookie", annotationAffinityMode: "persistent", annotationAffinityCookieName: "route1"}, "cookie", "persistent", "route1"},
+		{map[string]string{annotationAffinityType: "cookie", annotationAffinityMode: "balanced", annotationAffinityCookieName: ""}, "cookie", "balanced", "INGRESSCOOKIE"},
+		{map[string]string{}, "", "", ""},
+		{nil, "", "", ""},
 	}
 
 	for _, foo := range fooAnns {
 		ing.SetAnnotations(foo.annotations)
 		r := ec.Extract(ing).SessionAffinity
 		t.Logf("Testing pass %v %v", foo.affinitytype, foo.name)
+
+		if r.Mode != foo.affinitymode {
+			t.Errorf("Returned %v but expected %v for Name", r.Mode, foo.affinitymode)
+		}
 
 		if r.Cookie.Name != foo.name {
 			t.Errorf("Returned %v but expected %v for Name", r.Cookie.Name, foo.name)

@@ -17,28 +17,43 @@ limitations under the License.
 package template
 
 import (
+	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
-	"encoding/base64"
-	"fmt"
-
 	jsoniter "github.com/json-iterator/go"
-	extensions "k8s.io/api/extensions/v1beta1"
-	"k8s.io/ingress-nginx/internal/file"
+
+	apiv1 "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/authreq"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/influxdb"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/luarestywaf"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/modsecurity"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ratelimit"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/rewrite"
 	"k8s.io/ingress-nginx/internal/ingress/controller/config"
+	"k8s.io/ingress-nginx/internal/nginx"
 )
+
+func init() {
+	// the default value of nginx.TemplatePath assumes the template exists in
+	// the root filesystem and not in the rootfs directory
+	path, err := filepath.Abs(filepath.Join("../../../../rootfs/", nginx.TemplatePath))
+	if err == nil {
+		nginx.TemplatePath = path
+	}
+}
 
 var (
 	// TODO: add tests for SSLPassthrough
@@ -167,7 +182,14 @@ proxy_pass http://upstream_balancer;`,
 func TestBuildLuaSharedDictionaries(t *testing.T) {
 	invalidType := &ingress.Ingress{}
 	expected := ""
-	actual := buildLuaSharedDictionaries(invalidType, true)
+
+	// config lua dict
+	cfg := config.Configuration{
+		LuaSharedDicts: map[string]int{
+			"configuration_data": 10, "certificate_data": 20,
+		},
+	}
+	actual := buildLuaSharedDictionaries(cfg, invalidType, true)
 
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
@@ -183,19 +205,44 @@ func TestBuildLuaSharedDictionaries(t *testing.T) {
 			Locations: []*ingress.Location{{Path: "/", LuaRestyWAF: luarestywaf.Config{}}},
 		},
 	}
-
-	config := buildLuaSharedDictionaries(servers, false)
-	if !strings.Contains(config, "lua_shared_dict configuration_data") {
-		t.Errorf("expected to include 'configuration_data' but got %s", config)
+	// returns value from config
+	configuration := buildLuaSharedDictionaries(cfg, servers, false)
+	if !strings.Contains(configuration, "lua_shared_dict configuration_data 10M;\n") {
+		t.Errorf("expected to include 'configuration_data' but got %s", configuration)
 	}
-	if strings.Contains(config, "waf_storage") {
-		t.Errorf("expected to not include 'waf_storage' but got %s", config)
+	if !strings.Contains(configuration, "lua_shared_dict certificate_data 20M;\n") {
+		t.Errorf("expected to include 'certificate_data' but got %s", configuration)
+	}
+	if strings.Contains(configuration, "waf_storage") {
+		t.Errorf("expected to not include 'waf_storage' but got %s", configuration)
 	}
 
 	servers[1].Locations[0].LuaRestyWAF = luarestywaf.Config{Mode: "ACTIVE"}
-	config = buildLuaSharedDictionaries(servers, false)
-	if !strings.Contains(config, "lua_shared_dict waf_storage") {
-		t.Errorf("expected to configure 'waf_storage', but got %s", config)
+	configuration = buildLuaSharedDictionaries(cfg, servers, false)
+	if !strings.Contains(configuration, "lua_shared_dict waf_storage") {
+		t.Errorf("expected to configure 'waf_storage', but got %s", configuration)
+	}
+	// test invalid config
+	configuration = buildLuaSharedDictionaries(invalidType, servers, false)
+	if configuration != "" {
+		t.Errorf("expected an empty string, but got %s", configuration)
+	}
+
+	if actual != expected {
+		t.Errorf("Expected '%v' but returned '%v' ", expected, actual)
+	}
+}
+
+func TestLuaConfigurationRequestBodySize(t *testing.T) {
+	cfg := config.Configuration{
+		LuaSharedDicts: map[string]int{
+			"configuration_data": 10, "certificate_data": 20,
+		},
+	}
+
+	size := luaConfigurationRequestBodySize(cfg)
+	if size != "21" {
+		t.Errorf("expected the size to be 20 but got: %v", size)
 	}
 }
 
@@ -214,6 +261,21 @@ func TestFormatIP(t *testing.T) {
 		res := formatIP(tc.Input)
 		if res != tc.Output {
 			t.Errorf("%s: called formatIp('%s'); expected '%v' but returned '%v'", k, tc.Input, tc.Output, res)
+		}
+	}
+}
+
+func TestQuote(t *testing.T) {
+	cases := map[interface{}]string{
+		"foo":      `"foo"`,
+		"\"foo\"":  `"\"foo\""`,
+		"foo\nbar": `"foo\nbar"`,
+		10:         `"10"`,
+	}
+	for input, output := range cases {
+		actual := quote(input)
+		if actual != output {
+			t.Errorf("quote('%s'): expected '%v' but returned '%v'", input, output, actual)
 		}
 	}
 }
@@ -283,50 +345,122 @@ func TestBuildProxyPass(t *testing.T) {
 func TestBuildAuthLocation(t *testing.T) {
 	invalidType := &ingress.Ingress{}
 	expected := ""
-	actual := buildAuthLocation(invalidType)
+	actual := buildAuthLocation(invalidType, "")
 
 	if !reflect.DeepEqual(expected, actual) {
 		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
 	}
 
 	authURL := "foo.com/auth"
+	globalAuthURL := "foo.com/global-auth"
 
 	loc := &ingress.Location{
 		ExternalAuth: authreq.Config{
 			URL: authURL,
 		},
-		Path: "/cat",
+		Path:             "/cat",
+		EnableGlobalAuth: true,
 	}
 
-	str := buildAuthLocation(loc)
-
 	encodedAuthURL := strings.Replace(base64.URLEncoding.EncodeToString([]byte(loc.Path)), "=", "", -1)
-	expected = fmt.Sprintf("/_external-auth-%v", encodedAuthURL)
+	externalAuthPath := fmt.Sprintf("/_external-auth-%v", encodedAuthURL)
 
-	if str != expected {
-		t.Errorf("Expected \n'%v'\nbut returned \n'%v'", expected, str)
+	testCases := []struct {
+		title                    string
+		authURL                  string
+		globalAuthURL            string
+		enableglobalExternalAuth bool
+		expected                 string
+	}{
+		{"authURL, globalAuthURL and enabled", authURL, globalAuthURL, true, externalAuthPath},
+		{"authURL, globalAuthURL and disabled", authURL, globalAuthURL, false, externalAuthPath},
+		{"authURL, empty globalAuthURL and enabled", authURL, "", true, externalAuthPath},
+		{"authURL, empty globalAuthURL and disabled", authURL, "", false, externalAuthPath},
+		{"globalAuthURL and enabled", "", globalAuthURL, true, externalAuthPath},
+		{"globalAuthURL and disabled", "", globalAuthURL, false, ""},
+		{"all empty and enabled", "", "", true, ""},
+		{"all empty and disabled", "", "", false, ""},
+	}
+
+	for _, testCase := range testCases {
+		loc.ExternalAuth.URL = testCase.authURL
+		loc.EnableGlobalAuth = testCase.enableglobalExternalAuth
+
+		str := buildAuthLocation(loc, testCase.globalAuthURL)
+		if str != testCase.expected {
+			t.Errorf("%v: expected '%v' but returned '%v'", testCase.title, testCase.expected, str)
+		}
+	}
+}
+
+func TestShouldApplyGlobalAuth(t *testing.T) {
+
+	authURL := "foo.com/auth"
+	globalAuthURL := "foo.com/global-auth"
+
+	loc := &ingress.Location{
+		ExternalAuth: authreq.Config{
+			URL: authURL,
+		},
+		Path:             "/cat",
+		EnableGlobalAuth: true,
+	}
+
+	testCases := []struct {
+		title                    string
+		authURL                  string
+		globalAuthURL            string
+		enableglobalExternalAuth bool
+		expected                 bool
+	}{
+		{"authURL, globalAuthURL and enabled", authURL, globalAuthURL, true, false},
+		{"authURL, globalAuthURL and disabled", authURL, globalAuthURL, false, false},
+		{"authURL, empty globalAuthURL and enabled", authURL, "", true, false},
+		{"authURL, empty globalAuthURL and disabled", authURL, "", false, false},
+		{"globalAuthURL and enabled", "", globalAuthURL, true, true},
+		{"globalAuthURL and disabled", "", globalAuthURL, false, false},
+		{"all empty and enabled", "", "", true, false},
+		{"all empty and disabled", "", "", false, false},
+	}
+
+	for _, testCase := range testCases {
+		loc.ExternalAuth.URL = testCase.authURL
+		loc.EnableGlobalAuth = testCase.enableglobalExternalAuth
+
+		result := shouldApplyGlobalAuth(loc, testCase.globalAuthURL)
+		if result != testCase.expected {
+			t.Errorf("%v: expected '%v' but returned '%v'", testCase.title, testCase.expected, result)
+		}
 	}
 }
 
 func TestBuildAuthResponseHeaders(t *testing.T) {
-	invalidType := &ingress.Ingress{}
-	expected := []string{}
-	actual := buildAuthResponseHeaders(invalidType)
-
-	if !reflect.DeepEqual(expected, actual) {
-		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
-	}
-
-	loc := &ingress.Location{
-		ExternalAuth: authreq.Config{ResponseHeaders: []string{"h1", "H-With-Caps-And-Dashes"}},
-	}
-	headers := buildAuthResponseHeaders(loc)
-	expected = []string{
+	externalAuthResponseHeaders := []string{"h1", "H-With-Caps-And-Dashes"}
+	expected := []string{
 		"auth_request_set $authHeader0 $upstream_http_h1;",
 		"proxy_set_header 'h1' $authHeader0;",
 		"auth_request_set $authHeader1 $upstream_http_h_with_caps_and_dashes;",
 		"proxy_set_header 'H-With-Caps-And-Dashes' $authHeader1;",
 	}
+
+	headers := buildAuthResponseHeaders(externalAuthResponseHeaders)
+
+	if !reflect.DeepEqual(expected, headers) {
+		t.Errorf("Expected \n'%v'\nbut returned \n'%v'", expected, headers)
+	}
+}
+
+func TestBuildAuthProxySetHeaders(t *testing.T) {
+	proxySetHeaders := map[string]string{
+		"header1": "value1",
+		"header2": "value2",
+	}
+	expected := []string{
+		"proxy_set_header 'header1' 'value1';",
+		"proxy_set_header 'header2' 'value2';",
+	}
+
+	headers := buildAuthProxySetHeaders(proxySetHeaders)
 
 	if !reflect.DeepEqual(expected, headers) {
 		t.Errorf("Expected \n'%v'\nbut returned \n'%v'", expected, headers)
@@ -352,15 +486,12 @@ func TestTemplateWithData(t *testing.T) {
 		dat.ListenPorts = &config.ListenPorts{}
 	}
 
-	fs, err := file.NewFakeFS()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	ngxTpl, err := NewTemplate("/etc/nginx/template/nginx.tmpl", fs)
+	ngxTpl, err := NewTemplate(nginx.TemplatePath)
 	if err != nil {
 		t.Errorf("invalid NGINX template: %v", err)
 	}
+
+	dat.Cfg.DefaultSSLCertificate = &ingress.SSLCert{}
 
 	rt, err := ngxTpl.Write(dat)
 	if err != nil {
@@ -396,12 +527,7 @@ func BenchmarkTemplateWithData(b *testing.B) {
 		b.Errorf("unexpected error unmarshalling json: %v", err)
 	}
 
-	fs, err := file.NewFakeFS()
-	if err != nil {
-		b.Fatalf("unexpected error: %v", err)
-	}
-
-	ngxTpl, err := NewTemplate("/etc/nginx/template/nginx.tmpl", fs)
+	ngxTpl, err := NewTemplate(nginx.TemplatePath)
 	if err != nil {
 		b.Errorf("invalid NGINX template: %v", err)
 	}
@@ -488,43 +614,6 @@ func TestBuildForwardedFor(t *testing.T) {
 	inputStr := "X-Forwarded-For"
 	expected = "$http_x_forwarded_for"
 	actual = buildForwardedFor(inputStr)
-
-	if expected != actual {
-		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
-	}
-}
-
-func TestBuildResolversForLua(t *testing.T) {
-
-	ipOne := net.ParseIP("192.0.0.1")
-	ipTwo := net.ParseIP("2001:db8:1234:0000:0000:0000:0000:0000")
-	ipList := []net.IP{ipOne, ipTwo}
-
-	invalidType := &ingress.Ingress{}
-	expected := ""
-	actual := buildResolversForLua(invalidType, false)
-
-	// Invalid Type for []net.IP
-	if expected != actual {
-		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
-	}
-
-	actual = buildResolversForLua(ipList, invalidType)
-
-	// Invalid Type for bool
-	if expected != actual {
-		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
-	}
-
-	expected = "\"192.0.0.1\", \"[2001:db8:1234::]\""
-	actual = buildResolversForLua(ipList, false)
-
-	if expected != actual {
-		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
-	}
-
-	expected = "\"192.0.0.1\""
-	actual = buildResolversForLua(ipList, true)
 
 	if expected != actual {
 		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
@@ -818,6 +907,7 @@ func TestOpentracingPropagateContext(t *testing.T) {
 		&ingress.Location{BackendProtocol: "GRPC"}:  "opentracing_grpc_propagate_context",
 		&ingress.Location{BackendProtocol: "GRPCS"}: "opentracing_grpc_propagate_context",
 		&ingress.Location{BackendProtocol: "AJP"}:   "opentracing_propagate_context",
+		&ingress.Location{BackendProtocol: "FCGI"}:  "opentracing_propagate_context",
 		"not a location": "opentracing_propagate_context",
 	}
 
@@ -830,104 +920,108 @@ func TestOpentracingPropagateContext(t *testing.T) {
 }
 
 func TestGetIngressInformation(t *testing.T) {
-	validIngress := &ingress.Ingress{}
-	invalidIngress := "wrongtype"
-	host := "host1"
-	validPath := "/ok"
-	invalidPath := 10
 
-	info := getIngressInformation(invalidIngress, host, validPath)
-	expected := &ingressInformation{}
-	if !info.Equal(expected) {
-		t.Errorf("Expected %v, but got %v", expected, info)
-	}
-
-	info = getIngressInformation(validIngress, host, invalidPath)
-	if !info.Equal(expected) {
-		t.Errorf("Expected %v, but got %v", expected, info)
-	}
-
-	// Setup Ingress Resource
-	validIngress.Namespace = "default"
-	validIngress.Name = "validIng"
-	validIngress.Annotations = map[string]string{
-		"ingress.annotation": "ok",
-	}
-	validIngress.Spec.Backend = &extensions.IngressBackend{
-		ServiceName: "a-svc",
-	}
-
-	info = getIngressInformation(validIngress, host, validPath)
-	expected = &ingressInformation{
-		Namespace: "default",
-		Rule:      "validIng",
-		Annotations: map[string]string{
-			"ingress.annotation": "ok",
+	testcases := map[string]struct {
+		Ingress  interface{}
+		Host     string
+		Path     interface{}
+		Expected *ingressInformation
+	}{
+		"wrong ingress type": {
+			"wrongtype",
+			"host1",
+			"/ok",
+			&ingressInformation{},
 		},
-		Service: "a-svc",
-	}
-	if !info.Equal(expected) {
-		t.Errorf("Expected %v, but got %v", expected, info)
-	}
-
-	validIngress.Spec.Backend = nil
-	validIngress.Spec.Rules = []extensions.IngressRule{
-		{
-			Host: host,
-			IngressRuleValue: extensions.IngressRuleValue{
-				HTTP: &extensions.HTTPIngressRuleValue{
-					Paths: []extensions.HTTPIngressPath{
-						{
-							Path: "/ok",
-							Backend: extensions.IngressBackend{
-								ServiceName: "b-svc",
+		"wrong path type": {
+			&ingress.Ingress{},
+			"host1",
+			10,
+			&ingressInformation{},
+		},
+		"valid ingress definition with name validIng in namespace default": {
+			&ingress.Ingress{
+				networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "validIng",
+						Namespace: apiv1.NamespaceDefault,
+						Annotations: map[string]string{
+							"ingress.annotation": "ok",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Backend: &networking.IngressBackend{
+							ServiceName: "a-svc",
+						},
+					},
+				},
+				nil,
+			},
+			"host1",
+			"",
+			&ingressInformation{
+				Namespace: "default",
+				Rule:      "validIng",
+				Annotations: map[string]string{
+					"ingress.annotation": "ok",
+				},
+				Service: "a-svc",
+			},
+		},
+		"valid ingress definition with name demo in namespace something and path /ok using a service with name b-svc port 80": {
+			&ingress.Ingress{
+				networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "demo",
+						Namespace: "something",
+						Annotations: map[string]string{
+							"ingress.annotation": "ok",
+						},
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "foo.bar",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path: "/ok",
+												Backend: networking.IngressBackend{
+													ServiceName: "b-svc",
+													ServicePort: intstr.FromInt(80),
+												},
+											},
+										},
+									},
+								},
 							},
+							{},
 						},
 					},
 				},
+				nil,
 			},
-		},
-		{},
-	}
-
-	info = getIngressInformation(validIngress, host, validPath)
-	expected = &ingressInformation{
-		Namespace: "default",
-		Rule:      "validIng",
-		Annotations: map[string]string{
-			"ingress.annotation": "ok",
-		},
-		Service: "b-svc",
-	}
-	if !info.Equal(expected) {
-		t.Errorf("Expected %v, but got %v", expected, info)
-	}
-
-	validIngress.Spec.Rules = append(validIngress.Spec.Rules, extensions.IngressRule{
-		Host: "host2",
-		IngressRuleValue: extensions.IngressRuleValue{
-			HTTP: &extensions.HTTPIngressRuleValue{
-				Paths: []extensions.HTTPIngressPath{
-					{
-						Path: "/ok",
-						Backend: extensions.IngressBackend{
-							ServiceName: "c-svc",
-						},
-					},
+			"foo.bar",
+			"/ok",
+			&ingressInformation{
+				Namespace: "something",
+				Rule:      "demo",
+				Annotations: map[string]string{
+					"ingress.annotation": "ok",
 				},
+				Service:     "b-svc",
+				ServicePort: "80",
 			},
 		},
-	})
-
-	info = getIngressInformation(validIngress, host, validPath)
-	if !info.Equal(expected) {
-		t.Errorf("Expected %v, but got %v", expected, info)
 	}
 
-	info = getIngressInformation(validIngress, "host2", validPath)
-	expected.Service = "c-svc"
-	if !info.Equal(expected) {
-		t.Errorf("Expected %v, but got %v", expected, info)
+	for title, testCase := range testcases {
+		info := getIngressInformation(testCase.Ingress, testCase.Host, testCase.Path)
+
+		if !info.Equal(testCase.Expected) {
+			t.Fatalf("%s: expected '%v' but returned %v", title, testCase.Expected, info)
+		}
 	}
 }
 
@@ -1153,6 +1247,59 @@ func TestStripLocationModifer(t *testing.T) {
 	expected := "ok.com"
 	actual := stripLocationModifer("~*ok.com")
 
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+}
+
+func TestShouldLoadModSecurityModule(t *testing.T) {
+	// ### Invalid argument type tests ###
+	// The first tests should return false.
+	expected := false
+
+	invalidType := &ingress.Ingress{}
+	actual := shouldLoadModSecurityModule(config.Configuration{}, invalidType)
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	actual = shouldLoadModSecurityModule(invalidType, []*ingress.Server{})
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	// ### Functional tests ###
+	actual = shouldLoadModSecurityModule(config.Configuration{}, []*ingress.Server{})
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	// All further tests should return true.
+	expected = true
+
+	configuration := config.Configuration{EnableModsecurity: true}
+	actual = shouldLoadModSecurityModule(configuration, []*ingress.Server{})
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	servers := []*ingress.Server{
+		{
+			Locations: []*ingress.Location{
+				{
+					ModSecurity: modsecurity.Config{
+						Enable: true,
+					},
+				},
+			},
+		},
+	}
+	actual = shouldLoadModSecurityModule(config.Configuration{}, servers)
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	actual = shouldLoadModSecurityModule(configuration, servers)
 	if expected != actual {
 		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
 	}

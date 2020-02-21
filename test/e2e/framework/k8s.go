@@ -122,7 +122,7 @@ func (f *Framework) EnsureDeployment(deployment *appsv1.Deployment) (*appsv1.Dep
 
 // WaitForPodsReady waits for a given amount of time until a group of Pods is running in the given namespace.
 func WaitForPodsReady(kubeClientSet kubernetes.Interface, timeout time.Duration, expectedReplicas int, namespace string, opts metav1.ListOptions) error {
-	return wait.Poll(2*time.Second, timeout, func() (bool, error) {
+	return wait.Poll(Poll, timeout, func() (bool, error) {
 		pl, err := kubeClientSet.CoreV1().Pods(namespace).List(opts)
 		if err != nil {
 			return false, nil
@@ -143,17 +143,35 @@ func WaitForPodsReady(kubeClientSet kubernetes.Interface, timeout time.Duration,
 	})
 }
 
+// WaitForPodsDeleted waits for a given amount of time until a group of Pods are deleted in the given namespace.
+func WaitForPodsDeleted(kubeClientSet kubernetes.Interface, timeout time.Duration, namespace string, opts metav1.ListOptions) error {
+	return wait.Poll(Poll, timeout, func() (bool, error) {
+		pl, err := kubeClientSet.CoreV1().Pods(namespace).List(opts)
+		if err != nil {
+			return false, nil
+		}
+
+		if len(pl.Items) == 0 {
+			return true, nil
+		}
+		return false, nil
+	})
+}
+
 // WaitForEndpoints waits for a given amount of time until an endpoint contains.
 func WaitForEndpoints(kubeClientSet kubernetes.Interface, timeout time.Duration, name, ns string, expectedEndpoints int) error {
 	if expectedEndpoints == 0 {
 		return nil
 	}
-	return wait.Poll(2*time.Second, timeout, func() (bool, error) {
+
+	return wait.Poll(Poll, timeout, func() (bool, error) {
 		endpoint, err := kubeClientSet.CoreV1().Endpoints(ns).Get(name, metav1.GetOptions{})
 		if k8sErrors.IsNotFound(err) {
 			return false, nil
 		}
+
 		Expect(err).NotTo(HaveOccurred())
+
 		if len(endpoint.Subsets) == 0 || len(endpoint.Subsets[0].Addresses) == 0 {
 			return false, nil
 		}
@@ -196,7 +214,7 @@ func getIngressNGINXPod(ns string, kubeClientSet kubernetes.Interface) (*core.Po
 	}
 
 	if len(l.Items) == 0 {
-		return nil, fmt.Errorf("There is no ingress-nginx pods running in namespace %v", ns)
+		return nil, fmt.Errorf("there is no ingress-nginx pods running in namespace %v", ns)
 	}
 
 	var pod *core.Pod
@@ -211,7 +229,7 @@ func getIngressNGINXPod(ns string, kubeClientSet kubernetes.Interface) (*core.Po
 	}
 
 	if pod == nil {
-		return nil, fmt.Errorf("There is no ingress-nginx pods running in namespace %v", ns)
+		return nil, fmt.Errorf("there is no ingress-nginx pods running in namespace %v", ns)
 	}
 
 	return pod, nil

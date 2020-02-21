@@ -53,7 +53,7 @@ var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
 			"nginx.ingress.kubernetes.io/auth-tls-secret": nameSpace + "/" + host,
 		}
 
-		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, "http-svc", 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, &annotations))
 
 		assertSslClientCertificateConfig(f, host, "on", "1")
 
@@ -95,7 +95,7 @@ var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
 			"nginx.ingress.kubernetes.io/auth-tls-verify-depth":  "2",
 		}
 
-		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, "http-svc", 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, &annotations))
 
 		assertSslClientCertificateConfig(f, host, "off", "2")
 
@@ -130,7 +130,7 @@ var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
 			"nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream": "true",
 		}
 
-		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, "http-svc", 80, &annotations))
+		f.EnsureIngress(framework.NewSingleIngressWithTLS(host, "/", host, []string{host}, nameSpace, framework.EchoService, 80, &annotations))
 
 		assertSslClientCertificateConfig(f, host, "on", "1")
 
@@ -168,17 +168,13 @@ var _ = framework.IngressNginxDescribe("Annotations - AuthTLS", func() {
 })
 
 func assertSslClientCertificateConfig(f *framework.Framework, host string, verifyClient string, verifyDepth string) {
-	sslCertDirective := "ssl_certificate /etc/ingress-controller/ssl/default-fake-certificate.pem;"
-	sslKeyDirective := "ssl_certificate_key /etc/ingress-controller/ssl/default-fake-certificate.pem;"
 	sslClientCertDirective := fmt.Sprintf("ssl_client_certificate /etc/ingress-controller/ssl/%s-%s.pem;", f.Namespace, host)
 	sslVerify := fmt.Sprintf("ssl_verify_client %s;", verifyClient)
 	sslVerifyDepth := fmt.Sprintf("ssl_verify_depth %s;", verifyDepth)
 
 	f.WaitForNginxServer(host,
 		func(server string) bool {
-			return strings.Contains(server, sslCertDirective) &&
-				strings.Contains(server, sslKeyDirective) &&
-				strings.Contains(server, sslClientCertDirective) &&
+			return strings.Contains(server, sslClientCertDirective) &&
 				strings.Contains(server, sslVerify) &&
 				strings.Contains(server, sslVerifyDepth)
 		})
