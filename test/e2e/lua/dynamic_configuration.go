@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -49,7 +48,7 @@ var _ = framework.IngressNginxDescribe("Dynamic Configuration", func() {
 
 	BeforeEach(func() {
 		f.NewEchoDeploymentWithReplicas(1)
-		ensureIngress(f, "foo.com", "http-svc")
+		ensureIngress(f, "foo.com", framework.EchoService)
 	})
 
 	It("configures balancer Lua middleware correctly", func() {
@@ -63,13 +62,6 @@ var _ = framework.IngressNginxDescribe("Dynamic Configuration", func() {
 		})
 	})
 
-	It("sets nameservers for Lua", func() {
-		f.WaitForNginxConfiguration(func(cfg string) bool {
-			r := regexp.MustCompile(`configuration.nameservers = { [".,0-9a-zA-Z]+ }`)
-			return r.MatchString(cfg)
-		})
-	})
-
 	Context("when only backends change", func() {
 		It("handles endpoints only changes", func() {
 			var nginxConfig string
@@ -79,7 +71,7 @@ var _ = framework.IngressNginxDescribe("Dynamic Configuration", func() {
 			})
 
 			replicas := 2
-			err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "http-svc", replicas, nil)
+			err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, framework.EchoService, replicas, nil)
 			Expect(err).NotTo(HaveOccurred())
 			time.Sleep(waitForLuaSync)
 
@@ -101,7 +93,7 @@ var _ = framework.IngressNginxDescribe("Dynamic Configuration", func() {
 			})
 
 			replicas := 2
-			err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "http-svc", replicas, nil)
+			err := framework.UpdateDeployment(f.KubeClientSet, f.Namespace, framework.EchoService, replicas, nil)
 			Expect(err).NotTo(HaveOccurred())
 			time.Sleep(waitForLuaSync * 2)
 
@@ -114,7 +106,7 @@ var _ = framework.IngressNginxDescribe("Dynamic Configuration", func() {
 			})
 			Expect(nginxConfig).Should(Equal(newNginxConfig))
 
-			err = framework.UpdateDeployment(f.KubeClientSet, f.Namespace, "http-svc", 0, nil)
+			err = framework.UpdateDeployment(f.KubeClientSet, f.Namespace, framework.EchoService, 0, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			time.Sleep(waitForLuaSync * 2)
@@ -174,40 +166,9 @@ var _ = framework.IngressNginxDescribe("Dynamic Configuration", func() {
 		})
 	})
 
-	It("handles a non backend update", func() {
-		var nginxConfig string
-		f.WaitForNginxConfiguration(func(cfg string) bool {
-			nginxConfig = cfg
-			return true
-		})
-
-		ingress, err := f.KubeClientSet.ExtensionsV1beta1().Ingresses(f.Namespace).Get("foo.com", metav1.GetOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		ingress.Spec.TLS = []extensions.IngressTLS{
-			{
-				Hosts:      []string{"foo.com"},
-				SecretName: "foo.com",
-			},
-		}
-		_, err = framework.CreateIngressTLSSecret(f.KubeClientSet,
-			ingress.Spec.TLS[0].Hosts,
-			ingress.Spec.TLS[0].SecretName,
-			ingress.Namespace)
-		Expect(err).ToNot(HaveOccurred())
-		_, err = f.KubeClientSet.ExtensionsV1beta1().Ingresses(f.Namespace).Update(ingress)
-		Expect(err).ToNot(HaveOccurred())
-
-		var newNginxConfig string
-		f.WaitForNginxConfiguration(func(cfg string) bool {
-			newNginxConfig = cfg
-			return true
-		})
-		Expect(nginxConfig).ShouldNot(Equal(newNginxConfig))
-	})
-
 	It("sets controllerPodsCount in Lua general configuration", func() {
 		// https://github.com/curl/curl/issues/936
-		curlCmd := fmt.Sprintf("curl --fail --silent --unix-socket %v http://localhost/configuration/general", nginx.StatusSocket)
+		curlCmd := fmt.Sprintf("curl --fail --silent http://localhost:%v/configuration/general", nginx.StatusPort)
 
 		output, err := f.ExecIngressPod(curlCmd)
 		Expect(err).ToNot(HaveOccurred())
@@ -284,13 +245,4 @@ func ensureHTTPSRequest(url string, host string, expectedDNSName string) {
 	Expect(resp.StatusCode).Should(Equal(http.StatusOK))
 	Expect(len(resp.TLS.PeerCertificates)).Should(BeNumerically("==", 1))
 	Expect(resp.TLS.PeerCertificates[0].DNSNames[0]).Should(Equal(expectedDNSName))
-}
-
-func getCookie(name string, cookies []*http.Cookie) (*http.Cookie, error) {
-	for _, cookie := range cookies {
-		if cookie.Name == name {
-			return cookie, nil
-		}
-	}
-	return &http.Cookie{}, fmt.Errorf("Cookie does not exist")
 }

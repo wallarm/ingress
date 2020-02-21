@@ -1,12 +1,13 @@
 local ngx_balancer = require("ngx.balancer")
 local cjson = require("cjson.safe")
 local util = require("util")
-local dns_util = require("util.dns")
+local dns_lookup = require("util.dns").lookup
 local configuration = require("configuration")
 local round_robin = require("balancer.round_robin")
 local chash = require("balancer.chash")
 local chashsubset = require("balancer.chashsubset")
-local sticky = require("balancer.sticky")
+local sticky_balanced = require("balancer.sticky_balanced")
+local sticky_persistent = require("balancer.sticky_persistent")
 local ewma = require("balancer.ewma")
 
 -- measured in seconds
@@ -19,7 +20,8 @@ local IMPLEMENTATIONS = {
   round_robin = round_robin,
   chash = chash,
   chashsubset = chashsubset,
-  sticky = sticky,
+  sticky_balanced = sticky_balanced,
+  sticky_persistent = sticky_persistent,
   ewma = ewma,
 }
 
@@ -30,7 +32,11 @@ local function get_implementation(backend)
   local name = backend["load-balance"] or DEFAULT_LB_ALG
 
   if backend["sessionAffinityConfig"] and backend["sessionAffinityConfig"]["name"] == "cookie" then
-    name = "sticky"
+    if backend["sessionAffinityConfig"]["mode"] == 'persistent' then
+      name = "sticky_persistent"
+    else
+      name = "sticky_balanced"
+    end
   elseif backend["upstreamHashByConfig"] and backend["upstreamHashByConfig"]["upstream-hash-by"] then
     if backend["upstreamHashByConfig"]["upstream-hash-by-subset"] then
       name = "chashsubset"
@@ -52,7 +58,7 @@ local function resolve_external_names(original_backend)
   local backend = util.deepcopy(original_backend)
   local endpoints = {}
   for _, endpoint in ipairs(backend.endpoints) do
-    local ips = dns_util.resolve(endpoint.address)
+    local ips = dns_lookup(endpoint.address)
     for _, ip in ipairs(ips) do
       table.insert(endpoints, { address = ip, port = endpoint.port })
     end
@@ -190,6 +196,10 @@ local function route_to_alternative_balancer(balancer)
 end
 
 local function get_balancer()
+  if ngx.ctx.balancer then
+    return ngx.ctx.balancer
+  end
+
   local backend_name = ngx.var.proxy_upstream_name
 
   local balancer = balancers[backend_name]
@@ -198,9 +208,13 @@ local function get_balancer()
   end
 
   if route_to_alternative_balancer(balancer) then
-    local alternative_balancer = balancers[balancer.alternative_backends[1]]
-    return alternative_balancer
+    local alternative_backend_name = balancer.alternative_backends[1]
+    ngx.var.proxy_alternative_upstream_name = alternative_backend_name
+
+    balancer = balancers[alternative_backend_name]
   end
+
+  ngx.ctx.balancer = balancer
 
   return balancer
 end
@@ -257,6 +271,8 @@ end
 if _TEST then
   _M.get_implementation = get_implementation
   _M.sync_backend = sync_backend
+  _M.route_to_alternative_balancer = route_to_alternative_balancer
+  _M.get_balancer = get_balancer
 end
 
 return _M

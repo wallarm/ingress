@@ -18,7 +18,6 @@ limitations under the License.
 package config
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -29,6 +28,11 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress"
 	"k8s.io/ingress-nginx/internal/ingress/defaults"
 	"k8s.io/ingress-nginx/internal/runtime"
+)
+
+var (
+	// EnableSSLChainCompletion Autocomplete SSL certificate chains with missing intermediate CA certificates.
+	EnableSSLChainCompletion = false
 )
 
 const (
@@ -47,13 +51,13 @@ const (
 	// max-age is the time, in seconds, that the browser should remember that this site is only to be accessed using HTTPS.
 	hstsMaxAge = "15724800"
 
-	gzipTypes = "application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component"
+	gzipTypes = "application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component"
 
-	brotliTypes = "application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component"
+	brotliTypes = "application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component"
 
-	logFormatUpstream = `%v - [$the_real_ip] - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time [$proxy_upstream_name] $upstream_addr $upstream_response_length $upstream_response_time $upstream_status $req_id`
+	logFormatUpstream = `$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time [$proxy_upstream_name] [$proxy_alternative_upstream_name] $upstream_addr $upstream_response_length $upstream_response_time $upstream_status $req_id`
 
-	logFormatStream = `[$time_local] $protocol $status $bytes_sent $bytes_received $session_time`
+	logFormatStream = `[$remote_addr] [$time_local] $protocol $status $bytes_sent $bytes_received $session_time`
 
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_buffer_size
 	// Sets the size of the buffer used for sending data.
@@ -68,6 +72,10 @@ const (
 	// SSL enabled protocols to use
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_protocols
 	sslProtocols = "TLSv1.2"
+
+	// Disable TLS 1.3 early data
+	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_early_data
+	sslEarlyData = false
 
 	// Time during which a client may reuse the session parameters stored in a cache.
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_timeout
@@ -117,11 +125,6 @@ type Configuration struct {
 	// http://nginx.org/en/docs/ngx_core_module.html#error_log
 	// By default error logs go to /var/log/nginx/error.log
 	ErrorLogPath string `json:"error-log-path,omitempty"`
-
-	// EnableDynamicTLSRecords enables dynamic TLS record sizes
-	// https://blog.cloudflare.com/optimizing-tls-over-tcp-to-reduce-latency
-	// By default this is enabled
-	EnableDynamicTLSRecords bool `json:"enable-dynamic-tls-records"`
 
 	// EnableModsecurity enables the modsecurity module for NGINX
 	// By default this is disabled
@@ -311,6 +314,10 @@ type Configuration struct {
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_protocols
 	SSLProtocols string `json:"ssl-protocols,omitempty"`
 
+	// Enables or disable TLS 1.3 early data.
+	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_early_data
+	SSLEarlyData bool `json:"ssl-early-data,omitempty"`
+
 	// Enables or disables the use of shared SSL cache among worker processes.
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_session_cache
 	SSLSessionCache bool `json:"ssl-session-cache,omitempty"`
@@ -431,6 +438,10 @@ type Configuration struct {
 	// Default: 1
 	ProxyStreamResponses int `json:"proxy-stream-responses,omitempty"`
 
+	// Modifies the HTTP version the proxy uses to interact with the backend.
+	// http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_http_version
+	ProxyHTTPVersion string `json:"proxy-http-version"`
+
 	// Sets the ipv4 addresses on which the server will accept requests.
 	BindAddressIpv4 []string `json:"bind-address-ipv4,omitempty"`
 
@@ -495,6 +506,30 @@ type Configuration struct {
 	// JaegerSamplerParam specifies the argument to be passed to the sampler constructor
 	// Default: 1
 	JaegerSamplerParam string `json:"jaeger-sampler-param"`
+
+	// JaegerSamplerHost specifies the host used for remote sampling consultation
+	// Default: http://127.0.0.1
+	JaegerSamplerHost string `json:"jaeger-sampler-host"`
+
+	// JaegerSamplerHost specifies the host used for remote sampling consultation
+	// Default: 5778
+	JaegerSamplerPort int `json:"jaeger-sampler-port"`
+
+	// JaegerTraceContextHeaderName specifies the header name used for passing trace context
+	// Default: uber-trace-id
+	JaegerTraceContextHeaderName string `json:"jaeger-trace-context-header-name"`
+
+	// JaegerDebugHeader specifies the header name used for force sampling
+	// Default: jaeger-debug-id
+	JaegerDebugHeader string `json:"jaeger-debug-header"`
+
+	// JaegerBaggageHeader specifies the header name used to submit baggage if there is no root span
+	// Default: jaeger-baggage
+	JaegerBaggageHeader string `json:"jaeger-baggage-header"`
+
+	// TraceBaggageHeaderPrefix specifies the header prefix used to propagate baggage
+	// Default: uberctx-
+	JaegerTraceBaggageHeaderPrefix string `json:"jaeger-tracer-baggage-header-prefix"`
 
 	// DatadogCollectorHost specifies the datadog agent host to use when uploading traces
 	DatadogCollectorHost string `json:"datadog-collector-host"`
@@ -564,6 +599,11 @@ type Configuration struct {
 	// should not get authenticated
 	NoAuthLocations string `json:"no-auth-locations"`
 
+	// GlobalExternalAuth indicates the access to all locations requires
+	// authentication using an external provider
+	// +optional
+	GlobalExternalAuth GlobalExternalAuth `json:"global-external-auth"`
+
 	// DisableLuaRestyWAF disables lua-resty-waf globally regardless
 	// of whether there's an ingress that has enabled the WAF using annotation
 	DisableLuaRestyWAF bool `json:"disable-lua-resty-waf"`
@@ -621,6 +661,13 @@ type Configuration struct {
 
 	// Block all requests with given Referer headers
 	BlockReferers []string `json:"block-referers"`
+
+	// Lua shared dict configuration data / certificate data
+	LuaSharedDicts map[string]int `json:"lua-shared-dicts"`
+
+	// DefaultSSLCertificate holds the default SSL certificate to use in the configuration
+	// It can be the fake certificate or the one behind the flag --default-ssl-certificate
+	DefaultSSLCertificate *ingress.SSLCert `json:"-"`
 }
 
 // NewDefault returns the default nginx configuration
@@ -630,11 +677,13 @@ func NewDefault() Configuration {
 	defBlockEntity := make([]string, 0)
 	defNginxStatusIpv4Whitelist := make([]string, 0)
 	defNginxStatusIpv6Whitelist := make([]string, 0)
+	defResponseHeaders := make([]string, 0)
 
 	defIPCIDR = append(defIPCIDR, "0.0.0.0/0")
 	defNginxStatusIpv4Whitelist = append(defNginxStatusIpv4Whitelist, "127.0.0.1")
 	defNginxStatusIpv6Whitelist = append(defNginxStatusIpv6Whitelist, "::1")
 	defProxyDeadlineDuration := time.Duration(5) * time.Second
+	defGlobalExternalAuth := GlobalExternalAuth{"", "", "", "", append(defResponseHeaders, ""), "", "", "", []string{}, map[string]string{}}
 
 	cfg := Configuration{
 		AllowBackendServerHeader:         false,
@@ -652,13 +701,12 @@ func NewDefault() Configuration {
 		ClientHeaderTimeout:              60,
 		ClientBodyBufferSize:             "8k",
 		ClientBodyTimeout:                60,
-		EnableDynamicTLSRecords:          true,
 		EnableUnderscoresInHeaders:       false,
 		ErrorLogLevel:                    errorLevel,
 		UseForwardedHeaders:              false,
 		ForwardedForHeader:               "X-Forwarded-For",
 		ComputeFullForwardedFor:          false,
-		ProxyAddOriginalURIHeader:        true,
+		ProxyAddOriginalURIHeader:        false,
 		GenerateRequestID:                true,
 		HTTP2MaxFieldSize:                "4k",
 		HTTP2MaxHeaderSize:               "16k",
@@ -695,6 +743,7 @@ func NewDefault() Configuration {
 		SSLCiphers:                       sslCiphers,
 		SSLECDHCurve:                     "auto",
 		SSLProtocols:                     sslProtocols,
+		SSLEarlyData:                     sslEarlyData,
 		SSLSessionCache:                  true,
 		SSLSessionCacheSize:              sslSessionCacheSize,
 		SSLSessionTickets:                true,
@@ -704,7 +753,7 @@ func NewDefault() Configuration {
 		UseGeoIP:                         true,
 		UseGeoIP2:                        false,
 		WorkerProcesses:                  strconv.Itoa(runtime.NumCPU()),
-		WorkerShutdownTimeout:            "10s",
+		WorkerShutdownTimeout:            "240s",
 		VariablesHashBucketSize:          128,
 		VariablesHashMaxSize:             2048,
 		UseHTTP2:                         true,
@@ -714,11 +763,12 @@ func NewDefault() Configuration {
 			ProxyConnectTimeout:      5,
 			ProxyReadTimeout:         60,
 			ProxySendTimeout:         60,
-			ProxyBuffersNumber:     4,
+			ProxyBuffersNumber:       4,
 			ProxyBufferSize:          "4k",
 			ProxyCookieDomain:        "off",
 			ProxyCookiePath:          "off",
 			ProxyNextUpstream:        "error timeout",
+			ProxyNextUpstreamTimeout: 0,
 			ProxyNextUpstreamTries:   3,
 			ProxyRequestBuffering:    "on",
 			ProxyRedirectFrom:        "off",
@@ -739,6 +789,8 @@ func NewDefault() Configuration {
 			WallarmParseWebsocket:    "off",
 			WallarmUnpackResponse:    "on",
 			WallarmParserDisable:     []string{},
+			ProxyHTTPVersion:         "1.1",
+			ProxyMaxTempFileSize:     "1024m",
 		},
 		UpstreamKeepaliveConnections: 32,
 		UpstreamKeepaliveTimeout:     60,
@@ -753,6 +805,8 @@ func NewDefault() Configuration {
 		JaegerServiceName:            "nginx",
 		JaegerSamplerType:            "const",
 		JaegerSamplerParam:           "1",
+		JaegerSamplerPort:            5778,
+		JaegerSamplerHost:            "http://127.0.0.1",
 		DatadogServiceName:           "nginx",
 		DatadogCollectorPort:         8126,
 		DatadogOperationNameOverride: "nginx.handle",
@@ -770,6 +824,7 @@ func NewDefault() Configuration {
 		WallarmProcessTimeLimitBlock:     "attack",
 		WallarmRequestMemoryLimit:        "0",
 		WallarmWorkerRlimitVmem:          "1g",
+		GlobalExternalAuth:           defGlobalExternalAuth,
 	}
 
 	if klog.V(5) {
@@ -779,44 +834,32 @@ func NewDefault() Configuration {
 	return cfg
 }
 
-// BuildLogFormatUpstream format the log_format upstream using
-// proxy_protocol_addr as remote client address if UseProxyProtocol
-// is enabled.
-func (cfg Configuration) BuildLogFormatUpstream() string {
-	if cfg.LogFormatUpstream == logFormatUpstream {
-		return fmt.Sprintf(cfg.LogFormatUpstream, "$the_real_ip")
-	}
-
-	return cfg.LogFormatUpstream
-}
-
 // TemplateConfig contains the nginx configuration to render the file nginx.conf
 type TemplateConfig struct {
-	ProxySetHeaders            map[string]string
-	AddHeaders                 map[string]string
-	BacklogSize                int
-	Backends                   []*ingress.Backend
-	PassthroughBackends        []*ingress.SSLPassthroughBackend
-	WallarmTarantoolUpstream    *ingress.Backend
-	Servers                    []*ingress.Server
-	TCPBackends                []ingress.L4Service
-	UDPBackends                []ingress.L4Service
-	HealthzURI                 string
-	Cfg                        Configuration
-	IsIPV6Enabled              bool
-	IsSSLPassthroughEnabled    bool
-	NginxStatusIpv4Whitelist   []string
-	NginxStatusIpv6Whitelist   []string
-	RedirectServers            interface{}
-	ListenPorts                *ListenPorts
-	PublishService             *apiv1.Service
-	DynamicCertificatesEnabled bool
-	EnableMetrics              bool
+	ProxySetHeaders          map[string]string
+	AddHeaders               map[string]string
+	BacklogSize              int
+	Backends                 []*ingress.Backend
+	PassthroughBackends      []*ingress.SSLPassthroughBackend
+	WallarmTarantoolUpstream *ingress.Backend
+	Servers                  []*ingress.Server
+	TCPBackends              []ingress.L4Service
+	UDPBackends              []ingress.L4Service
+	HealthzURI               string
+	Cfg                      Configuration
+	IsIPV6Enabled            bool
+	IsSSLPassthroughEnabled  bool
+	NginxStatusIpv4Whitelist []string
+	NginxStatusIpv6Whitelist []string
+	RedirectServers          interface{}
+	ListenPorts              *ListenPorts
+	PublishService           *apiv1.Service
+	EnableMetrics            bool
 
-	PID          string
-	StatusSocket string
-	StatusPath   string
-	StreamSocket string
+	PID        string
+	StatusPath string
+	StatusPort int
+	StreamPort int
 }
 
 // ListenPorts describe the ports required to run the
@@ -827,4 +870,20 @@ type ListenPorts struct {
 	Health   int
 	Default  int
 	SSLProxy int
+}
+
+// GlobalExternalAuth describe external authentication configuration for the
+// NGINX Ingress controller
+type GlobalExternalAuth struct {
+	URL string `json:"url"`
+	// Host contains the hostname defined in the URL
+	Host              string            `json:"host"`
+	SigninURL         string            `json:"signinUrl"`
+	Method            string            `json:"method"`
+	ResponseHeaders   []string          `json:"responseHeaders,omitempty"`
+	RequestRedirect   string            `json:"requestRedirect"`
+	AuthSnippet       string            `json:"authSnippet"`
+	AuthCacheKey      string            `json:"authCacheKey"`
+	AuthCacheDuration []string          `json:"authCacheDuration"`
+	ProxySetHeaders   map[string]string `json:"proxySetHeaders,omitempty"`
 }
