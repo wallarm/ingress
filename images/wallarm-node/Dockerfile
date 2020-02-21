@@ -54,5 +54,5 @@ RUN echo "mQINBFL1Xl4BEADEFCVumPx2W4hQJG+4RRS0Zjw503a0YKH8tKp3OEWIMKiWwWiaTcqxZg
     && apt-get -qq --no-install-recommends install \
         nginx-module-wallarm-k8s-ingress \
         wallarm-node \
-    && chown www-data:www-data /var/lib/nginx /var/lib/wallarm-tarantool \
+    && chown www-data:www-data /var/lib/wallarm-tarantool \
     && find /var/lib/apt -type f -delete
