@@ -43,7 +43,7 @@ var TemplatePath = "/etc/nginx/template/nginx.tmpl"
 var PID = "/tmp/nginx.pid"
 
 // StatusPort port used by NGINX for the status server
-var StatusPort = 10246
+var StatusPort = 18080
 
 // HealthPath defines the path used to define the health check location in NGINX
 var HealthPath = "/healthz"

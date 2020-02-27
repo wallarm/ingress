@@ -167,7 +167,7 @@ Takes the form "<host>:port". If not provided, no admission controller is starte
 		validationWebhookKey = flags.String("validating-webhook-key", "",
 			`The path of the validating webhook key PEM.`)
 
-		statusPort = flags.Int("status-port", 10246, `Port to use for the lua HTTP endpoint configuration.`)
+		statusPort = flags.Int("status-port", 18080, `Port to use for the lua HTTP endpoint configuration.`)
 		streamPort = flags.Int("stream-port", 10247, "Port to use for the lua TCP/UDP endpoint configuration.")
 
 		profilerPort = flags.Int("profiler-port", 10245, "Port to use for expose the ingress controller Go profiler when it is enabled.")
