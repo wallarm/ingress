@@ -50,9 +50,12 @@ const (
 
 // Configuration contains all the settings required by an Ingress controller
 type Configuration struct {
-	APIServerHost  string
+	APIServerHost string
+	RootCAFile    string
+
 	KubeConfigFile string
-	Client         clientset.Interface
+
+	Client clientset.Interface
 
 	ResyncPeriod time.Duration
 
@@ -254,12 +257,12 @@ func (n *NGINXController) getStreamServices(configmapName string, proto apiv1.Pr
 	klog.V(3).Infof("Obtaining information about %v stream services from ConfigMap %q", proto, configmapName)
 	_, _, err := k8s.ParseNameNS(configmapName)
 	if err != nil {
-		klog.Errorf("Error parsing ConfigMap reference %q: %v", configmapName, err)
+		klog.Warningf("Error parsing ConfigMap reference %q: %v", configmapName, err)
 		return []ingress.L4Service{}
 	}
 	configmap, err := n.store.GetConfigMap(configmapName)
 	if err != nil {
-		klog.Errorf("Error getting ConfigMap %q: %v", configmapName, err)
+		klog.Warningf("Error getting ConfigMap %q: %v", configmapName, err)
 		return []ingress.L4Service{}
 	}
 
@@ -731,8 +734,6 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
 			klog.V(3).Infof("Creating upstream %q", defBackend)
 			upstreams[defBackend] = newUpstream(defBackend)
 
-			upstreams[defBackend].SecureCACert = anns.SecureUpstream.CACert
-
 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
 			upstreams[defBackend].UpstreamHashBy.UpstreamHashBySubsetSize = anns.UpstreamHashBy.UpstreamHashBySubsetSize
@@ -795,8 +796,6 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
 				klog.V(3).Infof("Creating upstream %q", name)
 				upstreams[name] = newUpstream(name)
 				upstreams[name].Port = path.Backend.ServicePort
-
-				upstreams[name].SecureCACert = anns.SecureUpstream.CACert
 
 				upstreams[name].UpstreamHashBy.UpstreamHashBy = anns.UpstreamHashBy.UpstreamHashBy
 				upstreams[name].UpstreamHashBy.UpstreamHashBySubset = anns.UpstreamHashBy.UpstreamHashBySubset
@@ -1157,6 +1156,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 			tlsSecretName := extractTLSSecretName(host, ing, n.store.GetLocalSSLCert)
 			if tlsSecretName == "" {
 				klog.V(3).Infof("Host %q is listed in the TLS section but secretName is empty. Using default certificate.", host)
+				servers[host].SSLCert = n.getDefaultSSLCertificate()
 				continue
 			}
 
@@ -1164,6 +1164,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 			cert, err := n.store.GetLocalSSLCert(secrKey)
 			if err != nil {
 				klog.Warningf("Error getting SSL certificate %q: %v. Using default certificate", secrKey, err)
+				servers[host].SSLCert = n.getDefaultSSLCertificate()
 				continue
 			}
 
@@ -1178,6 +1179,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 					klog.Warningf("SSL certificate %q does not contain a Common Name or Subject Alternative Name for server %q: %v",
 						secrKey, host, err)
 					klog.Warningf("Using default certificate")
+					servers[host].SSLCert = n.getDefaultSSLCertificate()
 					continue
 				}
 			}
@@ -1210,7 +1212,9 @@ func locationApplyAnnotations(loc *ingress.Location, anns *annotations.Ingress) 
 	loc.ExternalAuth = anns.ExternalAuth
 	loc.EnableGlobalAuth = anns.EnableGlobalAuth
 	loc.HTTP2PushPreload = anns.HTTP2PushPreload
+	loc.Opentracing = anns.Opentracing
 	loc.Proxy = anns.Proxy
+	loc.ProxySSL = anns.ProxySSL
 	loc.RateLimit = anns.RateLimit
 	loc.Redirect = anns.Redirect
 	loc.Rewrite = anns.Rewrite
@@ -1221,7 +1225,6 @@ func locationApplyAnnotations(loc *ingress.Location, anns *annotations.Ingress) 
 	loc.UsePortInRedirects = anns.UsePortInRedirects
 	loc.Connection = anns.Connection
 	loc.Logs = anns.Logs
-	loc.LuaRestyWAF = anns.LuaRestyWAF
 	loc.InfluxDB = anns.InfluxDB
 	loc.DefaultBackend = anns.DefaultBackend
 	loc.BackendProtocol = anns.BackendProtocol

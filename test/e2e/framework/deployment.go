@@ -127,6 +127,12 @@ Request Body:
 		location / {
 			lua_need_request_body on;
 
+			header_filter_by_lua_block {
+				if ngx.var.arg_hsts == "true" then
+					ngx.header["Strict-Transport-Security"] = "max-age=3600; preload"
+				end
+			}
+
 			content_by_lua_block {
 				ngx.header["Server"] = "echoserver"
 
@@ -181,8 +187,7 @@ Request Body:
 		},
 	)
 
-	d, err := f.EnsureDeployment(deployment)
-	Expect(err).NotTo(HaveOccurred(), "failed to create a deployment")
+	d := f.EnsureDeployment(deployment)
 	Expect(d).NotTo(BeNil(), "expected a deployment but none returned")
 
 	service := &corev1.Service{
@@ -267,8 +272,7 @@ server {
 		},
 	)
 
-	d, err := f.EnsureDeployment(deployment)
-	Expect(err).NotTo(HaveOccurred(), "failed to create a deployment")
+	d := f.EnsureDeployment(deployment)
 	Expect(d).NotTo(BeNil(), "expected a deployment but none returned")
 
 	service := &corev1.Service{
@@ -371,8 +375,7 @@ func (f *Framework) NewHttpbinDeployment() {
 func (f *Framework) NewDeployment(name, image string, port int32, replicas int32) {
 	deployment := newDeployment(name, f.Namespace, image, port, replicas, nil, nil, nil)
 
-	d, err := f.EnsureDeployment(deployment)
-	Expect(err).NotTo(HaveOccurred(), "failed to create a deployment")
+	d := f.EnsureDeployment(deployment)
 	Expect(d).NotTo(BeNil(), "expected a deployment but none returned")
 
 	service := &corev1.Service{
@@ -398,7 +401,7 @@ func (f *Framework) NewDeployment(name, image string, port int32, replicas int32
 	s := f.EnsureService(service)
 	Expect(s).NotTo(BeNil(), "expected a service but none returned")
 
-	err = WaitForEndpoints(f.KubeClientSet, DefaultTimeout, name, f.Namespace, int(replicas))
+	err := WaitForEndpoints(f.KubeClientSet, DefaultTimeout, name, f.Namespace, int(replicas))
 	Expect(err).NotTo(HaveOccurred(), "failed to wait for endpoints to become ready")
 }
 
@@ -421,7 +424,6 @@ func (f *Framework) ScaleDeploymentToZero(name string) {
 
 	d.Spec.Replicas = NewInt32(0)
 
-	d, err = f.EnsureDeployment(d)
-	Expect(err).NotTo(HaveOccurred(), "waiting deployment scale to 0")
+	d = f.EnsureDeployment(d)
 	Expect(d).NotTo(BeNil(), "expected a deployment but none returned")
 }

@@ -31,16 +31,15 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/influxdb"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ipwhitelist"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/log"
-	"k8s.io/ingress-nginx/internal/ingress/annotations/luarestywaf"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/mirror"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/modsecurity"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/opentracing"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxyssl"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ratelimit"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/redirect"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/rewrite"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
-	"k8s.io/ingress-nginx/internal/ingress/resolver"
 )
 
 var (
@@ -88,9 +87,6 @@ type Backend struct {
 	Name    string             `json:"name"`
 	Service *apiv1.Service     `json:"service,omitempty"`
 	Port    intstr.IntOrString `json:"port"`
-	// SecureCACert has the filename and SHA1 of the certificate authorities used to validate
-	// a secured connection to the backend
-	SecureCACert resolver.AuthSSLCert `json:"secureCACert"`
 	// SSLPassthrough indicates that Ingress controller will delegate TLS termination to the endpoints.
 	SSLPassthrough bool `json:"sslPassthrough"`
 	// Endpoints contains the list of endpoints currently running
@@ -313,8 +309,6 @@ type Location struct {
 	// Logs allows to enable or disable the nginx logs
 	// By default access logs are enabled and rewrite logs are disabled
 	Logs log.Config `json:"logs,omitempty"`
-	// LuaRestyWAF contains parameters to configure lua-resty-waf
-	LuaRestyWAF luarestywaf.Config `json:"luaRestyWAF"`
 	// InfluxDB allows to monitor the incoming request by sending them to an influxdb database
 	// +optional
 	InfluxDB influxdb.Config `json:"influxDB,omitempty"`
@@ -338,6 +332,9 @@ type Location struct {
 	// Mirror allows you to mirror traffic to a "test" backend
 	// +optional
 	Mirror mirror.Config `json:"mirror,omitempty"`
+	// Opentracing allows the global opentracing setting to be overridden for a location
+	// +optional
+	Opentracing opentracing.Config `json:"opentracing"`
 }
 
 // SSLPassthroughBackend describes a SSL upstream server configured

@@ -15,7 +15,7 @@ spec:
       serviceAccountName: nginx-ingress-serviceaccount
       containers:
         - name: nginx-ingress-controller
-          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.1
+          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.2
           args:
             - /nginx-ingress-controller
             - --configmap=$(POD_NAMESPACE)/$(NGINX_CONFIGMAP_NAME)
@@ -44,8 +44,10 @@ spec:
           ports:
             - name: http
               containerPort: 80
+              protocol: TCP
             - name: https
               containerPort: 443
+              protocol: TCP
           livenessProbe:
             failureThreshold: 3
             httpGet:
