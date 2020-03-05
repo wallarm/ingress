@@ -67,7 +67,7 @@ const (
 
 	// Enabled ciphers list to enabled. The ciphers are specified in the format understood by the OpenSSL library
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers
-	sslCiphers = "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256"
+	sslCiphers = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"
 
 	// SSL enabled protocols to use
 	// http://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_protocols
@@ -134,6 +134,9 @@ type Configuration struct {
 	// By default this is disabled
 	EnableOWASPCoreRules bool `json:"enable-owasp-modsecurity-crs"`
 
+	// ModSecuritySnippet adds custom rules to modsecurity section of nginx configuration
+	ModsecuritySnippet string `json:"modsecurity-snippet"`
+
 	// ClientHeaderBufferSize allows to configure a custom buffer
 	// size for reading client request header
 	// http://nginx.org/en/docs/http/ngx_http_core_module.html#client_header_buffer_size
@@ -193,6 +196,10 @@ type Configuration struct {
 	// through one HTTP/2 connection, after which the next client request will lead to connection closing
 	// and the need of establishing a new connection.
 	HTTP2MaxRequests int `json:"http2-max-requests,omitempty"`
+
+	// http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_concurrent_streams
+	// Sets the maximum number of concurrent HTTP/2 streams in a connection.
+	HTTP2MaxConcurrentStreams int `json:"http2-max-concurrent-streams,omitempty"`
 
 	// Enables or disables the header HSTS in servers running SSL
 	HSTS bool `json:"hsts,omitempty"`
@@ -604,10 +611,6 @@ type Configuration struct {
 	// +optional
 	GlobalExternalAuth GlobalExternalAuth `json:"global-external-auth"`
 
-	// DisableLuaRestyWAF disables lua-resty-waf globally regardless
-	// of whether there's an ingress that has enabled the WAF using annotation
-	DisableLuaRestyWAF bool `json:"disable-lua-resty-waf"`
-
 	// EnableInfluxDB enables the nginx InfluxDB extension
 	// http://github.com/influxdata/nginx-influxdb-module/
 	// By default this is disabled
@@ -716,6 +719,7 @@ func NewDefault() Configuration {
 		HTTP2MaxFieldSize:                "4k",
 		HTTP2MaxHeaderSize:               "16k",
 		HTTP2MaxRequests:                 1000,
+		HTTP2MaxConcurrentStreams:        128,
 		HTTPRedirectCode:                 308,
 		HSTS:                             true,
 		HSTSIncludeSubdomains:            true,
