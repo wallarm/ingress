@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	api "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	extensions "k8s.io/api/networking/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -76,6 +76,7 @@ func (m mockBackend) GetDefaultBackend() defaults.Backend {
 		WallarmModeAllowOverride: "on",
 		WallarmFallback: "on",
 		WallarmInstance: "",
+		WallarmAcl: "off",
 		WallarmBlockPage: "",
 		WallarmParseResponse: "on",
 		WallarmParseWebsocket: "off",
@@ -92,6 +93,7 @@ func TestProxy(t *testing.T) {
 	data[parser.GetAnnotationWithPrefix("wallarm-mode-allow-override")] = "strict"
 	data[parser.GetAnnotationWithPrefix("wallarm-fallback")] = "off"
 	data[parser.GetAnnotationWithPrefix("wallarm-instance")] = "42"
+	data[parser.GetAnnotationWithPrefix("wallarm-acl")] = "on"
 	data[parser.GetAnnotationWithPrefix("wallarm-block-page")] = "block"
 	data[parser.GetAnnotationWithPrefix("wallarm-parse-response")] = "off"
 	data[parser.GetAnnotationWithPrefix("wallarm-parse-websocket")] = "on"
@@ -118,6 +120,9 @@ func TestProxy(t *testing.T) {
 	}
 	if w.Instance != "42" {
 		t.Errorf("expected 42 as wallarm-instance but returned %v", w.Instance)
+	}
+	if w.Acl != "on" {
+		t.Errorf("expected on as wallarm-acl but returned %v", w.Acl)
 	}
 	if w.BlockPage != "block" {
 		t.Errorf("expected block as wallarm-block-page but returned %v", w.BlockPage)
@@ -161,6 +166,9 @@ func TestProxyWithNoAnnotation(t *testing.T) {
 	}
 	if p.Instance != "" {
 		t.Errorf(`expected "" as wallarm-instance but returned %v`, p.Instance)
+	}
+	if p.Acl != "off" {
+		t.Errorf(`expected "off" as wallarm-acl but returned %v`, p.Acl)
 	}
 	if p.BlockPage != "" {
 		t.Errorf(`expected "" as wallarm-block-page but returned %v`, p.BlockPage)

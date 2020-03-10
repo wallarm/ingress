@@ -18,7 +18,9 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -93,11 +95,6 @@ func (t *Template) Write(conf config.TemplateConfig) ([]byte, error) {
 	outCmdBuf := t.bp.Get()
 	defer t.bp.Put(outCmdBuf)
 
-	// TODO: remove once we found a fix for coredump running luarocks install lrexlib
-	if runtime.GOARCH == "arm" {
-		conf.Cfg.DisableLuaRestyWAF = true
-	}
-
 	if klog.V(3) {
 		b, err := json.Marshal(conf)
 		if err != nil {
@@ -134,7 +131,6 @@ var (
 			return true
 		},
 		"escapeLiteralDollar":             escapeLiteralDollar,
-		"shouldConfigureLuaRestyWAF":      shouldConfigureLuaRestyWAF,
 		"buildLuaSharedDictionaries":      buildLuaSharedDictionaries,
 		"luaConfigurationRequestBodySize": luaConfigurationRequestBodySize,
 		"buildLocation":                   buildLocation,
@@ -170,6 +166,7 @@ var (
 		"isValidByteSize":                    isValidByteSize,
 		"buildForwardedFor":                  buildForwardedFor,
 		"buildAuthSignURL":                   buildAuthSignURL,
+		"buildAuthSignURLLocation":           buildAuthSignURLLocation,
 		"buildOpentracing":                   buildOpentracing,
 		"proxySetHeader":                     proxySetHeader,
 		"buildInfluxDB":                      buildInfluxDB,
@@ -225,15 +222,7 @@ func quote(input interface{}) string {
 	return fmt.Sprintf("%q", inputStr)
 }
 
-func shouldConfigureLuaRestyWAF(disableLuaRestyWAF bool, mode string) bool {
-	if !disableLuaRestyWAF && len(mode) > 0 {
-		return true
-	}
-
-	return false
-}
-
-func buildLuaSharedDictionaries(c interface{}, s interface{}, disableLuaRestyWAF bool) string {
+func buildLuaSharedDictionaries(c interface{}, s interface{}) string {
 	var out []string
 
 	cfg, ok := c.(config.Configuration)
@@ -241,7 +230,8 @@ func buildLuaSharedDictionaries(c interface{}, s interface{}, disableLuaRestyWAF
 		klog.Errorf("expected a 'config.Configuration' type but %T was returned", c)
 		return ""
 	}
-	servers, ok := s.([]*ingress.Server)
+
+	_, ok = s.([]*ingress.Server)
 	if !ok {
 		klog.Errorf("expected an '[]*ingress.Server' type but %T was returned", s)
 		return ""
@@ -249,23 +239,6 @@ func buildLuaSharedDictionaries(c interface{}, s interface{}, disableLuaRestyWAF
 
 	for name, size := range cfg.LuaSharedDicts {
 		out = append(out, fmt.Sprintf("lua_shared_dict %s %dM", name, size))
-	}
-
-	// TODO: there must be a better place for this
-	if _, ok := cfg.LuaSharedDicts["waf_storage"]; !ok && !disableLuaRestyWAF {
-		luaRestyWAFEnabled := func() bool {
-			for _, server := range servers {
-				for _, location := range server.Locations {
-					if len(location.LuaRestyWAF.Mode) > 0 {
-						return true
-					}
-				}
-			}
-			return false
-		}()
-		if luaRestyWAFEnabled {
-			out = append(out, "lua_shared_dict waf_storage 64M")
-		}
 	}
 
 	sort.Strings(out)
@@ -913,24 +886,25 @@ func buildForwardedFor(input interface{}) string {
 	return fmt.Sprintf("$http_%v", ffh)
 }
 
-func buildAuthSignURL(input interface{}) string {
-	s, ok := input.(string)
-	if !ok {
-		klog.Errorf("expected an 'string' type but %T was returned", input)
-		return ""
-	}
-
-	u, _ := url.Parse(s)
+func buildAuthSignURL(authSignURL string) string {
+	u, _ := url.Parse(authSignURL)
 	q := u.Query()
 	if len(q) == 0 {
-		return fmt.Sprintf("%v?rd=$pass_access_scheme://$http_host$escaped_request_uri", s)
+		return fmt.Sprintf("%v?rd=$pass_access_scheme://$http_host$escaped_request_uri", authSignURL)
 	}
 
 	if q.Get("rd") != "" {
-		return s
+		return authSignURL
 	}
 
-	return fmt.Sprintf("%v&rd=$pass_access_scheme://$http_host$escaped_request_uri", s)
+	return fmt.Sprintf("%v&rd=$pass_access_scheme://$http_host$escaped_request_uri", authSignURL)
+}
+
+func buildAuthSignURLLocation(location, authSignURL string) string {
+	hasher := sha1.New()
+	hasher.Write([]byte(location))
+	hasher.Write([]byte(authSignURL))
+	return "@" + hex.EncodeToString(hasher.Sum(nil))
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -1039,7 +1013,7 @@ type errorLocation struct {
 // of errorLocations, each of which contain the upstream name and a list of
 // error codes for that given upstream, so that sufficiently unique
 // @custom error location blocks can be created in the template
-func buildCustomErrorLocationsPerServer(input interface{}) interface{} {
+func buildCustomErrorLocationsPerServer(input interface{}) []errorLocation {
 	server, ok := input.(*ingress.Server)
 	if !ok {
 		klog.Errorf("expected a '*ingress.Server' type but %T was returned", input)
@@ -1184,12 +1158,6 @@ func buildHTTPSListener(t interface{}, s interface{}) string {
 		klog.Errorf("expected a 'string' type but %T was returned", s)
 		return ""
 	}
-
-	/*
-		if server.SSLCert == nil && server.Hostname != "_" {
-			return ""
-		}
-	*/
 
 	co := commonListenOptions(tc, hostname)
 

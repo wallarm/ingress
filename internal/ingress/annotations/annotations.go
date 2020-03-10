@@ -45,8 +45,8 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ipwhitelist"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/loadbalancing"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/log"
-	"k8s.io/ingress-nginx/internal/ingress/annotations/luarestywaf"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/mirror"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/opentracing"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/parser"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/portinredirect"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
@@ -91,6 +91,7 @@ type Ingress struct {
 	ExternalAuth       authreq.Config
 	EnableGlobalAuth   bool
 	HTTP2PushPreload   bool
+	Opentracing        opentracing.Config
 	Proxy              proxy.Config
 	ProxySSL           proxyssl.Config
 	RateLimit          ratelimit.Config
@@ -110,7 +111,6 @@ type Ingress struct {
 	XForwardedPrefix   string
 	SSLCiphers         string
 	Logs               log.Config
-	LuaRestyWAF        luarestywaf.Config
 	InfluxDB           influxdb.Config
 	Wallarm            wallarm.Config
 	ModSecurity        modsecurity.Config
@@ -140,6 +140,7 @@ func NewAnnotationExtractor(cfg resolver.Resolver) Extractor {
 			"ExternalAuth":         authreq.NewParser(cfg),
 			"EnableGlobalAuth":     authreqglobal.NewParser(cfg),
 			"HTTP2PushPreload":     http2pushpreload.NewParser(cfg),
+			"Opentracing":          opentracing.NewParser(cfg),
 			"Proxy":                proxy.NewParser(cfg),
 			"ProxySSL":             proxyssl.NewParser(cfg),
 			"RateLimit":            ratelimit.NewParser(cfg),
@@ -159,7 +160,6 @@ func NewAnnotationExtractor(cfg resolver.Resolver) Extractor {
 			"XForwardedPrefix":     xforwardedprefix.NewParser(cfg),
 			"SSLCiphers":           sslcipher.NewParser(cfg),
 			"Logs":                 log.NewParser(cfg),
-			"LuaRestyWAF":          luarestywaf.NewParser(cfg),
 			"InfluxDB":             influxdb.NewParser(cfg),
 			"Wallarm":              wallarm.NewParser(cfg),
 			"BackendProtocol":      backendprotocol.NewParser(cfg),

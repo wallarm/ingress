@@ -78,7 +78,6 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/enable-rewrite-log](#enable-rewrite-log)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/rewrite-target](#rewrite)|URI|
 |[nginx.ingress.kubernetes.io/satisfy](#satisfy)|string|
-|[nginx.ingress.kubernetes.io/secure-verify-ca-secret](#secure-backends)|string|
 |[nginx.ingress.kubernetes.io/server-alias](#server-alias)|string|
 |[nginx.ingress.kubernetes.io/server-snippet](#server-snippet)|string|
 |[nginx.ingress.kubernetes.io/service-upstream](#service-upstream)|"true" or "false"|
@@ -95,9 +94,11 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/proxy-buffering](#proxy-buffering)|string|
 |[nginx.ingress.kubernetes.io/proxy-buffers-number](#proxy-buffers-number)|number|
 |[nginx.ingress.kubernetes.io/proxy-buffer-size](#proxy-buffer-size)|string|
+|[nginx.ingress.kubernetes.io/proxy-max-temp-file-size](#proxy-max-temp-file-size)|string|
 |[nginx.ingress.kubernetes.io/ssl-ciphers](#ssl-ciphers)|string|
 |[nginx.ingress.kubernetes.io/connection-proxy-header](#connection-proxy-header)|string|
 |[nginx.ingress.kubernetes.io/enable-access-log](#enable-access-log)|"true" or "false"|
+|[nginx.ingress.kubernetes.io/enable-opentracing](#enable-opentracing)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/lua-resty-waf](#lua-resty-waf)|string|
 |[nginx.ingress.kubernetes.io/lua-resty-waf-debug](#lua-resty-waf)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/lua-resty-waf-ignore-rulesets](#lua-resty-waf)|string|
@@ -360,7 +361,7 @@ For more information please see [the `server_name` documentation](http://nginx.o
 Using the annotation `nginx.ingress.kubernetes.io/server-snippet` it is possible to add custom configuration in the server configuration block.
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   annotations:
@@ -451,8 +452,8 @@ These annotations define limits on connections and transmission rates.  These ca
 * `nginx.ingress.kubernetes.io/limit-connections`: number of concurrent connections allowed from a single IP address. A 503 error is returned when exceeding this limit.
 * `nginx.ingress.kubernetes.io/limit-rps`: number of requests accepted from a given IP each second. The burst limit is set to 5 times the limit. When clients exceed this limit,  [limit-req-status-code](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#limit-req-status-code) ***default:*** 503 is returned.
 * `nginx.ingress.kubernetes.io/limit-rpm`: number of requests accepted from a given IP each minute. The burst limit is set to 5 times the limit. When clients exceed this limit,  [limit-req-status-code](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/#limit-req-status-code) ***default:*** 503 is returned.
-* `nginx.ingress.kubernetes.io/limit-rate-after`: initial number of kilobytes after which the further transmission of a response to a given connection will be rate limited.
-* `nginx.ingress.kubernetes.io/limit-rate`: number of kilobytes per second allowed to send to a given connection.  The zero value disables rate limiting.
+* `nginx.ingress.kubernetes.io/limit-rate-after`: initial number of kilobytes after which the further transmission of a response to a given connection will be rate limited. This feature must be used with [proxy-buffering](#proxy-buffering) enabled.
+* `nginx.ingress.kubernetes.io/limit-rate`: number of kilobytes per second allowed to send to a given connection.  The zero value disables rate limiting. This feature must be used with [proxy-buffering](#proxy-buffering) enabled.
 * `nginx.ingress.kubernetes.io/limit-whitelist`: client IP source ranges to be excluded from rate-limiting. The value is a comma separated list of CIDRs.
 
 If you specify multiple annotations in a single Ingress rule, limits are applied in the order `limit-connections`, `limit-rpm`, `limit-rps`.
@@ -594,7 +595,7 @@ nginx.ingress.kubernetes.io/proxy-buffering: "on"
 
 ### Proxy buffers Number
 
-Sets the number of the buffers  in [`proxy_buffers`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffers) used for reading the first part of the response received from the proxied server.
+Sets the number of the buffers in [`proxy_buffers`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffers) used for reading the first part of the response received from the proxied server.
 By default proxy buffers number is set as 4
 
 To configure this setting globally, set `proxy-buffers-number` in [NGINX ConfigMap](./configmap.md#proxy-buffers-number). To use custom values in an Ingress rule, define this annotation:
@@ -610,6 +611,17 @@ By default proxy buffer size is set as "4k"
 To configure this setting globally, set `proxy-buffer-size` in [NGINX ConfigMap](./configmap.md#proxy-buffer-size). To use custom values in an Ingress rule, define this annotation:
 ```yaml
 nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+```
+
+### Proxy max temp file size
+
+When [`buffering`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering) of responses from the proxied server is enabled, and the whole response does not fit into the buffers set by the [`proxy_buffer_size`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffer_size) and [`proxy_buffers`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffers) directives, a part of the response can be saved to a temporary file. This directive sets the maximum `size` of the temporary file setting the [`proxy_max_temp_file_size`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_max_temp_file_size). The size of data written to the temporary file at a time is set by the [`proxy_temp_file_write_size`](http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_temp_file_write_size) directive.
+
+The zero value disables buffering of responses to temporary files.
+
+To use custom values in an Ingress rule, define this annotation:
+```yaml
+nginx.ingress.kubernetes.io/proxy-max-temp-file-size: "1024m"
 ```
 
 ### Proxy HTTP version
@@ -656,6 +668,15 @@ Note that rewrite logs are sent to the error_log file at the notice level. To en
 
 ```yaml
 nginx.ingress.kubernetes.io/enable-rewrite-log: "true"
+```
+
+### Enable Opentracing
+
+Opentracing can be enabled or disabled globally through the ConfigMap but this will sometimes need to be overridden
+to enable it or disable it for a specific ingress (e.g. to turn off tracing of external health check endpoints)
+
+```yaml
+nginx.ingress.kubernetes.io/enable-opentracing: "true"
 ```
 
 ### X-Forwarded-Prefix Header
@@ -761,10 +782,17 @@ Note: If you use both `enable-owasp-core-rules` and `modsecurity-snippet` annota
 `modsecurity-snippet` will take effect. If you wish to include the [OWASP Core Rule Set](https://www.modsecurity.org/CRS/Documentation/) or
 [recommended configuration](https://github.com/SpiderLabs/ModSecurity/blob/v3/master/modsecurity.conf-recommended) simply use the include
 statement:
+
+nginx 0.24.1 and below
 ```yaml
 nginx.ingress.kubernetes.io/modsecurity-snippet: |
 Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 Include /etc/nginx/modsecurity/modsecurity.conf
+```
+nginx 0.25.0 and above
+```yaml
+nginx.ingress.kubernetes.io/modsecurity-snippet: |
+Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 ```
 
 ### InfluxDB

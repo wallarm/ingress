@@ -54,8 +54,12 @@ http {
     {{ if $cfg.EnableWallarm }}
     wallarm_upstream_connect_attempts {{ $cfg.WallarmUpstreamConnectAttempts }};
     wallarm_upstream_reconnect_interval {{ $cfg.WallarmUpstreamReconnectInterval }};
-    ## Commented out until NODE-1288 will fixed
-    # wallarm_acl_mapsize {{ $cfg.WallarmAclMapsize }};
+    {{ if $cfg.EnableWallarmAcl }}
+    wallarm_acl_db default {
+      wallarm_acl_path /usr/local/openresty/nginx/wallarm_acl_default;
+      wallarm_acl_mapsize {{ $cfg.WallarmAclMapsize }};
+    }
+    {{ end }}
     wallarm_process_time_limit {{ $cfg.WallarmProcessTimeLimit }};
     wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
     wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
@@ -65,15 +69,10 @@ http {
     lua_package_cpath "/usr/local/lib/lua/?.so;/usr/lib/lua-platform-path/lua/5.1/?.so;;";
     lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;/usr/local/lib/lua/?.lua;;";
 
-    {{ buildLuaSharedDictionaries $cfg $servers $all.Cfg.DisableLuaRestyWAF }}
+    {{ buildLuaSharedDictionaries $cfg $servers }}
 
     init_by_lua_block {
         collectgarbage("collect")
-
-        {{ if not $all.Cfg.DisableLuaRestyWAF }}
-        local lua_resty_waf = require("resty.waf")
-        lua_resty_waf.init()
-        {{ end }}
 
         -- init modules
         local ok, res
@@ -158,6 +157,10 @@ http {
 
     {{ if $all.Cfg.EnableOWASPCoreRules }}
     modsecurity_rules_file /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf;
+    {{ else if (not (empty $all.Cfg.ModsecuritySnippet)) }}
+    modsecurity_rules '
+      {{ $all.Cfg.ModsecuritySnippet }}
+    ';
     {{ end }}
 
     {{ end }}
@@ -190,6 +193,7 @@ http {
 
     geoip2 /etc/nginx/geoip/GeoLite2-ASN.mmdb {
         $geoip2_asn source=$remote_addr autonomous_system_number;
+        $geoip2_org source=$remote_addr autonomous_system_organization;
     }
     {{ end }}
 
@@ -220,6 +224,7 @@ http {
     http2_max_field_size            {{ $cfg.HTTP2MaxFieldSize }};
     http2_max_header_size           {{ $cfg.HTTP2MaxHeaderSize }};
     http2_max_requests              {{ $cfg.HTTP2MaxRequests }};
+    http2_max_concurrent_streams    {{ $cfg.HTTP2MaxConcurrentStreams }};
 
     types_hash_max_size             2048;
     server_names_hash_max_size      {{ $cfg.ServerNameHashMaxSize }};
@@ -616,6 +621,18 @@ http {
             wallarm_status on format=json;
         }
 
+        {{ if $cfg.EnableWallarmAcl }}
+        location /wallarm-acl {
+            {{ if $cfg.EnableOpentracing }}
+            opentracing off;
+            {{ end }}
+
+            access_log off;
+            wallarm_acl default;
+            wallarm_acl_api on;
+        }
+        {{ end }}
+
         location /wallarm-metrics {
             {{ if $cfg.EnableOpentracing }}
             opentracing off;
@@ -685,7 +702,7 @@ stream {
 
     lua_add_variable $proxy_upstream_name;
 
-    log_format log_stream {{ $cfg.LogFormatStream }};
+    log_format log_stream '{{ $cfg.LogFormatStream }}';
 
     {{ if $cfg.DisableAccessLog }}
     access_log off;
@@ -859,13 +876,16 @@ stream {
 
         {{ if not (empty $server.ProxySSL.CAFileName) }}
         # PEM sha: {{ $server.ProxySSL.CASHA }}
-        proxy_ssl_certificate                   {{ $server.ProxySSL.CAFileName }};
-        proxy_ssl_certificate_key               {{ $server.ProxySSL.CAFileName }};
         proxy_ssl_trusted_certificate           {{ $server.ProxySSL.CAFileName }};
         proxy_ssl_ciphers                       {{ $server.ProxySSL.Ciphers }};
         proxy_ssl_protocols                     {{ $server.ProxySSL.Protocols }};
         proxy_ssl_verify                        {{ $server.ProxySSL.Verify }};
         proxy_ssl_verify_depth                  {{ $server.ProxySSL.VerifyDepth }};
+        {{ end }}
+
+        {{ if not (empty $server.ProxySSL.PemFileName) }}
+        proxy_ssl_certificate                   {{ $server.ProxySSL.PemFileName }};
+        proxy_ssl_certificate_key               {{ $server.ProxySSL.PemFileName }};
         {{ end }}
 
         {{ if not (empty $server.SSLCiphers) }}
@@ -995,6 +1015,14 @@ stream {
         {{ end }}
 
 
+        {{ if $externalAuth.SigninURL }}
+        location {{ buildAuthSignURLLocation $location.Path $externalAuth.SigninURL }} {
+            internal;
+
+            return 302 {{ buildAuthSignURL $externalAuth.SigninURL }};
+        }
+        {{ end }}
+
         location {{ $path }} {
             {{ $ing := (getIngressInformation $location.Ingress $server.Hostname $location.Path) }}
             set $namespace      {{ $ing.Namespace | quote}};
@@ -1004,6 +1032,11 @@ stream {
             set $location_path  {{ $location.Path | escapeLiteralDollar | quote }};
 
             {{ if $all.Cfg.EnableWallarm }}
+            {{ if $all.Cfg.EnableWallarmAcl }}
+            {{ if (eq $location.Wallarm.Acl "on") }}
+            wallarm_acl default;
+            {{ end }}
+            {{ end }}
             wallarm_mode                 {{ $location.Wallarm.Mode }};
             wallarm_mode_allow_override  {{ $location.Wallarm.ModeAllowOverride }};
             wallarm_fallback             {{ $location.Wallarm.Fallback }};
@@ -1023,7 +1056,16 @@ stream {
             {{ end }}
 
             {{ if $all.Cfg.EnableOpentracing }}
+            {{ if and $location.Opentracing.Set (not $location.Opentracing.Enabled) }}
+            opentracing off;
+            {{ else }}
             {{ opentracingPropagateContext $location }};
+            {{ end }}
+            {{ else }}
+            {{ if and $location.Opentracing.Set $location.Opentracing.Enabled }}
+            opentracing on;
+            {{ opentracingPropagateContext $location }};
+            {{ end }}
             {{ end }}
 
             {{ if $location.Mirror.URI }}
@@ -1037,78 +1079,21 @@ stream {
                 plugins.run()
             }
 
-            {{ if shouldConfigureLuaRestyWAF $all.Cfg.DisableLuaRestyWAF $location.LuaRestyWAF.Mode }}
             # be careful with `access_by_lua_block` and `satisfy any` directives as satisfy any
             # will always succeed when there's `access_by_lua_block` that does not have any lua code doing `ngx.exit(ngx.DECLINED)`
-            # that means currently `satisfy any` and lua-resty-waf together will potentiall render any
             # other authentication method such as basic auth or external auth useless - all requests will be allowed.
-            access_by_lua_block {
-                local lua_resty_waf = require("resty.waf")
-                local waf = lua_resty_waf:new()
-
-                waf:set_option("mode", {{ $location.LuaRestyWAF.Mode | quote }})
-                waf:set_option("storage_zone", "waf_storage")
-
-                {{ if $location.LuaRestyWAF.AllowUnknownContentTypes }}
-                waf:set_option("allow_unknown_content_types", true)
-                {{ else }}
-                waf:set_option("allowed_content_types", { "text/html", "text/json", "application/json" })
-                {{ end }}
-
-                waf:set_option("event_log_level", ngx.WARN)
-
-                {{ if gt $location.LuaRestyWAF.ScoreThreshold 0 }}
-                waf:set_option("score_threshold", {{ $location.LuaRestyWAF.ScoreThreshold }})
-                {{ end }}
-
-                {{ if not $location.LuaRestyWAF.ProcessMultipartBody }}
-                waf:set_option("process_multipart_body", false)
-                {{ end }}
-
-                {{ if $location.LuaRestyWAF.Debug }}
-                waf:set_option("debug", true)
-                waf:set_option("event_log_request_arguments", true)
-                waf:set_option("event_log_request_body", true)
-                waf:set_option("event_log_request_headers", true)
-                waf:set_option("req_tid_header", true)
-                waf:set_option("res_tid_header", true)
-                {{ end }}
-
-                {{ range $ruleset := $location.LuaRestyWAF.IgnoredRuleSets }}
-                waf:set_option("ignore_ruleset", {{ $ruleset | quote }})
-                {{ end }}
-
-                {{ if gt (len $location.LuaRestyWAF.ExtraRulesetString) 0 }}
-                waf:set_option("add_ruleset_string", "10000_extra_rules", {{ $location.LuaRestyWAF.ExtraRulesetString }})
-                {{ end }}
-
-                waf:exec()
-            }
-            {{ end }}
+            #access_by_lua_block {
+            #}
 
             header_filter_by_lua_block {
-                {{ if shouldConfigureLuaRestyWAF $all.Cfg.DisableLuaRestyWAF $location.LuaRestyWAF.Mode }}
-                local lua_resty_waf = require "resty.waf"
-                local waf = lua_resty_waf:new()
-                waf:exec()
-                {{ end }}
-
+                lua_ingress.header()
                 plugins.run()
             }
+
             body_filter_by_lua_block {
-                {{ if shouldConfigureLuaRestyWAF $all.Cfg.DisableLuaRestyWAF $location.LuaRestyWAF.Mode }}
-                local lua_resty_waf = require "resty.waf"
-                local waf = lua_resty_waf:new()
-                waf:exec()
-                {{ end }}
             }
 
             log_by_lua_block {
-                {{ if shouldConfigureLuaRestyWAF $all.Cfg.DisableLuaRestyWAF $location.LuaRestyWAF.Mode }}
-                local lua_resty_waf = require "resty.waf"
-                local waf = lua_resty_waf:new()
-                waf:exec()
-                {{ end }}
                 balancer.log()
                 {{ if $all.EnableMetrics }}
                 monitor.call()
@@ -1152,7 +1137,7 @@ stream {
             modsecurity_rules '
                 {{ $location.ModSecurity.Snippet }}
             ';
-            {{ else if (and ((not $all.Cfg.EnableOWASPCoreRules) $location.ModSecurity.OWASPRules))}}
+            {{ else if (and (not $all.Cfg.EnableOWASPCoreRules) ($location.ModSecurity.OWASPRules))}}
             modsecurity_rules_file /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf;
             {{ end }}
 
@@ -1181,7 +1166,7 @@ stream {
 
             {{ if $externalAuth.SigninURL }}
             set_escape_uri $escaped_request_uri $request_uri;
-            error_page 401 = {{ buildAuthSignURL $externalAuth.SigninURL }};
+            error_page 401 = {{ buildAuthSignURLLocation $location.Path $externalAuth.SigninURL }};
             {{ end }}
 
             {{ if $location.BasicDigestAuth.Secured }}
@@ -1346,6 +1331,19 @@ stream {
             {{ else }}
             # Location denied. Reason: {{ $location.Denied | quote }}
             return 503;
+            {{ end }}
+            {{ if not (empty $location.ProxySSL.CAFileName) }}
+            # PEM sha: {{ $location.ProxySSL.CASHA }}
+            proxy_ssl_trusted_certificate           {{ $location.ProxySSL.CAFileName }};
+            proxy_ssl_ciphers                       {{ $location.ProxySSL.Ciphers }};
+            proxy_ssl_protocols                     {{ $location.ProxySSL.Protocols }};
+            proxy_ssl_verify                        {{ $location.ProxySSL.Verify }};
+            proxy_ssl_verify_depth                  {{ $location.ProxySSL.VerifyDepth }};
+            {{ end }}
+
+            {{ if not (empty $location.ProxySSL.PemFileName) }}
+            proxy_ssl_certificate                   {{ $location.ProxySSL.PemFileName }};
+            proxy_ssl_certificate_key               {{ $location.ProxySSL.PemFileName }};
             {{ end }}
         }
         {{ end }}

@@ -1,5 +1,13 @@
 # Changelog
 
+### 0.26.2
+
+**Image:** `quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.2`
+
+_Changes:_
+
+- [X] [#4859](https://github.com/kubernetes/ingress-nginx/pull/4859) Use a named location for authSignURL
+
 ### 0.26.1
 
 **Image:** `quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.26.1`
@@ -364,6 +372,10 @@ _Changes:_
 _New Features:_
 
 - NGINX 1.15.10
+
+_Breaking changes:_
+
+- `x-forwarded-prefix` annotation changed from a boolean to a string, see [#3786](https://github.com/kubernetes/ingress-nginx/pull/3786)
 
 _Changes:_
 

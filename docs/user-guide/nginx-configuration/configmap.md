@@ -35,6 +35,7 @@ The following table shows a configuration option's name, type, and the default v
 |[enable-access-log-for-default-backend](#enable-access-log-for-default-backend)|bool|"false"|
 |[error-log-path](#error-log-path)|string|"/var/log/nginx/error.log"|
 |[enable-modsecurity](#enable-modsecurity)|bool|"false"|
+|[modsecurity-snippet](#modsecurity-snippet)|string|""|
 |[enable-owasp-modsecurity-crs](#enable-owasp-modsecurity-crs)|bool|"false"|
 |[client-header-buffer-size](#client-header-buffer-size)|string|"1k"|
 |[client-header-timeout](#client-header-timeout)|int|60|
@@ -50,6 +51,7 @@ The following table shows a configuration option's name, type, and the default v
 |[http2-max-field-size](#http2-max-field-size)|string|"4k"|
 |[http2-max-header-size](#http2-max-header-size)|string|"16k"|
 |[http2-max-requests](#http2-max-requests)|int|1000|
+|[http2-max-concurrent-streams](#http2-max-concurrent-streams)|int|1000|
 |[hsts](#hsts)|bool|"true"|
 |[hsts-include-subdomains](#hsts-include-subdomains)|bool|"true"|
 |[hsts-max-age](#hsts-max-age)|string|"15724800"|
@@ -59,7 +61,7 @@ The following table shows a configuration option's name, type, and the default v
 |[large-client-header-buffers](#large-client-header-buffers)|string|"4 8k"|
 |[log-format-escape-json](#log-format-escape-json)|bool|"false"|
 |[log-format-upstream](#log-format-upstream)|string|`$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent" $request_length $request_time [$proxy_upstream_name] [$proxy_alternative_upstream_name] $upstream_addr $upstream_response_length $upstream_response_time $upstream_status $req_id`|
-|[log-format-stream](#log-format-stream)|string|`[$time_local] $protocol $status $bytes_sent $bytes_received $session_time`|
+|[log-format-stream](#log-format-stream)|string|`[$remote_addr] [$time_local] $protocol $status $bytes_sent $bytes_received $session_time`|
 |[enable-multi-accept](#enable-multi-accept)|bool|"true"|
 |[max-worker-connections](#max-worker-connections)|int|16384|
 |[max-worker-open-files](#max-worker-open-files)|int|0|
@@ -168,6 +170,7 @@ The following table shows a configuration option's name, type, and the default v
 |[global-auth-cache-duration](#global-auth-cache-duration)|string|"200 202 401 5m"|
 |[no-auth-locations](#no-auth-locations)|string|"/.well-known/acme-challenge"|
 |[enable-wallarm](#enable-wallarm)|bool|"true"|
+|[enable-wallarm-acl](#enable-wallarm-acl)|bool|"false"|
 |[wallarm-upstream-connect-attempts](#wallarm-upstream-connect-attempts)|int|10|
 |[wallarm-upstream-reconnect-interval](#wallarm-upstream-reconnect-interval)|string|"15s"|
 |[wallarm-acl-mapsize](#wallarm-acl-mapsize)|string|"64m"|
@@ -228,6 +231,10 @@ Enables the modsecurity module for NGINX. _**default:**_ is disabled
 ## enable-owasp-modsecurity-crs
 
 Enables the OWASP ModSecurity Core Rule Set (CRS). _**default:**_ is disabled
+
+## modsecurity-snippet
+
+Adds custom rules to modsecurity section of nginx configration
 
 ## client-header-buffer-size
 
@@ -312,6 +319,13 @@ Sets the maximum number of requests (including push requests) that can be served
 
 _References:_
 [http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests](http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_requests)
+
+## http2-max-concurrent-streams
+
+Sets the maximum number of concurrent HTTP/2 streams in a connection.
+
+_References:_
+[http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_concurrent_streams](http://nginx.org/en/docs/http/ngx_http_v2_module.html#http2_max_concurrent_streams)
 
 ## hsts
 
@@ -908,7 +922,7 @@ _**default:**_ 308
 
 > __Why the default code is 308?__
 
-> [RFC 7238](https://tools.ietf.org/html/rfc7238) was created to define the 308 (Permanent Redirect) status code that is similar to 301 (Moved Permanently) but it keeps the payload in the redirect. This is important if the we send a redirect in methods like POST.
+> [RFC 7238](https://tools.ietf.org/html/rfc7238) was created to define the 308 (Permanent Redirect) status code that is similar to 301 (Moved Permanently) but it keeps the payload in the redirect. This is important if we send a redirect in methods like POST.
 
 ## proxy-buffering
 
@@ -982,6 +996,10 @@ _**default:**_ "/.well-known/acme-challenge"
 ## enable-wallarm
 
 Enables the wallarm module for NGINX. _**default:**_ is enabled
+
+## enable-wallarm-acl
+
+Enables the wallarm ACL module for NGINX. _**default:**_ is disabled
 
 ## wallarm-upstream-connect-attempts
 

@@ -843,6 +843,7 @@ func (s *k8sStore) GetAuthCertificate(name string) (*resolver.AuthSSLCert, error
 		CASHA:       cert.CASHA,
 		CRLFileName: cert.CRLFileName,
 		CRLSHA:      cert.CRLSHA,
+		PemFileName: cert.PemFileName,
 	}, nil
 }
 
@@ -889,6 +890,10 @@ func (s *k8sStore) GetBackendConfiguration() ngx_config.Configuration {
 func (s *k8sStore) setConfig(cmap *corev1.ConfigMap) {
 	s.backendConfigMu.Lock()
 	defer s.backendConfigMu.Unlock()
+
+	if cmap == nil {
+		return
+	}
 
 	s.backendConfig = ngx_template.ReadConfig(cmap.Data)
 	s.writeSSLSessionTicketKey(cmap, "/etc/nginx/tickets.key")
