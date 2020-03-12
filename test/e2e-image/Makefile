@@ -9,6 +9,7 @@ container:
 	cp ../e2e/wait-for-nginx.sh .
 	cp -r ../../deploy/cloud-generic .
 	cp -r ../../deploy/cluster-wide .
+	cp -r ../../charts .
 
 	docker build -t nginx-ingress-controller:e2e .
 

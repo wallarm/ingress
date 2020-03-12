@@ -1,0 +1,34 @@
+controller:
+  wallarm:
+    enabled: true
+    apiHost: "$WALLARM_API_HOST"
+    apiPort: "$WALLARM_API_PORT"
+    apiSSL: "$WALLARM_API_USE_SSL"
+    token: "$WALLARM_API_TOKEN"
+  image:
+    repository: "${REGISTRY}/nginx-ingress-controller"
+    tag: "${TAG}"
+  containerPort:
+    http: "1080"
+    https: "1443"
+
+  extraArgs:
+    http-port: "1080"
+    https-port: "1443"
+    # e2e tests do not require information about ingress status
+    update-status: "false"
+
+  scope:
+    enabled: true
+
+  config:
+    worker-processes: "1"
+  service:
+    name: ingress-nginx
+    type: NodePort
+    
+defaultBackend:
+  enabled: false
+
+rbac:
+  create: false

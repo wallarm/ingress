@@ -37,11 +37,15 @@ fi
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-export TAG=dev
+export TAG=${TAG:-1.5.0}
 export ARCH=amd64
-export REGISTRY=ingress-controller
-
+export REGISTRY=${REGISTRY:-wallarm}
 export K8S_VERSION=${K8S_VERSION:-v1.17.0}
+export E2E_NODES=${E2E_NODES:-10}
+export IC_TYPE=${IC_TYPE:-wallarm}
+export WALLARM_API_HOST=${WALLARM_API_HOST:-api.wallarm.com}
+export WALLARM_API_PORT=${WALLARM_API_PORT:-444}
+export WALLARM_API_USE_SSL=${WALLARM_API_USE_SSL:-true}
 
 KIND_CLUSTER_NAME="ingress-nginx-dev"
 
@@ -63,9 +67,10 @@ echo "[dev-env] building container"
 echo "
 make -C ${DIR}/../../ build container
 make -C ${DIR}/../../ e2e-test-image
-make -C ${DIR}/../../images/fastcgi-helloserver/ build container
-make -C ${DIR}/../../images/httpbin/ container
-" | parallel --progress --joblog /tmp/log {} || cat /tmp/log
+TAG=dev make -C ${DIR}/../../images/fastcgi-helloserver/ build container
+TAG=dev make -C ${DIR}/../../images/httpbin/ container
+make -C ${DIR}/../../images/wallarm-api-proxy/
+" | parallel --progress {}
 
 # Remove after https://github.com/kubernetes/ingress-nginx/pull/4271 is merged
 docker tag ${REGISTRY}/nginx-ingress-controller-${ARCH}:${TAG} ${REGISTRY}/nginx-ingress-controller:${TAG}
@@ -77,10 +82,11 @@ echo "[dev-env] copying docker images to cluster..."
 echo "
 kind load docker-image --name="${KIND_CLUSTER_NAME}" nginx-ingress-controller:e2e
 kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/nginx-ingress-controller:${TAG}
-kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/fastcgi-helloserver:${TAG}
+kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/fastcgi-helloserver:dev
 kind load docker-image --name="${KIND_CLUSTER_NAME}" openresty/openresty:1.15.8.2-alpine
-kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/httpbin:${TAG}
-" | parallel --progress --joblog /tmp/log {} || cat /tmp/log
+kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/httpbin:dev
+kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/wallarm-api-proxy:${TAG}
+" | parallel --progress
 
 echo "[dev-env] running e2e tests..."
 make -C ${DIR}/../../ e2e-test

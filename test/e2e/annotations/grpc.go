@@ -39,7 +39,7 @@ import (
 var _ = framework.IngressNginxDescribe("Annotations - GRPC", func() {
 	f := framework.NewDefaultFramework("grpc")
 
-	It("should use grpc_pass in the configuration file", func() {
+	XIt("should use grpc_pass in the configuration file", func() {
 		f.NewGRPCFortuneTellerDeployment()
 
 		host := "grpc"
@@ -64,7 +64,7 @@ var _ = framework.IngressNginxDescribe("Annotations - GRPC", func() {
 			})
 	})
 
-	It("should return OK for service with backend protocol GRPC", func() {
+	XIt("should return OK for service with backend protocol GRPC", func() {
 		host := "echo"
 
 		svc := &core.Service{
@@ -120,7 +120,7 @@ var _ = framework.IngressNginxDescribe("Annotations - GRPC", func() {
 		Expect(metadata["content-type"].Values[0]).Should(Equal("application/grpc"))
 	})
 
-	It("should return OK for service with backend protocol GRPCS", func() {
+	XIt("should return OK for service with backend protocol GRPCS", func() {
 		host := "echo"
 
 		svc := &core.Service{

@@ -1,5 +1,6 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2017 The Kubernetes Authors,
+          2019 Wallarm Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,6 +45,7 @@ import (
 	_ "k8s.io/ingress-nginx/test/e2e/ssl"
 	_ "k8s.io/ingress-nginx/test/e2e/status"
 	_ "k8s.io/ingress-nginx/test/e2e/tcpudp"
+	_ "k8s.io/ingress-nginx/test/e2e/wallarm"
 )
 
 // RunE2ETests checks configuration parameters (specified through flags) and then runs
@@ -56,6 +58,14 @@ func RunE2ETests(t *testing.T) {
 	// Disable skipped tests unless they are explicitly requested.
 	if config.GinkgoConfig.FocusString == "" && config.GinkgoConfig.SkipString == "" {
 		config.GinkgoConfig.SkipString = `\[Flaky\]|\[Feature:.+\]`
+	}
+
+	if os.Getenv("IC_TYPE") != "wallarm" {
+		if config.GinkgoConfig.SkipString == "" {
+			config.GinkgoConfig.SkipString = `\[Wallarm\]`
+		} else {
+			config.GinkgoConfig.SkipString += `|\[Wallarm\]`
+		}
 	}
 
 	if os.Getenv("KUBECTL_PATH") != "" {
