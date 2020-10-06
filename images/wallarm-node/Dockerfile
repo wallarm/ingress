@@ -48,7 +48,7 @@ RUN echo "mQINBFL1Xl4BEADEFCVumPx2W4hQJG+4RRS0Zjw503a0YKH8tKp3OEWIMKiWwWiaTcqxZg
 "+rX8UUJlg1E+ZX4/4T5QfLqMKdMIWikFQJ9Zqc1vmFOwWraAPQVrm8hULwvfpu9V12Qqt7CJQwvF"\
 "umteeg==" \
         | base64 -d > /etc/apt/trusted.gpg.d/wallarm.gpg \
-    && echo 'deb http://repo.wallarm.com/debian/wallarm-node buster/2.14/' \
+    && echo 'deb http://repo.wallarm.com/debian/wallarm-node buster/2.16/' \
         > /etc/apt/sources.list.d/wallarm.list \
     && apt-get -qq update \
     && apt-get -qq --no-install-recommends install \
