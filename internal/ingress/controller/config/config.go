@@ -658,6 +658,11 @@ type Configuration struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit
 	WallarmWorkerRlimitVmem string `json:"wallarm-worker-rlimit-vmem"`
 
+	// With the value set to on, NGINX has the ability to enter an emergency
+	// mode if proton.db or LOM cannot be loaded.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmfallback
+	WallarmFallback string `json:"wallarm-fallback"`
+
 	// Checksum contains a checksum of the configmap configuration
 	Checksum string `json:"-"`
 
@@ -835,7 +840,8 @@ func NewDefault() Configuration {
 		WallarmProcessTimeLimitBlock:     "attack",
 		WallarmRequestMemoryLimit:        "0",
 		WallarmWorkerRlimitVmem:          "1g",
-		GlobalExternalAuth:           defGlobalExternalAuth,
+		WallarmFallback:                  "on",
+		GlobalExternalAuth:               defGlobalExternalAuth,
 	}
 
 	if klog.V(5) {

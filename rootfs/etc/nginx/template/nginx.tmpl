@@ -64,6 +64,7 @@ http {
     wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
     wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
     wallarm_worker_rlimit_vmem {{ $cfg.WallarmWorkerRlimitVmem }};
+    wallarm_fallback {{ $cfg.WallarmFallback}};    
     {{ end }}
 
     lua_package_cpath "/usr/local/lib/lua/?.so;/usr/lib/lua-platform-path/lua/5.1/?.so;;";
@@ -1039,7 +1040,11 @@ stream {
             {{ end }}
             wallarm_mode                 {{ $location.Wallarm.Mode }};
             wallarm_mode_allow_override  {{ $location.Wallarm.ModeAllowOverride }};
+            {{ if eq $all.Cfg.WallarmFallback "on"}}
+            wallarm_fallback             "on";            
+            {{ else }}
             wallarm_fallback             {{ $location.Wallarm.Fallback }};
+            {{ end }}
             {{ if not (eq $location.Wallarm.Instance "") }}
             wallarm_instance             {{ $location.Wallarm.Instance }};
             {{ end }}
