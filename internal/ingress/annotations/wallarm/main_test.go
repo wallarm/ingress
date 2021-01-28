@@ -78,6 +78,7 @@ func (m mockBackend) GetDefaultBackend() defaults.Backend {
 		WallarmInstance: "",
 		WallarmAcl: "off",
 		WallarmBlockPage: "",
+		WallarmAclBlockPage: "",
 		WallarmParseResponse: "on",
 		WallarmParseWebsocket: "off",
 		WallarmUnpackResponse: "on",
@@ -95,6 +96,7 @@ func TestProxy(t *testing.T) {
 	data[parser.GetAnnotationWithPrefix("wallarm-instance")] = "42"
 	data[parser.GetAnnotationWithPrefix("wallarm-acl")] = "on"
 	data[parser.GetAnnotationWithPrefix("wallarm-block-page")] = "block"
+	data[parser.GetAnnotationWithPrefix("wallarm-acl-block-page")] = "block"
 	data[parser.GetAnnotationWithPrefix("wallarm-parse-response")] = "off"
 	data[parser.GetAnnotationWithPrefix("wallarm-parse-websocket")] = "on"
 	data[parser.GetAnnotationWithPrefix("wallarm-unpack-response")] = "off"
@@ -126,6 +128,9 @@ func TestProxy(t *testing.T) {
 	}
 	if w.BlockPage != "block" {
 		t.Errorf("expected block as wallarm-block-page but returned %v", w.BlockPage)
+	}
+	if w.AclBlockPage != "block" {
+		t.Errorf("expected block as wallarm-acl-block-page but returned %v", w.AclBlockPage)
 	}
 	if w.ParseResponse != "off" {
 		t.Errorf("expected off as wallarm-parse-response but returned %v", w.ParseResponse)
@@ -172,6 +177,9 @@ func TestProxyWithNoAnnotation(t *testing.T) {
 	}
 	if p.BlockPage != "" {
 		t.Errorf(`expected "" as wallarm-block-page but returned %v`, p.BlockPage)
+	}
+	if p.AclBlockPage != "" {
+		t.Errorf(`expected "" as wallarm-acl-block-page but returned %v`, p.AclBlockPage)
 	}
 	if p.ParseResponse != "on" {
 		t.Errorf(`expected "on" as wallarm-parse-response but returned %v`, p.ParseResponse)

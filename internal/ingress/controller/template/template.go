@@ -158,6 +158,7 @@ var (
 		"toLower":                         strings.ToLower,
 		"formatIP":                        formatIP,
 		"quote":                           quote,
+		"replace":                         replace,
 		"buildNextUpstream":               buildNextUpstream,
 		"getIngressInformation":           getIngressInformation,
 		"serverConfig": func(all config.TemplateConfig, server *ingress.Server) interface{} {
@@ -180,6 +181,10 @@ var (
 		"buildHTTPSListener":                 buildHTTPSListener,
 	}
 )
+
+func replace(old, new, src string) string {
+	return strings.Replace(src, old, new, -1)
+}
 
 // escapeLiteralDollar will replace the $ character with ${literal_dollar}
 // which is made to work via the following configuration in the http section of
