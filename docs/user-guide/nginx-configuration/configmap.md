@@ -178,6 +178,7 @@ The following table shows a configuration option's name, type, and the default v
 |[wallarm-process-time-limit-block](#wallarm-process-time-limit-block)|string|"attack"|
 |[wallarm-request-memory-limit](#wallarm-request-memory-limit)|string|"0"|
 |[wallarm-worker-rlimit-vmem](#wallarm-worker-rlimit-vmem)|string|"1g"|
+|[wallarm-fallback](#wallarm-fallback)|string|"off"|
 |[block-cidrs](#block-cidrs)|[]string|""|
 |[block-user-agents](#block-user-agents)|[]string|""|
 |[block-referers](#block-referers)|[]string|""|
@@ -1050,6 +1051,13 @@ The maximum amount of virtual memory in megabytes that is allowed for the NGINX-
 
 _References:_
 [https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit)
+
+## wallarm-fallback
+
+With the value set to "on", NGINX has the ability to enter an emergency mode: if proton.db or LOM cannot be downloaded, this setting disables the Wallarm module for the http, server, and location blocks, for which the data fails to download. NGINX keeps functioning.
+
+_References:_
+[https://docs.wallarm.com/admin-en/configure-parameters-en/#wallarm_fallback](https://docs.wallarm.com/admin-en/configure-parameters-en/#wallarm_fallback)
 
 ## block-cidrs
 
