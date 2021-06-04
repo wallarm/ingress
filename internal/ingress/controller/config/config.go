@@ -621,11 +621,6 @@ type Configuration struct {
 	// By default this is enabled
 	EnableWallarm bool `json:"enable-wallarm"`
 
-	// EnableWallarmAcl enables the nginx Wallarm ACL module
-	// https://docs.wallarm.com/
-	// By default this is disabled
-	EnableWallarmAcl bool `json:"enable-wallarm-acl"`
-
 	// Name of Wallarm Tarantool service in form "namespace/name"
 	WallarmUpstreamService string `json:"wallarm-upstream-service"`
 
@@ -798,7 +793,6 @@ func NewDefault() Configuration {
 			WallarmModeAllowOverride: "on",
 			WallarmFallback:          "on",
 			WallarmInstance:          "",
-			WallarmAcl:               "off",
 			WallarmBlockPage:         "",
 			WallarmAclBlockPage:      "",
 			WallarmParseResponse:     "on",
@@ -833,7 +827,6 @@ func NewDefault() Configuration {
 		NoAuthLocations:              "/.well-known/acme-challenge",
 
 		EnableWallarm:                    false,
-		EnableWallarmAcl:                 false,
 		WallarmUpstreamConnectAttempts:   10,
 		WallarmUpstreamReconnectInterval: "15s",
 		WallarmAclMapsize:                "64m",

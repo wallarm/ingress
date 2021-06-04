@@ -170,7 +170,6 @@ The following table shows a configuration option's name, type, and the default v
 |[global-auth-cache-duration](#global-auth-cache-duration)|string|"200 202 401 5m"|
 |[no-auth-locations](#no-auth-locations)|string|"/.well-known/acme-challenge"|
 |[enable-wallarm](#enable-wallarm)|bool|"true"|
-|[enable-wallarm-acl](#enable-wallarm-acl)|bool|"false"|
 |[wallarm-upstream-connect-attempts](#wallarm-upstream-connect-attempts)|int|10|
 |[wallarm-upstream-reconnect-interval](#wallarm-upstream-reconnect-interval)|string|"15s"|
 |[wallarm-acl-mapsize](#wallarm-acl-mapsize)|string|"64m"|
@@ -997,10 +996,6 @@ _**default:**_ "/.well-known/acme-challenge"
 ## enable-wallarm
 
 Enables the wallarm module for NGINX. _**default:**_ is enabled
-
-## enable-wallarm-acl
-
-Enables the wallarm ACL module for NGINX. _**default:**_ is disabled
 
 ## wallarm-upstream-connect-attempts
 

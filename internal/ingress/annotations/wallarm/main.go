@@ -31,7 +31,6 @@ type Config struct {
 	ModeAllowOverride string `json:"modeAllowOverride"`
 	Fallback string `json:"fallback"`
 	Instance string `json:"instance"`
-	Acl string `json:"acl"`
 	BlockPage string `json:"blockPage"`
 	AclBlockPage string `json:"aclBlockPage"`
 	ParseResponse string `json:"parseResponse"`
@@ -55,9 +54,6 @@ func (l1 *Config) Equal(l2 *Config) bool {
 		return false
 	}
 	if l1.Fallback != l2.Fallback {
-		return false
-	}
-	if l1.Acl != l2.Acl {
 		return false
 	}
 	if l1.Instance != l2.Instance {
@@ -115,10 +111,6 @@ func (a wallarm) Parse(ing *extensions.Ingress) (interface{}, error) {
 	if err != nil {
 		instance = defBackend.WallarmInstance
 	}
-	acl, err := parser.GetStringAnnotation("wallarm-acl", ing)
-	if err != nil {
-		acl = defBackend.WallarmAcl
-	}
 	blockPage, err := parser.GetStringAnnotation("wallarm-block-page", ing)
 	if err != nil {
 		blockPage = defBackend.WallarmBlockPage
@@ -155,7 +147,6 @@ func (a wallarm) Parse(ing *extensions.Ingress) (interface{}, error) {
 		modeAllowOverride,
 		fallback,
 		instance,
-		acl,
 		blockPage,
 		aclBlockPage,
 		parseResponse,
