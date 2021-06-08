@@ -172,7 +172,6 @@ The following table shows a configuration option's name, type, and the default v
 |[enable-wallarm](#enable-wallarm)|bool|"true"|
 |[wallarm-upstream-connect-attempts](#wallarm-upstream-connect-attempts)|int|10|
 |[wallarm-upstream-reconnect-interval](#wallarm-upstream-reconnect-interval)|string|"15s"|
-|[wallarm-acl-mapsize](#wallarm-acl-mapsize)|string|"64m"|
 |[wallarm-process-time-limit](#wallarm-process-time-limit)|int|1000|
 |[wallarm-process-time-limit-block](#wallarm-process-time-limit-block)|string|"attack"|
 |[wallarm-request-memory-limit](#wallarm-request-memory-limit)|string|"0"|
@@ -1011,13 +1010,6 @@ the threshold value set in wallarm-upstream-connect-attempts
 
 _References:_
 [https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval)
-
-## wallarm-acl-mapsize
-
-Initial memory size to be allocated for the corresponding ACL
-
-_References:_
-[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize)
 
 ## wallarm-process-time-limit
 

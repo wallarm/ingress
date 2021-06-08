@@ -633,10 +633,6 @@ type Configuration struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval
 	WallarmUpstreamReconnectInterval string `json:"wallarm-upstream-reconnect-interval"`
 
-	// Initial memory size to be allocated for the corresponding ACL
-	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize
-	WallarmAclMapsize string `json:"wallarm-acl-mapsize"`
-
 	// The time limit of a single request processing in milliseconds
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimit
 	WallarmProcessTimeLimit int `json:"wallarm-process-time-limit"`
@@ -829,7 +825,6 @@ func NewDefault() Configuration {
 		EnableWallarm:                    false,
 		WallarmUpstreamConnectAttempts:   10,
 		WallarmUpstreamReconnectInterval: "15s",
-		WallarmAclMapsize:                "64m",
 		WallarmProcessTimeLimit:          1000,
 		WallarmProcessTimeLimitBlock:     "attack",
 		WallarmRequestMemoryLimit:        "0",

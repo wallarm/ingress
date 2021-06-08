@@ -54,8 +54,6 @@ http {
     {{ if $cfg.EnableWallarm }}
     wallarm_upstream_connect_attempts {{ $cfg.WallarmUpstreamConnectAttempts }};
     wallarm_upstream_reconnect_interval {{ $cfg.WallarmUpstreamReconnectInterval }};
-    ## Commented out until NODE-1288 will fixed
-    # wallarm_acl_mapsize {{ $cfg.WallarmAclMapsize }};
     wallarm_process_time_limit {{ $cfg.WallarmProcessTimeLimit }};
     wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
     wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
