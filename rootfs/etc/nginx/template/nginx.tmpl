@@ -613,6 +613,7 @@ http {
             {{ end }}
 
             access_log off;
+            disable_acl "on";
             wallarm_status on format=json;
         }
 
@@ -622,6 +623,7 @@ http {
             {{ end }}
 
             access_log off;
+            disable_acl "on";
             wallarm_status on format=prometheus;
         }
         {{ end }}
