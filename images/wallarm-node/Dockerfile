@@ -17,7 +17,7 @@ FROM BASEIMAGE
 
 RUN apt-get -qq update && apt-get -qq -y install curl gnupg2 \
     && curl -fsSL https://repo.wallarm.com/wallarm.gpg | apt-key add - \
-    && echo 'deb [trusted=yes] http://repo.wallarm.com/debian/wallarm-node buster/2.19/' \
+    && echo 'deb http://repo.wallarm.com/debian/wallarm-node buster/3.0/' \
         > /etc/apt/sources.list.d/wallarm.list \
     && apt-get -qq update \
     && apt-get -qq --no-install-recommends install \
