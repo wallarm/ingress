@@ -54,12 +54,6 @@ http {
     {{ if $cfg.EnableWallarm }}
     wallarm_upstream_connect_attempts {{ $cfg.WallarmUpstreamConnectAttempts }};
     wallarm_upstream_reconnect_interval {{ $cfg.WallarmUpstreamReconnectInterval }};
-    {{ if $cfg.EnableWallarmAcl }}
-    wallarm_acl_db default {
-      wallarm_acl_path /usr/local/openresty/nginx/wallarm_acl_default;
-      wallarm_acl_mapsize {{ $cfg.WallarmAclMapsize }};
-    }
-    {{ end }}
     wallarm_process_time_limit {{ $cfg.WallarmProcessTimeLimit }};
     wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
     wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
@@ -619,20 +613,9 @@ http {
             {{ end }}
 
             access_log off;
+            disable_acl "on";
             wallarm_status on format=json;
         }
-
-        {{ if $cfg.EnableWallarmAcl }}
-        location /wallarm-acl {
-            {{ if $cfg.EnableOpentracing }}
-            opentracing off;
-            {{ end }}
-
-            access_log off;
-            wallarm_acl default;
-            wallarm_acl_api on;
-        }
-        {{ end }}
 
         location /wallarm-metrics {
             {{ if $cfg.EnableOpentracing }}
@@ -640,6 +623,7 @@ http {
             {{ end }}
 
             access_log off;
+            disable_acl "on";
             wallarm_status on format=prometheus;
         }
         {{ end }}
@@ -1033,11 +1017,6 @@ stream {
             set $location_path  {{ $location.Path | escapeLiteralDollar | quote }};
 
             {{ if $all.Cfg.EnableWallarm }}
-            {{ if $all.Cfg.EnableWallarmAcl }}
-            {{ if (eq $location.Wallarm.Acl "on") }}
-            wallarm_acl default;
-            {{ end }}
-            {{ end }}
             wallarm_mode                 {{ $location.Wallarm.Mode }};
             wallarm_mode_allow_override  {{ $location.Wallarm.ModeAllowOverride }};
             {{ if eq $all.Cfg.WallarmFallback "on"}}

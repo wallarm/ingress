@@ -17,7 +17,7 @@
 all: all-container
 
 # Use the 0.0 tag for testing, it shouldn't clobber any release builds
-TAG ?= 2.18.1-1
+TAG ?= 3.0.0-1
 REGISTRY ?= wallarm
 DOCKER ?= docker
 SED_I ?= sed -i

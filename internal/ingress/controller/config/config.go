@@ -621,11 +621,6 @@ type Configuration struct {
 	// By default this is enabled
 	EnableWallarm bool `json:"enable-wallarm"`
 
-	// EnableWallarmAcl enables the nginx Wallarm ACL module
-	// https://docs.wallarm.com/
-	// By default this is disabled
-	EnableWallarmAcl bool `json:"enable-wallarm-acl"`
-
 	// Name of Wallarm Tarantool service in form "namespace/name"
 	WallarmUpstreamService string `json:"wallarm-upstream-service"`
 
@@ -637,10 +632,6 @@ type Configuration struct {
 	// the threshold value set in WallarmUpstreamConnectAttempts
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval
 	WallarmUpstreamReconnectInterval string `json:"wallarm-upstream-reconnect-interval"`
-
-	// Initial memory size to be allocated for the corresponding ACL
-	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize
-	WallarmAclMapsize string `json:"wallarm-acl-mapsize"`
 
 	// The time limit of a single request processing in milliseconds
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimit
@@ -798,7 +789,6 @@ func NewDefault() Configuration {
 			WallarmModeAllowOverride: "on",
 			WallarmFallback:          "on",
 			WallarmInstance:          "",
-			WallarmAcl:               "off",
 			WallarmBlockPage:         "",
 			WallarmAclBlockPage:      "",
 			WallarmParseResponse:     "on",
@@ -833,10 +823,8 @@ func NewDefault() Configuration {
 		NoAuthLocations:              "/.well-known/acme-challenge",
 
 		EnableWallarm:                    false,
-		EnableWallarmAcl:                 false,
 		WallarmUpstreamConnectAttempts:   10,
 		WallarmUpstreamReconnectInterval: "15s",
-		WallarmAclMapsize:                "64m",
 		WallarmProcessTimeLimit:          1000,
 		WallarmProcessTimeLimitBlock:     "attack",
 		WallarmRequestMemoryLimit:        "0",

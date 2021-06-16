@@ -170,10 +170,8 @@ The following table shows a configuration option's name, type, and the default v
 |[global-auth-cache-duration](#global-auth-cache-duration)|string|"200 202 401 5m"|
 |[no-auth-locations](#no-auth-locations)|string|"/.well-known/acme-challenge"|
 |[enable-wallarm](#enable-wallarm)|bool|"true"|
-|[enable-wallarm-acl](#enable-wallarm-acl)|bool|"false"|
 |[wallarm-upstream-connect-attempts](#wallarm-upstream-connect-attempts)|int|10|
 |[wallarm-upstream-reconnect-interval](#wallarm-upstream-reconnect-interval)|string|"15s"|
-|[wallarm-acl-mapsize](#wallarm-acl-mapsize)|string|"64m"|
 |[wallarm-process-time-limit](#wallarm-process-time-limit)|int|1000|
 |[wallarm-process-time-limit-block](#wallarm-process-time-limit-block)|string|"attack"|
 |[wallarm-request-memory-limit](#wallarm-request-memory-limit)|string|"0"|
@@ -998,10 +996,6 @@ _**default:**_ "/.well-known/acme-challenge"
 
 Enables the wallarm module for NGINX. _**default:**_ is enabled
 
-## enable-wallarm-acl
-
-Enables the wallarm ACL module for NGINX. _**default:**_ is disabled
-
 ## wallarm-upstream-connect-attempts
 
 The number of reconnection attempts to Tarantool upstream.
@@ -1016,13 +1010,6 @@ the threshold value set in wallarm-upstream-connect-attempts
 
 _References:_
 [https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval)
-
-## wallarm-acl-mapsize
-
-Initial memory size to be allocated for the corresponding ACL
-
-_References:_
-[https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize](https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclmapsize)
 
 ## wallarm-process-time-limit
 

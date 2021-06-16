@@ -170,10 +170,6 @@ type Backend struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarminstance
 	WallarmInstance string `json:"wallarm-instance"`
 
-	// Boolean switch.
-	// The directive is used to enable or disable ACL logic for location.
-	WallarmAcl string `json:"wallarm-acl"`
-
 	// This directive lets you set up the page returned to the client when blocking an invalid request.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmblockpage
 	WallarmBlockPage string `json:"wallarm-block-page"`
