@@ -174,7 +174,7 @@ type Backend struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmblockpage
 	WallarmBlockPage string `json:"wallarm-block-page"`
 
-	// This directive lets you set up the page returned to the client when blocking by IP ACL
+	// Deprecated. This directive lets you set up the page returned to the client when blocking by IP ACL
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclblockpage
 	WallarmAclBlockPage string `json:"wallarm-acl-block-page"`
 

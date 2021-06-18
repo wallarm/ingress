@@ -156,6 +156,7 @@ var (
 		"trimSpace":                       strings.TrimSpace,
 		"toUpper":                         strings.ToUpper,
 		"toLower":                         strings.ToLower,
+		"split":                           strings.Split,
 		"formatIP":                        formatIP,
 		"quote":                           quote,
 		"replace":                         replace,
