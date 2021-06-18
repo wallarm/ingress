@@ -1028,10 +1028,8 @@ stream {
             wallarm_instance             {{ $location.Wallarm.Instance }};
             {{ end }}
             {{ if not (eq $location.Wallarm.BlockPage "") }}
-            wallarm_block_page           {{ $location.Wallarm.BlockPage | replace "," " " }};
+            {{ range (split $location.Wallarm.BlockPage ";") }}wallarm_block_page {{ . }};
             {{ end }}
-            {{ if not (eq $location.Wallarm.AclBlockPage "") }}
-            wallarm_acl_block_page       {{ $location.Wallarm.AclBlockPage | replace "," " " }};
             {{ end }}
             wallarm_parse_response       {{ $location.Wallarm.ParseResponse }};
             wallarm_parse_websocket      {{ $location.Wallarm.ParseWebsocket }};

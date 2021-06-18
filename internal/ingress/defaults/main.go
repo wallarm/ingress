@@ -174,10 +174,6 @@ type Backend struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmblockpage
 	WallarmBlockPage string `json:"wallarm-block-page"`
 
-	// This directive lets you set up the page returned to the client when blocking by IP ACL
-	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclblockpage
-	WallarmAclBlockPage string `json:"wallarm-acl-block-page"`
-
 	// The mode of processing web server responses.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparseresponse
 	WallarmParseResponse string `json:"wallarm-parse-response"`

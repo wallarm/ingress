@@ -32,7 +32,6 @@ type Config struct {
 	Fallback string `json:"fallback"`
 	Instance string `json:"instance"`
 	BlockPage string `json:"blockPage"`
-	AclBlockPage string `json:"aclBlockPage"`
 	ParseResponse string `json:"parseResponse"`
 	ParseWebsocket string `json:"parseWebsocket"`
 	UnpackResponse string `json:"unpackResponse"`
@@ -74,9 +73,6 @@ func (l1 *Config) Equal(l2 *Config) bool {
 	if !reflect.DeepEqual(l1.ParserDisable, l2.ParserDisable) {
 		return false
 	}
-	if l1.AclBlockPage != l2.AclBlockPage {
-		return false
-	}
 
 	return true
 }
@@ -115,10 +111,6 @@ func (a wallarm) Parse(ing *extensions.Ingress) (interface{}, error) {
 	if err != nil {
 		blockPage = defBackend.WallarmBlockPage
 	}
-	aclBlockPage, err := parser.GetStringAnnotation("wallarm-acl-block-page", ing)
-	if err != nil {
-		aclBlockPage = defBackend.WallarmAclBlockPage
-	}
 	parseResponse, err := parser.GetStringAnnotation("wallarm-parse-response", ing)
 	if err != nil {
 		parseResponse = defBackend.WallarmParseResponse
@@ -148,7 +140,6 @@ func (a wallarm) Parse(ing *extensions.Ingress) (interface{}, error) {
 		fallback,
 		instance,
 		blockPage,
-		aclBlockPage,
 		parseResponse,
 		parseWebsocket,
 		unpackResponse,

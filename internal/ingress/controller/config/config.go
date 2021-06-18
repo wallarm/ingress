@@ -790,7 +790,6 @@ func NewDefault() Configuration {
 			WallarmFallback:          "on",
 			WallarmInstance:          "",
 			WallarmBlockPage:         "",
-			WallarmAclBlockPage:      "",
 			WallarmParseResponse:     "on",
 			WallarmParseWebsocket:    "off",
 			WallarmUnpackResponse:    "on",
