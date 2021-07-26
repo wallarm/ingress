@@ -23,5 +23,8 @@ RUN apt-get -qq update && apt-get -qq -y install curl gnupg2 \
     && apt-get -qq --no-install-recommends install \
         nginx-module-wallarm-k8s-ingress \
         wallarm-node \
+    && apt-get -y remove curl \
+    && apt-get -y dist-upgrade \
     && chown www-data:www-data /var/lib/wallarm-tarantool \
+    && chown www-data:www-data /var/lib/collectd \
     && find /var/lib/apt -type f -delete

@@ -29,6 +29,8 @@ RUN clean-install \
   diffutils \
   libcap2-bin
 
+RUN dpkg -r --force-all apt apt-get
+
 COPY --chown=www-data:www-data . /
 
 RUN cp /usr/local/openresty/nginx/conf/mime.types /etc/nginx/mime.types \
@@ -58,7 +60,8 @@ RUN  setcap    cap_net_bind_service=+ep /nginx-ingress-controller \
 RUN  setcap    cap_net_bind_service=+ep /usr/local/openresty/nginx/sbin/nginx \
   && setcap -v cap_net_bind_service=+ep /usr/local/openresty/nginx/sbin/nginx
 
-USER www-data
+#USER www-data
+USER 33
 
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
 RUN  ln -sf /dev/stdout /usr/local/openresty/nginx/logs/access.log \
