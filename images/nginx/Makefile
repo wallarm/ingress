@@ -21,8 +21,8 @@ DIR:=$(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 
 # 0.0.0 shouldn't clobber any released builds
-TAG ?= 0.0
-REGISTRY ?= gcr.io/k8s-staging-ingress-nginx
+TAG ?= 1.1.0
+REGISTRY ?= wallarm
 
 IMAGE = $(REGISTRY)/nginx
 
@@ -30,12 +30,13 @@ IMAGE = $(REGISTRY)/nginx
 export DOCKER_CLI_EXPERIMENTAL=enabled
 
 # build with buildx
-PLATFORMS?=linux/amd64,linux/arm,linux/arm64,linux/s390x
+PLATFORMS?=linux/amd64
 OUTPUT=
 PROGRESS=plain
 build: ensure-buildx
 	docker buildx build \
 		--platform=${PLATFORMS} $(OUTPUT) \
+		--ssh default \
 		--progress=$(PROGRESS) \
 		--pull \
 		--tag $(IMAGE):$(TAG) rootfs

@@ -602,6 +602,7 @@ Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-980-CORRELATION.conf
 Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
 " > /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 
+/install_deps.sh
 # build nginx
 cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 
@@ -642,6 +643,7 @@ CC_OPT="-g -O2 -fPIE -fstack-protector-strong \
   -Werror=format-security \
   -Wno-deprecated-declarations \
   -fno-strict-aliasing \
+  -fno-omit-frame-pointer \
   -D_FORTIFY_SOURCE=2 \
   --param=ssp-buffer-size=4 \
   -DTCP_FASTOPEN=23 \
@@ -673,7 +675,8 @@ WITH_MODULES=" \
   --add-dynamic-module=$BUILD_PATH/nginx-opentracing-$NGINX_OPENTRACING_VERSION/opentracing \
   --add-dynamic-module=$BUILD_PATH/ModSecurity-nginx-$MODSECURITY_VERSION \
   --add-dynamic-module=$BUILD_PATH/ngx_http_geoip2_module-${GEOIP2_VERSION} \
-  --add-dynamic-module=$BUILD_PATH/ngx_brotli"
+  --add-dynamic-module=$BUILD_PATH/ngx_brotli \
+  --add-dynamic-module=/tmp/pkgs/wallarm-nginx/wallarm/module"
 
 if [ $USE_OPENTELEMETRY = true ]; then
   WITH_MODULES+=" \

@@ -17,7 +17,7 @@ FROM alpine:3.14.2 as builder
 
 COPY . /
 
-RUN apk update \
+RUN --mount=type=ssh apk update \
   && apk upgrade \
   && apk add -U bash \
   && /build.sh
