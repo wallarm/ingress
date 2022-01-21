@@ -1,5 +1,5 @@
 /*
-Copyright 2015 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,39 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package defaultbackend
+package streamsnippet
 
 import (
-	"fmt"
-
 	networking "k8s.io/api/networking/v1"
 
 	"k8s.io/ingress-nginx/internal/ingress/annotations/parser"
 	"k8s.io/ingress-nginx/internal/ingress/resolver"
 )
 
-type backend struct {
+type streamSnippet struct {
 	r resolver.Resolver
 }
 
-// NewParser creates a new default backend annotation parser
+// NewParser creates a new server snippet annotation parser
 func NewParser(r resolver.Resolver) parser.IngressAnnotation {
-	return backend{r}
+	return streamSnippet{r}
 }
 
-// Parse parses the annotations contained in the ingress to use
-// a custom default backend
-func (db backend) Parse(ing *networking.Ingress) (interface{}, error) {
-	s, err := parser.GetStringAnnotation("default-backend", ing)
-	if err != nil {
-		return nil, err
-	}
-
-	name := fmt.Sprintf("%v/%v", ing.Namespace, s)
-	svc, err := db.r.GetService(name)
-	if err != nil {
-		return nil, fmt.Errorf("unexpected error reading service %s: %w", name, err)
-	}
-
-	return svc, nil
+// Parse parses the annotations contained in the ingress rule
+// used to indicate if the location/s contains a fragment of
+// configuration to be included inside the paths of the rules
+func (a streamSnippet) Parse(ing *networking.Ingress) (interface{}, error) {
+	return parser.GetStringAnnotation("stream-snippet", ing)
 }

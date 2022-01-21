@@ -51,7 +51,7 @@ jobs:
           # G601 for zz_generated.deepcopy.go
           # G306 TODO: Expect WriteFile permissions to be 0600 or less
           # G307 TODO: Deferring unsafe method "Close"
-          args: -exclude=G601,G104,G204,G304,G306,G307 -tests=false -exclude-dir=test -exclude-dir=images/  -exclude-dir=docs/ ./...
+          args: -exclude=G109,G601,G104,G204,G304,G306,G307 -tests=false -exclude-dir=test -exclude-dir=images/  -exclude-dir=docs/ ./...
 
   build:
     name: Build
@@ -67,7 +67,7 @@ jobs:
         id: go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: '1.17.6'
 
       - name: Set up Docker Buildx
         id: buildx
@@ -123,6 +123,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.6'
+
       - name: cache
         uses: actions/download-artifact@v2
         with:
@@ -131,6 +136,13 @@ jobs:
       - name: Lint
         run: |
           ./build/run-in-docker.sh ./hack/verify-chart-lint.sh
+
+      - name: Run helm-docs
+        run: |
+          GOBIN=$PWD GO111MODULE=on go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.6.0
+          ./helm-docs --chart-search-root=${GITHUB_WORKSPACE}/charts
+          git diff --exit-code
+          rm -f ./helm-docs
 
       - name: fix permissions
         run: |
@@ -174,7 +186,7 @@ jobs:
 
     strategy:
       matrix:
-        k8s: [v1.19.11, v1.20.7, v1.21.2, v1.22.0]
+        k8s: [v1.19.11, v1.20.7, v1.21.2, v1.22.0, v1.23.0]
 
     steps:
 
@@ -307,7 +319,7 @@ jobs:
         if: ${{ steps.filter-images.outputs.kube-webhook-certgen == 'true' }}
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: '1.17.6'
 
       - name: kube-webhook-certgen image build
         if: ${{ steps.filter-images.outputs.kube-webhook-certgen == 'true' }}
