@@ -21,10 +21,10 @@ DIR:=$(strip $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST)))))
 INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 
 # 0.0.0 shouldn't clobber any released builds
-TAG ?= 1.1.0
+TAG ?= $(shell cat ../../TAG)
 REGISTRY ?= wallarm
 
-IMAGE = $(REGISTRY)/nginx
+IMAGE = $(REGISTRY)/ingress-nginx
 
 # required to enable buildx
 export DOCKER_CLI_EXPERIMENTAL=enabled

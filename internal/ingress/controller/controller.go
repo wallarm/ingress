@@ -37,6 +37,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/log"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/parser"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 	ngx_config "k8s.io/ingress-nginx/internal/ingress/controller/config"
 	"k8s.io/ingress-nginx/internal/ingress/controller/ingressclass"
 	"k8s.io/ingress-nginx/internal/ingress/controller/store"
@@ -536,6 +537,7 @@ func (n *NGINXController) getConfiguration(ingresses []*ingress.Ingress) (sets.S
 		TCPEndpoints:          n.getStreamServices(n.cfg.TCPConfigMapName, apiv1.ProtocolTCP),
 		UDPEndpoints:          n.getStreamServices(n.cfg.UDPConfigMapName, apiv1.ProtocolUDP),
 		PassthroughBackends:   passUpstreams,
+		WallarmTarantoolUpstream:   n.getWallarmTarantoolUpstream(),
 		BackendConfigChecksum: n.store.GetBackendConfiguration().Checksum,
 		DefaultSSLCertificate: n.getDefaultSSLCertificate(),
 		StreamSnippets:        n.getStreamSnippets(ingresses),
@@ -855,6 +857,29 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
 	return aUpstreams, aServers
 }
 
+func (n *NGINXController) getWallarmTarantoolUpstream() *ingress.Backend {
+	if !n.store.GetBackendConfiguration().EnableWallarm {
+		return nil
+	}
+
+	svcKey := n.store.GetBackendConfiguration().WallarmUpstreamService
+	svc, err := n.store.GetService(svcKey)
+	if err != nil {
+		klog.Warningf("Error getting Wallarm Tarantool Upstream %q from local store: %v", svcKey, err)
+		return nil
+	}
+	port := &svc.Spec.Ports[0]
+	endpoints := getEndpoints(svc, port, port.Protocol, n.store.GetServiceEndpoints)
+	if len(endpoints) == 0 {
+		klog.Warning("No Wallarm Tarantool Upstream endpoints found")
+		return nil
+	}
+
+	return &ingress.Backend{
+		Endpoints: endpoints,
+	}
+}
+
 // createUpstreams creates the NGINX upstreams (Endpoints) for each Service
 // referenced in Ingress rules.
 func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.Backend) map[string]*ingress.Backend {
@@ -1135,6 +1160,19 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 		ProxyMaxTempFileSize: bdef.ProxyMaxTempFileSize,
 	}
 
+	ngxWallarm := wallarm.Config{
+		Mode:              bdef.WallarmMode,
+		ModeAllowOverride: bdef.WallarmModeAllowOverride,
+		Fallback:          bdef.WallarmFallback,
+		Instance:          bdef.WallarmInstance,
+		BlockPage:         bdef.WallarmBlockPage,
+		AclBlockPage:      bdef.WallarmAclBlockPage,
+		ParseResponse:     bdef.WallarmParseResponse,
+		ParseWebsocket:    bdef.WallarmParseWebsocket,
+		UnpackResponse:    bdef.WallarmUnpackResponse,
+		ParserDisable:     bdef.WallarmParserDisable,
+	}
+
 	// initialize default server and root location
 	pathTypePrefix := networking.PathTypePrefix
 	servers[defServerName] = &ingress.Server{
@@ -1147,6 +1185,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 				IsDefBackend: true,
 				Backend:      du.Name,
 				Proxy:        ngxProxy,
+				Wallarm:      ngxWallarm,
 				Service:      du.Service,
 				Logs: log.Config{
 					Access:  n.store.GetBackendConfiguration().EnableAccessLogForDefaultBackend,
@@ -1196,6 +1235,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 					locationApplyAnnotations(defLoc, anns)
 					defLoc.Redirect = originalRedirect
 					defLoc.Rewrite = originalRewrite
+					defLoc.Wallarm = anns.Wallarm
 				} else {
 					klog.V(3).Infof("Ingress %q defines both a backend and rules. Using its backend as default upstream for all its rules.", ingKey)
 				}
@@ -1218,6 +1258,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 				PathType:     &pathTypePrefix,
 				IsDefBackend: true,
 				Backend:      un,
+				Wallarm:      ngxWallarm,
 				Ingress:      ing,
 				Service:      &apiv1.Service{},
 			}
@@ -1398,6 +1439,7 @@ func locationApplyAnnotations(loc *ingress.Location, anns *annotations.Ingress) 
 	loc.CustomHTTPErrors = anns.CustomHTTPErrors
 	loc.ModSecurity = anns.ModSecurity
 	loc.Satisfy = anns.Satisfy
+	loc.Wallarm = anns.Wallarm
 	loc.Mirror = anns.Mirror
 
 	loc.DefaultBackendUpstreamName = defUpstreamName

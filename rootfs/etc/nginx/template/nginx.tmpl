@@ -12,6 +12,10 @@
 # setup custom paths that do not require root access
 pid {{ .PID }};
 
+{{ if $cfg.EnableWallarm }}
+load_module /etc/nginx/modules/ngx_http_wallarm_module.so;
+{{ end }}
+
 {{ if $cfg.UseGeoIP2 }}
 load_module /etc/nginx/modules/ngx_http_geoip2_module.so;
 {{ end }}
@@ -62,6 +66,16 @@ events {
 
 http {
     lua_package_path "/etc/nginx/lua/?.lua;;";
+
+    {{ if $cfg.EnableWallarm }}
+    wallarm_upstream_connect_attempts {{ $cfg.WallarmUpstreamConnectAttempts }};
+    wallarm_upstream_reconnect_interval {{ $cfg.WallarmUpstreamReconnectInterval }};
+    wallarm_process_time_limit {{ $cfg.WallarmProcessTimeLimit }};
+    wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
+    wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
+    wallarm_worker_rlimit_vmem {{ $cfg.WallarmWorkerRlimitVmem }};
+    wallarm_fallback {{ $cfg.WallarmFallback}};
+    {{ end }}
 
     {{ buildLuaSharedDictionaries $cfg $servers }}
 
@@ -484,6 +498,15 @@ http {
     {{ $cfg.HTTPSnippet }}
     {{ end }}
 
+    {{ if $all.WallarmTarantoolUpstream }}
+    upstream wallarm_tarantool {
+        {{ range $server := $all.WallarmTarantoolUpstream.Endpoints }}server {{ $server.Address | formatIP }}:{{ $server.Port }};
+        {{ end }}
+        keepalive {{ $all.WallarmTarantoolUpstream.Endpoints | len }};
+    }
+    wallarm_tarantool_upstream wallarm_tarantool;
+    {{ end }}
+
     upstream upstream_balancer {
         ### Attention!!!
         #
@@ -677,6 +700,19 @@ http {
         location {{ .StatusPath }} {
             stub_status on;
         }
+
+        {{ if $cfg.EnableWallarm }}
+        location /wallarm-status {
+            access_log off;
+            disable_acl "on";
+            wallarm_status on format=json;
+        }
+        location /wallarm-metrics {
+            access_log off;
+            disable_acl "on";
+            wallarm_status on format=prometheus;
+        }
+        {{ end }}
 
         location /configuration {
             client_max_body_size                    {{ luaConfigurationRequestBodySize $cfg }};
@@ -1118,6 +1154,31 @@ stream {
             set $service_port   {{ $ing.ServicePort | quote }};
             set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
             set $global_rate_limit_exceeding n;
+
+            {{ if $all.Cfg.EnableWallarm }}
+            wallarm_mode                 {{ $location.Wallarm.Mode }};
+            wallarm_mode_allow_override  {{ $location.Wallarm.ModeAllowOverride }};
+            {{ if eq $all.Cfg.WallarmFallback "on"}}
+            wallarm_fallback             "on";            
+            {{ else }}
+            wallarm_fallback             {{ $location.Wallarm.Fallback }};
+            {{ end }}
+            {{ if not (eq $location.Wallarm.Instance "") }}
+            wallarm_instance             {{ $location.Wallarm.Instance }};
+            {{ end }}
+            {{ if not (eq $location.Wallarm.AclBlockPage "") }}
+            wallarm_acl_block_page       {{ $location.Wallarm.AclBlockPage | replace "," " " }};
+            {{ end }}
+            {{ if not (eq $location.Wallarm.BlockPage "") }}
+            {{ range (split $location.Wallarm.BlockPage ";") }}wallarm_block_page {{ . }};
+            {{ end }}
+            {{ end }}
+            wallarm_parse_response       {{ $location.Wallarm.ParseResponse }};
+            wallarm_parse_websocket      {{ $location.Wallarm.ParseWebsocket }};
+            wallarm_unpack_response      {{ $location.Wallarm.UnpackResponse }};
+            {{ range $parser := $location.Wallarm.ParserDisable }}wallarm_parser_disable {{ $parser }};
+            {{ end }}
+            {{ end }}
 
             {{ buildOpentracingForLocation $all.Cfg.EnableOpentracing $all.Cfg.OpentracingTrustIncomingSpan $location }}
 

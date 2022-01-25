@@ -98,6 +98,49 @@ type Backend struct {
 	// http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_request_buffering
 	ProxyRequestBuffering string `json:"proxy-request-buffering"`
 
+	// Defines operational mode of Wallarm module
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmmode
+	WallarmMode string `json:"wallarm-mode"`
+
+	// Manages the ability to override the wallarm_mode values via filtering rules
+	// downloaded from the Wallarm cloud (LOM).
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmmodeallowoverride
+	WallarmModeAllowOverride string `json:"wallarm-mode-allow-override"`
+
+	// With the value set to on, NGINX has the ability to enter an emergency
+	// mode if proton.db or LOM cannot be loaded.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmfallback
+	WallarmFallback string `json:"wallarm-fallback"`
+
+	// An application identifier.
+	// The directive is used to visually separate the data of different applications on Dashboard.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarminstance
+	WallarmInstance string `json:"wallarm-instance"`
+
+	// This directive lets you set up the page returned to the client when blocking an invalid request.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmblockpage
+	WallarmBlockPage string `json:"wallarm-block-page"`
+
+	// Deprecated. This directive lets you set up the page returned to the client when blocking by IP ACL
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclblockpage
+	WallarmAclBlockPage string `json:"wallarm-acl-block-page"`
+
+	// The mode of processing web server responses.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparseresponse
+	WallarmParseResponse string `json:"wallarm-parse-response"`
+
+	// Enables or disables websocket messages processing.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparsewebsocket
+	WallarmParseWebsocket string `json:"wallarm-parse-websocket"`
+
+	// If the backend sends compressed data, the value on decompresses the data before processing.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmunpackresponse
+	WallarmUnpackResponse string `json:"wallarm-unpack-response"`
+
+	// Allows to disable parsers.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparserdisable
+	WallarmParserDisable []string `json:"wallarm-parser-disable,-"`
+
 	// Name server/s used to resolve names of upstream servers into IP addresses.
 	// The file /etc/resolv.conf is used as DNS resolution configuration.
 	Resolver []net.IP

@@ -49,9 +49,9 @@ ifeq ($(ARCH),)
     $(error mandatory variable ARCH is empty, either set it when calling the command or make sure 'go env GOARCH' works)
 endif
 
-REGISTRY ?= gcr.io/k8s-staging-ingress-nginx
+REGISTRY ?= wallarm
 
-BASE_IMAGE ?= k8s.gcr.io/ingress-nginx/nginx:v20210926-g5662db450@sha256:1ef404b5e8741fe49605a1f40c3fdd8ef657aecdb9526ea979d1672eeabd0cd9
+BASE_IMAGE ?= $(REGISTRY)/ingress-nginx:$(TAG)
 
 GOARCH=$(ARCH)
 
@@ -68,12 +68,12 @@ image: clean-image ## Build image for a particular arch.
 		--build-arg TARGETARCH="$(ARCH)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
-		-t $(REGISTRY)/controller:$(TAG) rootfs
+		-t $(REGISTRY)/ingress-controller:$(TAG) rootfs
 
 .PHONY: clean-image
 clean-image: ## Removes local image
-	echo "removing old image $(REGISTRY)/controller:$(TAG)"
-	@docker rmi -f $(REGISTRY)/controller:$(TAG) || true
+	echo "removing old image $(REGISTRY)/ingress-controller:$(TAG)"
+	@docker rmi -f $(REGISTRY)/ingress-controller:$(TAG) || true
 
 .PHONY: build
 build:  ## Build ingress controller, debug tool and pre-stop hook.
@@ -193,7 +193,7 @@ ensure-buildx:
 show-version:
 	echo -n $(TAG)
 
-PLATFORMS ?= amd64 arm arm64 s390x
+PLATFORMS ?= amd64
 
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
@@ -214,4 +214,4 @@ release: ensure-buildx clean
 		--build-arg VERSION="$(TAG)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
-		-t $(REGISTRY)/controller:$(TAG) rootfs
+		-t $(REGISTRY)/ingress-controller:$(TAG) rootfs

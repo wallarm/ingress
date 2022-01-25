@@ -711,6 +711,44 @@ type Configuration struct {
 	// +optional
 	GlobalExternalAuth GlobalExternalAuth `json:"global-external-auth"`
 
+	// EnableWallarm enables the nginx Wallarm module
+	// https://docs.wallarm.com/
+	// By default this is enabled
+	EnableWallarm bool `json:"enable-wallarm"`
+
+	// Name of Wallarm Tarantool service in form "namespace/name"
+	WallarmUpstreamService string `json:"wallarm-upstream-service"`
+
+	// The number of reconnection attempts to Tarantool upstream.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectattempts
+	WallarmUpstreamConnectAttempts int `json:"wallarm-upstream-connect-attempts"`
+
+	// A delay in reconnecting to Tarantool after a number of failed attempts exceeds
+	// the threshold value set in WallarmUpstreamConnectAttempts
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval
+	WallarmUpstreamReconnectInterval string `json:"wallarm-upstream-reconnect-interval"`
+
+	// The time limit of a single request processing in milliseconds
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimit
+	WallarmProcessTimeLimit int `json:"wallarm-process-time-limit"`
+
+	// Ability to manage the blocking of requests, which exceed the time limit
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmprocesstimelimitblock
+	WallarmProcessTimeLimitBlock string `json:"wallarm-process-time-limit-block"`
+
+	// A limit for the maximum amount of memory that can be used for processing of a single request
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit
+	WallarmRequestMemoryLimit string `json:"wallarm-request-memory-limit"`
+
+	// The maximum amount of virtual memory in megabytes that is allowed for the NGINX-Wallarm worker
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmrequestmemorylimit
+	WallarmWorkerRlimitVmem string `json:"wallarm-worker-rlimit-vmem"`
+
+	// With the value set to on, NGINX has the ability to enter an emergency
+	// mode if proton.db or LOM cannot be loaded.
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmfallback
+	WallarmFallback string `json:"wallarm-fallback"`
+
 	// Checksum contains a checksum of the configmap configuration
 	Checksum string `json:"-"`
 
@@ -887,6 +925,16 @@ func NewDefault() Configuration {
 			LimitRate:                0,
 			LimitRateAfter:           0,
 			ProxyBuffering:           "off",
+			WallarmMode:              "off",
+			WallarmModeAllowOverride: "on",
+			WallarmFallback:          "on",
+			WallarmInstance:          "",
+			WallarmBlockPage:         "",
+			WallarmAclBlockPage:      "",
+			WallarmParseResponse:     "on",
+			WallarmParseWebsocket:    "off",
+			WallarmUnpackResponse:    "on",
+			WallarmParserDisable:     []string{},
 			ProxyHTTPVersion:         "1.1",
 			ProxyMaxTempFileSize:     "1024m",
 			ServiceUpstream:          false,
@@ -919,6 +967,14 @@ func NewDefault() Configuration {
 		SyslogPort:                             514,
 		NoTLSRedirectLocations:                 "/.well-known/acme-challenge",
 		NoAuthLocations:                        "/.well-known/acme-challenge",
+		EnableWallarm:                          false,
+		WallarmUpstreamConnectAttempts:         10,
+		WallarmUpstreamReconnectInterval:       "15s",
+		WallarmProcessTimeLimit:                1000,
+		WallarmProcessTimeLimitBlock:           "attack",
+		WallarmRequestMemoryLimit:              "0",
+		WallarmWorkerRlimitVmem:                "1g",
+		WallarmFallback:                        "on",
 		GlobalExternalAuth:                     defGlobalExternalAuth,
 		ProxySSLLocationOnly:                   false,
 		DefaultType:                            "text/html",
@@ -943,6 +999,7 @@ type TemplateConfig struct {
 	BacklogSize              int
 	Backends                 []*ingress.Backend
 	PassthroughBackends      []*ingress.SSLPassthroughBackend
+	WallarmTarantoolUpstream *ingress.Backend
 	Servers                  []*ingress.Server
 	TCPBackends              []ingress.L4Service
 	UDPBackends              []ingress.L4Service

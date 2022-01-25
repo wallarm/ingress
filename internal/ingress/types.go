@@ -37,6 +37,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/opentracing"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxyssl"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ratelimit"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/redirect"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/rewrite"
@@ -68,6 +69,9 @@ type Configuration struct {
 	// It contains information about the associated Server Name Indication (SNI).
 	// +optional
 	PassthroughBackends []*SSLPassthroughBackend `json:"passthroughBackends,omitempty"`
+
+	// WallarmTarantoolUpstream contains the backend used as Wallarm postanalyst database
+	WallarmTarantoolUpstream *Backend `json:"wallarmTarantoolUpstream,omitempty"`
 
 	// BackendConfigChecksum contains the particular checksum of a Configuration object
 	BackendConfigChecksum string `json:"BackendConfigChecksum,omitempty"`
@@ -338,6 +342,9 @@ type Location struct {
 	// InfluxDB allows to monitor the incoming request by sending them to an influxdb database
 	// +optional
 	InfluxDB influxdb.Config `json:"influxDB,omitempty"`
+	// Wallarm contains configuration options of Wallarm module
+	// +optional
+	Wallarm wallarm.Config `json:"wallarm,omitempty"`
 	// BackendProtocol indicates which protocol should be used to communicate with the service
 	// By default this is HTTP
 	BackendProtocol string `json:"backend-protocol"`

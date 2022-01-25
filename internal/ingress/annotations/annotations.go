@@ -64,6 +64,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/sslpassthrough"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/upstreamhashby"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/upstreamvhost"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/xforwardedprefix"
 	"k8s.io/ingress-nginx/internal/ingress/errors"
 	"k8s.io/ingress-nginx/internal/ingress/resolver"
@@ -114,6 +115,7 @@ type Ingress struct {
 	SSLCipher          sslcipher.Config
 	Logs               log.Config
 	InfluxDB           influxdb.Config
+	Wallarm            wallarm.Config
 	ModSecurity        modsecurity.Config
 	Mirror             mirror.Config
 	StreamSnippet      string
@@ -164,6 +166,7 @@ func NewAnnotationExtractor(cfg resolver.Resolver) Extractor {
 			"SSLCipher":            sslcipher.NewParser(cfg),
 			"Logs":                 log.NewParser(cfg),
 			"InfluxDB":             influxdb.NewParser(cfg),
+			"Wallarm":              wallarm.NewParser(cfg),
 			"BackendProtocol":      backendprotocol.NewParser(cfg),
 			"ModSecurity":          modsecurity.NewParser(cfg),
 			"Mirror":               mirror.NewParser(cfg),
