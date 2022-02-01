@@ -140,8 +140,12 @@ spec:
               hostPort: {{ $key }}
               {{- end }}
           {{- end }}
-        {{- if (or .Values.controller.customTemplate.configMapName .Values.controller.extraVolumeMounts .Values.controller.admissionWebhooks.enabled) }}
+        {{- if (or .Values.controller.customTemplate.configMapName .Values.controller.extraVolumeMounts .Values.controller.admissionWebhooks.enabled .Values.controller.extraModules .Values.controller.wallarm.enabled) }}
           volumeMounts:
+          {{- if .Values.controller.extraModules }}
+            - name: modules
+              mountPath: /modules_mount
+          {{- end }}
           {{- if .Values.controller.wallarm.enabled }}
             - name: wallarm
               mountPath: /etc/wallarm
@@ -176,11 +180,21 @@ spec:
         {{ include "ingress-nginx.wallarmSyncAclContainer" . | nindent 8 }}
         {{ include "ingress-nginx.wallarmExportEnvContainer" . | nindent 8 }}
       {{- end }}
-    {{- if or .Values.controller.extraInitContainers .Values.controller.wallarm.enabled }}
+    {{- if or .Values.controller.extraInitContainers .Values.controller.wallarm.enabled .Values.controller.extraModules }}
       initContainers:
     {{- end }}
       {{- if .Values.controller.extraInitContainers }}
         {{ toYaml .Values.controller.extraInitContainers | nindent 8 }}
+      {{- end }}
+      {{- if .Values.controller.extraModules }}
+        {{- range .Values.controller.extraModules }}
+          - name: {{ .name }}
+            image: {{ .image }}
+            command: ['sh', '-c', '/usr/local/bin/init_module.sh']
+            volumeMounts:
+              - name: modules
+                mountPath: /modules_mount
+        {{- end }}
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
         {{ include "ingress-nginx.wallarmInitContainer" . | nindent 8 }}
@@ -202,8 +216,12 @@ spec:
     {{- end }}
       serviceAccountName: {{ template "ingress-nginx.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.controller.terminationGracePeriodSeconds }}
-    {{- if (or .Values.controller.customTemplate.configMapName .Values.controller.extraVolumeMounts .Values.controller.admissionWebhooks.enabled .Values.controller.extraVolumes) }}
+    {{- if (or .Values.controller.customTemplate.configMapName .Values.controller.extraVolumeMounts .Values.controller.admissionWebhooks.enabled .Values.controller.extraVolumes .Values.controller.extraModules .Values.controller.wallarm.enabled) }}
       volumes:
+      {{- if .Values.controller.extraModules }}
+        - name: modules
+          emptyDir: {}
+      {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
         - name: wallarm-acl
           emptyDir: {}
