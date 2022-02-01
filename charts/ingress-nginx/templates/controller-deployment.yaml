@@ -142,6 +142,14 @@ spec:
           {{- end }}
         {{- if (or .Values.controller.customTemplate.configMapName .Values.controller.extraVolumeMounts .Values.controller.admissionWebhooks.enabled) }}
           volumeMounts:
+          {{- if .Values.controller.wallarm.enabled }}
+            - name: wallarm
+              mountPath: /etc/wallarm
+            - mountPath: /var/lib/wallarm-acl
+              name: wallarm-acl
+            - mountPath: /var/lib/nginx/wallarm/
+              name: wallarm-cache
+          {{- end }}
           {{- if .Values.controller.customTemplate.configMapName }}
             - mountPath: /etc/nginx/template
               name: nginx-template-volume
@@ -162,9 +170,21 @@ spec:
       {{- if .Values.controller.extraContainers }}
         {{ toYaml .Values.controller.extraContainers | nindent 8 }}
       {{- end }}
-    {{- if .Values.controller.extraInitContainers }}
-      initContainers: {{ toYaml .Values.controller.extraInitContainers | nindent 8 }}
+      {{- if .Values.controller.wallarm.enabled }}
+        {{ include "ingress-nginx.wallarmCollectdContainer" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmSyncnodeContainer" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmSyncAclContainer" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmExportEnvContainer" . | nindent 8 }}
+      {{- end }}
+    {{- if or .Values.controller.extraInitContainers .Values.controller.wallarm.enabled }}
+      initContainers:
     {{- end }}
+      {{- if .Values.controller.extraInitContainers }}
+        {{ toYaml .Values.controller.extraInitContainers | nindent 8 }}
+      {{- end }}
+      {{- if .Values.controller.wallarm.enabled }}
+        {{ include "ingress-nginx.wallarmInitContainer" . | nindent 8 }}
+      {{- end }}
     {{- if .Values.controller.hostNetwork }}
       hostNetwork: {{ .Values.controller.hostNetwork }}
     {{- end }}
@@ -184,6 +204,14 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.controller.terminationGracePeriodSeconds }}
     {{- if (or .Values.controller.customTemplate.configMapName .Values.controller.extraVolumeMounts .Values.controller.admissionWebhooks.enabled .Values.controller.extraVolumes) }}
       volumes:
+      {{- if .Values.controller.wallarm.enabled }}
+        - name: wallarm-acl
+          emptyDir: {}
+        - name: wallarm
+          emptyDir: {}
+        - name: wallarm-cache
+          emptyDir: {}
+      {{- end }}
       {{- if .Values.controller.customTemplate.configMapName }}
         - name: nginx-template-volume
           configMap:

@@ -10,13 +10,12 @@
 controller:
   name: controller
   image:
-    registry: k8s.gcr.io
-    image: ingress-nginx/controller
+    registry: docker.io
+    image: wallarm/ingress-controller
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "v1.1.1"
-    digest: sha256:0bc88eb15f9e7f84e8e56c14fa5735aaa488b840983f87bd79b1054190e660de
+    tag: "3.4.9-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -35,6 +34,8 @@ controller:
 
   # -- Will add custom configuration options to Nginx https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
   config: {}
+#  config:
+#    error-log-level: debug
 
   # -- Annotations to be added to the controller config configuration configmap
   configAnnotations: {}
@@ -717,6 +718,76 @@ controller:
           - /wait-shutdown
 
   priorityClassName: ""
+
+  wallarm:
+    enabled: false
+    apiHost: api.wallarm.com
+    apiPort: 444
+    apiSSL: true
+    token: ""
+    fallback: "on"
+    tarantool:
+      kind: Deployment
+      service:
+        annotations: {}
+      replicaCount: 1
+      arena: "0.2"
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources: {}
+    heartbeat:
+      resources: {}
+    sync-markers:
+      resources: {}
+    export-attacks:
+      resources: {}
+    export-counters:
+      resources: {}
+    brute-detect:
+      resources: {}
+    addnode:
+      resources: {}
+    exportenv:
+      resources: {}
+    metrics:
+      port: 10254
+    # if this port is changed, change healthz-port: in extraArgs: accordingly
+      enabled: false
+
+      service:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /wallarm-metrics
+          prometheus.io/port: "10254"
+
+        # clusterIP: ""
+
+        ## -- List of IP addresses at which the stats-exporter service is available
+        ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+        ##
+        externalIPs: []
+
+        # loadBalancerIP: ""
+        loadBalancerSourceRanges: []
+        servicePort: 10254
+        type: ClusterIP
+        # externalTrafficPolicy: ""
+        # nodePort: ""
+    synccloud:
+      wallarm_syncnode_interval_sec: 120
+      resources: {}
+    collectd:
+      resources: {}
+    acl:
+      resources: {}
+    mmdb:
+      resources: {}
+    wallarm-appstructure:
+      resources: {}
 
 # -- Rollback limit
 ##
