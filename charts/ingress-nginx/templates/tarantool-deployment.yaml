@@ -123,6 +123,15 @@ spec:
             name: wallarm
           resources:
 {{ toYaml (index .Values "controller" "wallarm" "brute-detect" "resources") | indent 12 }}
+        - name: wallarm-appstructure
+          image: "wallarm/ingress-python:{{ .Values.controller.image.tag }}"
+          imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+          securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+          - mountPath: /etc/wallarm
+            name: wallarm
+          resources:
+{{ toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "resources") | indent 12 }}
     {{- if .Values.controller.wallarm.tarantool.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.controller.wallarm.tarantool.nodeSelector | indent 8 }}
