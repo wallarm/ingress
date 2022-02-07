@@ -7,16 +7,21 @@
 # nameOverride:
 # fullnameOverride:
 
+## Labels to apply to all resources
+##
+commonLabels: {}
+# scmhash: abc123
+# myLabel: aakkmd
+
 controller:
   name: controller
   image:
-    registry: k8s.gcr.io
-    image: ingress-nginx/controller
+    registry: docker.io
+    image: wallarm/ingress-controller
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "v1.1.1"
-    digest: sha256:0bc88eb15f9e7f84e8e56c14fa5735aaa488b840983f87bd79b1054190e660de
+    tag: "3.4.9-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -28,15 +33,17 @@ controller:
   # -- Configures the controller container name
   containerName: controller
 
-  # -- Configures the ports the nginx-controller listens on
+  # -- Configures the ports that the nginx-controller listens on
   containerPort:
     http: 80
     https: 443
 
   # -- Will add custom configuration options to Nginx https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
   config: {}
+#  config:
+#    error-log-level: debug
 
-  # -- Annotations to be added to the controller config configuration configmap
+  # -- Annotations to be added to the controller config configuration configmap.
   configAnnotations: {}
 
   # -- Will add custom headers before sending traffic to backends according to https://github.com/kubernetes/ingress-nginx/tree/main/docs/examples/customization/custom-headers
@@ -65,7 +72,7 @@ controller:
   # Defaults to false
   watchIngressWithoutClass: false
 
-  # -- Process IngressClass per name (additionally as per spec.controller)
+  # -- Process IngressClass per name (additionally as per spec.controller).
   ingressClassByName: false
 
   # -- This configuration defines if Ingress Controller should allow users to set
@@ -559,6 +566,15 @@ controller:
   #   image: busybox
   #   command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
 
+  extraModules: []
+  ## Modules, which are mounted into the core nginx image
+  # - name: opentelemetry
+  #   image: busybox
+  #
+  # The image must contain a `/usr/local/bin/init_module.sh` executable, which
+  # will be executed as initContainers, to move its config files within the
+  # mounted volume.
+
   admissionWebhooks:
     annotations: {}
     # ignore-check.kube-linter.io/no-read-only-rootfs: "This deployment needs write access to root filesystem".
@@ -717,6 +733,76 @@ controller:
           - /wait-shutdown
 
   priorityClassName: ""
+
+  wallarm:
+    enabled: false
+    apiHost: api.wallarm.com
+    apiPort: 444
+    apiSSL: true
+    token: ""
+    fallback: "on"
+    tarantool:
+      kind: Deployment
+      service:
+        annotations: {}
+      replicaCount: 1
+      arena: "0.2"
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources: {}
+    heartbeat:
+      resources: {}
+    sync-markers:
+      resources: {}
+    export-attacks:
+      resources: {}
+    export-counters:
+      resources: {}
+    brute-detect:
+      resources: {}
+    addnode:
+      resources: {}
+    exportenv:
+      resources: {}
+    metrics:
+      port: 10254
+    # if this port is changed, change healthz-port: in extraArgs: accordingly
+      enabled: false
+
+      service:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /wallarm-metrics
+          prometheus.io/port: "10254"
+
+        # clusterIP: ""
+
+        ## -- List of IP addresses at which the stats-exporter service is available
+        ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+        ##
+        externalIPs: []
+
+        # loadBalancerIP: ""
+        loadBalancerSourceRanges: []
+        servicePort: 10254
+        type: ClusterIP
+        # externalTrafficPolicy: ""
+        # nodePort: ""
+    synccloud:
+      wallarm_syncnode_interval_sec: 120
+      resources: {}
+    collectd:
+      resources: {}
+    acl:
+      resources: {}
+    mmdb:
+      resources: {}
+    wallarm-appstructure:
+      resources: {}
 
 # -- Rollback limit
 ##

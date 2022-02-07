@@ -42,6 +42,7 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/controller/ingressclass"
 	"k8s.io/ingress-nginx/internal/ingress/controller/store"
 	"k8s.io/ingress-nginx/internal/ingress/errors"
+	"k8s.io/ingress-nginx/internal/ingress/metric/collectors"
 	"k8s.io/ingress-nginx/internal/k8s"
 	"k8s.io/ingress-nginx/internal/nginx"
 	"k8s.io/klog/v2"
@@ -98,6 +99,7 @@ type Configuration struct {
 
 	EnableMetrics  bool
 	MetricsPerHost bool
+	MetricsBuckets *collectors.HistogramBuckets
 
 	FakeCertificate *ingress.SSLCert
 
@@ -117,7 +119,8 @@ type Configuration struct {
 
 	MonitorMaxBatchSize int
 
-	ShutdownGracePeriod int
+	PostShutdownGracePeriod int
+	ShutdownGracePeriod     int
 }
 
 // GetPublishService returns the Service used to set the load-balancer status of Ingresses.

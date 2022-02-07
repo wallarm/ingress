@@ -14,6 +14,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   allow-snippet-annotations: "{{ .Values.controller.allowSnippetAnnotations }}"
+{{- if .Values.controller.wallarm.enabled }}
+  enable-wallarm: "{{ .Values.controller.wallarm.enabled }}"
+  wallarm-upstream-service: "{{ .Release.Namespace }}/{{ include "ingress-nginx.controller.fullname" . }}-wallarm-tarantool"
+{{- if .Values.controller.wallarm.fallback }}
+  wallarm-fallback: "{{ .Values.controller.wallarm.fallback }}"
+{{- end }}
+{{- end }}
 {{- if .Values.controller.addHeaders }}
   add-headers: {{ .Release.Namespace }}/{{ include "ingress-nginx.fullname" . }}-custom-add-headers
 {{- end }}

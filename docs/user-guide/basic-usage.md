@@ -6,10 +6,10 @@ First of all follow the instructions to install ingress-nginx. Then imagine that
 
 Let's say that you want to expose the first at `myServiceA.foo.org` and the second at `myServiceB.foo.org`.
 
-If cluster version < 1.19 you can create two **ingress** resources like this:
+If the cluster version is < 1.19, you can create two **ingress** resources like this:
 
 ```
-apiVersion: networking.k8s.io/v1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   name: ingress-myservicea
@@ -20,14 +20,11 @@ spec:
     http:
       paths:
       - path: /
-        pathType: Prefix
         backend:
-          service:
-            name: myservicea
-            port:
-              number: 80
+          serviceName: myservicea
+          servicePort: 80
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   name: ingress-myserviceb
@@ -40,15 +37,12 @@ spec:
     http:
       paths:
       - path: /
-        pathType: Prefix
         backend:
-          service:
-            name: myserviceb
-            port:
-              number: 80
+          serviceName: myserviceb
+          servicePort: 80
 ```
 
-If cluster version >= 1.19 the Ingress resource above will not work, instead of annotations you should use the new `ingressClassName: nginx` property.
+If the cluster uses Kubernetes version >= 1.19.x, then its suggested to create 2 ingress resources, using yaml examples shown below. These examples are in conformity with the `networking.kubernetes.io/v1` api.
 
 ```
 apiVersion: networking.k8s.io/v1
