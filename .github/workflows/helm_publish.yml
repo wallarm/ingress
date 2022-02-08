@@ -1,6 +1,4 @@
-
-   
-name: release
+name: Publish Helm
 on:
   push:
     tags:
@@ -13,7 +11,7 @@ jobs:
       - uses: actions/checkout@v2
       -
         name: Extract tag name
-        run: echo "X_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+        run: echo "X_TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\+.*$//g')" >> $GITHUB_ENV
       -
         name: Publish Helm charts
         uses: stefanprodan/helm-gh-pages@master
