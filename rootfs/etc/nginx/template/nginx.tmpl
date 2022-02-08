@@ -1170,7 +1170,7 @@ stream {
             wallarm_fallback             {{ $location.Wallarm.Fallback }};
             {{ end }}
             {{ if not (eq $location.Wallarm.Instance "") }}
-            wallarm_instance             {{ $location.Wallarm.Instance }};
+            wallarm_application          {{ $location.Wallarm.Instance }};
             {{ end }}
             {{ if not (eq $location.Wallarm.AclBlockPage "") }}
             wallarm_acl_block_page       {{ $location.Wallarm.AclBlockPage | replace "," " " }};

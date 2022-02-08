@@ -106,9 +106,12 @@ func (a wallarm) Parse(ing *networking.Ingress) (interface{}, error) {
 	if err != nil {
 		fallback = defBackend.WallarmFallback
 	}
-	instance, err := parser.GetStringAnnotation("wallarm-instance", ing)
+	instance, err := parser.GetStringAnnotation("wallarm-application", ing)
 	if err != nil {
-		instance = defBackend.WallarmInstance
+		instance, err = parser.GetStringAnnotation("wallarm-instance", ing)
+		if err != nil {
+			instance = defBackend.WallarmInstance
+		}
 	}
 	blockPage, err := parser.GetStringAnnotation("wallarm-block-page", ing)
 	if err != nil {
