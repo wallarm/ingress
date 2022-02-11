@@ -33,6 +33,7 @@ ENV LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
 COPY --from=builder /usr/local /usr/local
 COPY --from=builder /opt /opt
 COPY --from=builder /etc/nginx /etc/nginx
+COPY --from=builder /tmp/pkgs/wallarm-nginx/wallarm/share/wallarm_blocked.html /usr/share/nginx/html/
 COPY --from=builder entrypoint.sh /usr/local/entrypoint.sh
 
 RUN apk update \
