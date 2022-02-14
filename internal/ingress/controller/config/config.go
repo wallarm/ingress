@@ -723,6 +723,10 @@ type Configuration struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectattempts
 	WallarmUpstreamConnectAttempts int `json:"wallarm-upstream-connect-attempts"`
 
+	// Wallarm prometheus metrics port
+	// By default 18080
+	WallarmMetricsPort int `json:"wallarm-metrics-port"`
+
 	// A delay in reconnecting to Tarantool after a number of failed attempts exceeds
 	// the threshold value set in WallarmUpstreamConnectAttempts
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval
@@ -969,6 +973,7 @@ func NewDefault() Configuration {
 		NoAuthLocations:                        "/.well-known/acme-challenge",
 		EnableWallarm:                          false,
 		WallarmUpstreamConnectAttempts:         10,
+		WallarmMetricsPort:                     18080,
 		WallarmUpstreamReconnectInterval:       "15s",
 		WallarmProcessTimeLimit:                1000,
 		WallarmProcessTimeLimitBlock:           "attack",
