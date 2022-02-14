@@ -17,6 +17,7 @@ data:
 {{- if .Values.controller.wallarm.enabled }}
   enable-wallarm: "{{ .Values.controller.wallarm.enabled }}"
   wallarm-upstream-service: "{{ .Release.Namespace }}/{{ include "ingress-nginx.controller.fullname" . }}-wallarm-tarantool"
+  wallarm-metrics-port: "{{ .Values.controller.wallarm.metricsPort }}"
 {{- if .Values.controller.wallarm.fallback }}
   wallarm-fallback: "{{ .Values.controller.wallarm.fallback }}"
 {{- end }}

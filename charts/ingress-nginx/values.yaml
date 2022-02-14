@@ -21,7 +21,7 @@ controller:
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "3.6.1-1"
+    tag: "3.6.2-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -743,6 +743,7 @@ controller:
     apiHost: api.wallarm.com
     apiPort: 444
     apiSSL: true
+    metricsPort: 18080
     token: ""
     fallback: "on"
     tarantool:
@@ -772,30 +773,6 @@ controller:
       resources: {}
     exportenv:
       resources: {}
-    metrics:
-      port: 10254
-    # if this port is changed, change healthz-port: in extraArgs: accordingly
-      enabled: false
-
-      service:
-        annotations:
-          prometheus.io/scrape: "true"
-          prometheus.io/path: /wallarm-metrics
-          prometheus.io/port: "10254"
-
-        # clusterIP: ""
-
-        ## -- List of IP addresses at which the stats-exporter service is available
-        ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
-        ##
-        externalIPs: []
-
-        # loadBalancerIP: ""
-        loadBalancerSourceRanges: []
-        servicePort: 10254
-        type: ClusterIP
-        # externalTrafficPolicy: ""
-        # nodePort: ""
     synccloud:
       wallarm_syncnode_interval_sec: 120
       resources: {}
