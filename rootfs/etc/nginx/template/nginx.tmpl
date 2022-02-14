@@ -671,6 +671,28 @@ http {
         }
     }
 
+    {{ if $cfg.EnableWallarm }}
+    # default server, used for wallarm nginx stats
+    server {
+        listen [::]:{{ $cfg.WallarmMetricsPort }} ipv6only=off;
+        set $proxy_upstream_name "wallarm-internal";
+
+        keepalive_timeout 0;
+        gzip off;
+
+        access_log off;
+
+        {{ if $cfg.EnableOpentracing }}
+        opentracing off;
+        {{ end }}
+
+        location ~ ^/(wallarm-metrics|metrics) {
+            disable_acl "on";
+            wallarm_status on format=prometheus;
+        }
+    }
+    {{ end }}
+
     # default server, used for NGINX healthcheck and access to nginx stats
     server {
         listen 127.0.0.1:{{ .StatusPort }};
@@ -712,11 +734,6 @@ http {
             access_log off;
             disable_acl "on";
             wallarm_status on format=json;
-        }
-        location /wallarm-metrics {
-            access_log off;
-            disable_acl "on";
-            wallarm_status on format=prometheus;
         }
         {{ end }}
 
