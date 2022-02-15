@@ -122,6 +122,11 @@ spec:
               containerPort: {{ .Values.controller.metrics.port }}
               protocol: TCP
           {{- end }}
+          {{- if .Values.controller.wallarm.enabled }}
+            - name: wallarm-metrics
+              containerPort: {{ .Values.controller.wallarm.metricsPort }}
+              protocol: TCP
+          {{- end }}
           {{- if .Values.controller.admissionWebhooks.enabled }}
             - name: webhook
               containerPort: {{ .Values.controller.admissionWebhooks.port }}
