@@ -73,7 +73,7 @@ http {
     wallarm_process_time_limit {{ $cfg.WallarmProcessTimeLimit }};
     wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
     wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
-    wallarm_worker_rlimit_vmem {{ $cfg.WallarmWorkerRlimitVmem }};
+    wallarm_general_ruleset_memory_limit {{ $cfg.WallarmWorkerRlimitVmem }};
     wallarm_fallback {{ $cfg.WallarmFallback}};
     {{ end }}
 
