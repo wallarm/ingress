@@ -147,6 +147,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
 	hosts, servers, pcfg := n.getConfiguration(ings)
 
 	n.metricCollector.SetSSLExpireTime(servers)
+	n.metricCollector.SetSSLInfo(servers)
 
 	if n.runningConfig.Equal(pcfg) {
 		klog.V(3).Infof("No configuration change detected, skipping backend reload")
@@ -212,7 +213,8 @@ func (n *NGINXController) syncIngress(interface{}) error {
 
 	ri := getRemovedIngresses(n.runningConfig, pcfg)
 	re := getRemovedHosts(n.runningConfig, pcfg)
-	n.metricCollector.RemoveMetrics(ri, re)
+	rc := getRemovedCertificateSerialNumbers(n.runningConfig, pcfg)
+	n.metricCollector.RemoveMetrics(ri, re, rc)
 
 	n.runningConfig = pcfg
 
@@ -231,6 +233,12 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
 
 	// Skip checks if the ingress is marked as deleted
 	if !ing.DeletionTimestamp.IsZero() {
+		return nil
+	}
+
+	// Do not attempt to validate an ingress that's not meant to be controlled by the current instance of the controller.
+	if ingressClass, err := n.store.GetIngressClass(ing, n.cfg.IngressClassConfiguration); ingressClass == "" {
+		klog.Warningf("ignoring ingress %v in %v based on annotation %v: %v", ing.Name, ing.ObjectMeta.Namespace, ingressClass, err)
 		return nil
 	}
 
@@ -1661,6 +1669,37 @@ func getRemovedHosts(rucfg, newcfg *ingress.Configuration) []string {
 	return old.Difference(new).List()
 }
 
+func getRemovedCertificateSerialNumbers(rucfg, newcfg *ingress.Configuration) []string {
+	oldCertificates := sets.NewString()
+	newCertificates := sets.NewString()
+
+	for _, server := range rucfg.Servers {
+		if server.SSLCert == nil {
+			continue
+		}
+		identifier := server.SSLCert.Identifier()
+		if identifier != "" {
+			if !oldCertificates.Has(identifier) {
+				oldCertificates.Insert(identifier)
+			}
+		}
+	}
+
+	for _, server := range newcfg.Servers {
+		if server.SSLCert == nil {
+			continue
+		}
+		identifier := server.SSLCert.Identifier()
+		if identifier != "" {
+			if !newCertificates.Has(identifier) {
+				newCertificates.Insert(identifier)
+			}
+		}
+	}
+
+	return oldCertificates.Difference(newCertificates).List()
+}
+
 func getRemovedIngresses(rucfg, newcfg *ingress.Configuration) []string {
 	oldIngresses := sets.NewString()
 	newIngresses := sets.NewString()
@@ -1777,15 +1816,10 @@ func checkOverlap(ing *networking.Ingress, ingresses []*ingress.Ingress, servers
 			}
 
 			// same ingress
-			skipValidation := false
 			for _, existing := range existingIngresses {
 				if existing.ObjectMeta.Namespace == ing.ObjectMeta.Namespace && existing.ObjectMeta.Name == ing.ObjectMeta.Name {
 					return nil
 				}
-			}
-
-			if skipValidation {
-				continue
 			}
 
 			// path overlap. Check if one of the ingresses has a canary annotation
