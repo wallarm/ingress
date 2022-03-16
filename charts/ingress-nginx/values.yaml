@@ -743,6 +743,7 @@ controller:
     apiHost: api.wallarm.com
     apiPort: 444
     apiSSL: true
+    apiVerifySSL: true
     token: ""
     fallback: "on"
     tarantool:

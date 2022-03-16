@@ -133,6 +133,8 @@ Create the name of the controller service account to use
   env:
   - name: WALLARM_API_HOST
     value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
+  - name: WALLARM_API_CA_VERIFY
+    value: {{ .Values.controller.wallarm.apiVerifySSL | default "true" | quote }}
   - name: WALLARM_API_PORT
     value: {{ .Values.controller.wallarm.apiPort | default "444" | quote }}
   - name: WALLARM_API_USE_SSL
