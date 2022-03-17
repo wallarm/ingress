@@ -34,7 +34,13 @@ spec:
       containers:
 {{ include "ingress-nginx.wallarmExportEnvContainer" . | indent 8 }}
         - name: tarantool
+{{- if .Values.controller.wallarm.tarantool.image }}
+  {{- with .Values.controller.wallarm.tarantool.image }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
           image: "wallarm/ingress-tarantool:{{ .Values.controller.image.tag }}"
+{{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           env:
             - name: SLAB_ALLOC_ARENA
@@ -55,7 +61,13 @@ spec:
           resources:
 {{ toYaml .Values.controller.wallarm.tarantool.resources | indent 12 }}
         - name: heartbeat
+{{- if .Values.controller.wallarm.heartbeat.image }}
+  {{- with .Values.controller.wallarm.heartbeat.image }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
           image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+{{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["/opt/wallarm/ruby/usr/share/wallarm-common/synccloud"]
           env:
@@ -83,7 +95,13 @@ spec:
           resources:
 {{ toYaml .Values.controller.wallarm.heartbeat.resources | indent 12 }}
         - name: sync-markers
+{{- if (index .Values "controller" "wallarm" "sync-markers" "image") }}
+  {{- with (index .Values "controller" "wallarm" "sync-markers" "image") }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
           image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+{{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["sh", "-c", "while true; do timeout 1h /opt/wallarm/ruby/usr/share/wallarm-common/sync-markers -l STDOUT || true; sleep 60; done"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
@@ -93,7 +111,13 @@ spec:
           resources:
 {{ toYaml (index .Values "controller" "wallarm" "sync-markers" "resources") | indent 12 }}
         - name: export-attacks
+{{- if (index .Values "controller" "wallarm" "export-attacks" "image") }}
+  {{- with (index .Values "controller" "wallarm" "export-attacks" "image") }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
           image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+{{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["sh", "-c", "while true; do timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/export-attacks -l STDOUT || true; done"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
@@ -103,7 +127,13 @@ spec:
           resources:
 {{ toYaml (index .Values "controller" "wallarm" "export-attacks" "resources") | indent 12 }}
         - name: export-counters
+{{- if (index .Values "controller" "wallarm" "export-counters" "image") }}
+  {{- with (index .Values "controller" "wallarm" "export-counters" "image") }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
           image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+{{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["sh", "-c", "while true; do timeout 11m /opt/wallarm/ruby/usr/share/wallarm-common/export-counters -l STDOUT || true; sleep 60; done"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
@@ -113,7 +143,13 @@ spec:
           resources:
 {{ toYaml (index .Values "controller" "wallarm" "export-counters" "resources") | indent 12 }}
         - name: brute-detect
+{{- if (index .Values "controller" "wallarm" "brute-detect" "image") }}
+  {{- with (index .Values "controller" "wallarm" "brute-detect" "image") }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
           image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+{{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["sh", "-c", "while true; do timeout 6m /opt/wallarm/ruby/usr/share/wallarm-common/brute-detect -l STDOUT || true; sleep 60; done"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
@@ -123,7 +159,13 @@ spec:
           resources:
 {{ toYaml (index .Values "controller" "wallarm" "brute-detect" "resources") | indent 12 }}
         - name: wallarm-appstructure
+{{- if (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}
+  {{- with (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
           image: "wallarm/ingress-python:{{ .Values.controller.image.tag }}"
+{{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
