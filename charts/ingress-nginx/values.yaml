@@ -744,7 +744,6 @@ controller:
     apiHost: api.wallarm.com
     apiPort: 444
     apiSSL: true
-    metricsPort: 18080
     token: ""
     fallback: "on"
     tarantool:
@@ -774,6 +773,29 @@ controller:
       resources: {}
     exportenv:
       resources: {}
+    metrics:
+      port: 18080
+      enabled: false
+
+      service:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/path: /wallarm-metrics
+          prometheus.io/port: "18080"
+
+        # clusterIP: ""
+
+        ## -- List of IP addresses at which the stats-exporter service is available
+        ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+        ##
+        externalIPs: []
+
+        # loadBalancerIP: ""
+        loadBalancerSourceRanges: []
+        servicePort: 18080
+        type: ClusterIP
+        # externalTrafficPolicy: ""
+        # nodePort: ""
     synccloud:
       wallarm_syncnode_interval_sec: 120
       resources: {}
