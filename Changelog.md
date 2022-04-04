@@ -1,5 +1,43 @@
 # Changelog
 
+### 1.1.3
+
+**Image:**
+- k8s.gcr.io/ingress-nginx/controller:v1.1.3@sha256:31f47c1e202b39fadecf822a9b76370bd4baed199a005b3e7d4d1455f4fd3fe2
+
+This release upgrades Alpine to 3.14.4 and nginx to 1.19.10 
+
+Patches [OpenSSL CVE-2022-0778](https://github.com/kubernetes/ingress-nginx/issues/8339)
+
+Patches [Libxml2 CVE-2022-23308](https://github.com/kubernetes/ingress-nginx/issues/8321)
+
+_Changes:_
+
+[8415](https://github.com/kubernetes/ingress-nginx/pull/8415) base img update for e2e-test-runner & opentelemetry
+[8403](https://github.com/kubernetes/ingress-nginx/pull/8403) Add execute permissions to nginx image entrypoint.sh
+[8392](https://github.com/kubernetes/ingress-nginx/pull/8392) fix document for monitoring
+[8386](https://github.com/kubernetes/ingress-nginx/pull/8386) downgrade to 3.14.4 and fix tag
+[8379](https://github.com/kubernetes/ingress-nginx/pull/8379) bump luarocks to 3.8.0
+[8368](https://github.com/kubernetes/ingress-nginx/pull/8368) Updated semver in install docs URLs
+[8360](https://github.com/kubernetes/ingress-nginx/pull/8360) Bump github.com/stretchr/testify from 1.7.0 to 1.7.1
+[8334](https://github.com/kubernetes/ingress-nginx/pull/8334) Pinned GitHub workflows by SHA
+[8324](https://github.com/kubernetes/ingress-nginx/pull/8324) Added missing "repo" option on "helm upgrade" command
+[8315](https://github.com/kubernetes/ingress-nginx/pull/8315) Fix 50% split between canary and mainline tests
+[8311](https://github.com/kubernetes/ingress-nginx/pull/8311) leaving it the git tag
+[8307](https://github.com/kubernetes/ingress-nginx/pull/8307) Nginx v1.19.10
+[8302](https://github.com/kubernetes/ingress-nginx/pull/8302) docs: fix changelog formatting for 1.1.2
+[8300](https://github.com/kubernetes/ingress-nginx/pull/8300) Names cannot contain _ (underscore)! So I changed it to -.
+[8288](https://github.com/kubernetes/ingress-nginx/pull/8288) [docs] Missing annotations
+[8287](https://github.com/kubernetes/ingress-nginx/pull/8287) Add the shareProcessNamespace as a configurable setting in the helm chart
+[8286](https://github.com/kubernetes/ingress-nginx/pull/8286) Fix OpenTelemetry sidecar image build
+[8281](https://github.com/kubernetes/ingress-nginx/pull/8281) force prow job by changing something in images/ot dir
+[8273](https://github.com/kubernetes/ingress-nginx/pull/8273) Issue#8241
+[8267](https://github.com/kubernetes/ingress-nginx/pull/8267) Add fsGroup value to admission-webhooks/job-patch charts
+[8262](https://github.com/kubernetes/ingress-nginx/pull/8262) Updated confusing error
+[8258](https://github.com/kubernetes/ingress-nginx/pull/8258) remove 0.46.0 from supported versions table
+[8256](https://github.com/kubernetes/ingress-nginx/pull/8256) fix: deny locations with invalid auth-url annotation
+[8253](https://github.com/kubernetes/ingress-nginx/pull/8253) Add a certificate info metric
+
 ### 1.1.2
 
 **Image:** 
@@ -7,39 +45,39 @@
 
 This release bumps grpc version to 1.44.0 & runc to version 1.1.0. The release also re-introduces the ingress.class annotation, which was previously declared as deprecated. Besides that, several bug fixes and improvements are listed below.
 
-Changes:
+_Changes:_
 
-[8291](https://github.com/kubernetes/ingress-nginx/pull/8291) remove git tag env from cloud build
-[8286](https://github.com/kubernetes/ingress-nginx/pull/8286) Fix OpenTelemetry sidecar image build
-[8277](https://github.com/kubernetes/ingress-nginx/pull/8277) Add OpenSSF Best practices badge
-[8273](https://github.com/kubernetes/ingress-nginx/pull/8273) Issue#8241
-[8267](https://github.com/kubernetes/ingress-nginx/pull/8267) Add fsGroup value to admission-webhooks/job-patch charts
-[8262](https://github.com/kubernetes/ingress-nginx/pull/8262) Updated confusing error
-[8256](https://github.com/kubernetes/ingress-nginx/pull/8256) fix: deny locations with invalid auth-url annotation
-[8253](https://github.com/kubernetes/ingress-nginx/pull/8253) Add a certificate info metric
-[8236](https://github.com/kubernetes/ingress-nginx/pull/8236) webhook: remove useless code.
-[8227](https://github.com/kubernetes/ingress-nginx/pull/8227) Update libraries in webhook image
-[8225](https://github.com/kubernetes/ingress-nginx/pull/8225) fix inconsistent-label-cardinality for prometheus metrics: nginx_ingress_controller_requests
-[8221](https://github.com/kubernetes/ingress-nginx/pull/8221) Do not validate ingresses with unknown ingress class in admission webhook endpoint
-[8210](https://github.com/kubernetes/ingress-nginx/pull/8210) Bump github.com/prometheus/client_golang from 1.11.0 to 1.12.1
-[8209](https://github.com/kubernetes/ingress-nginx/pull/8209) Bump google.golang.org/grpc from 1.43.0 to 1.44.0
-[8204](https://github.com/kubernetes/ingress-nginx/pull/8204) Add Artifact Hub lint
-[8203](https://github.com/kubernetes/ingress-nginx/pull/8203) Fix Indentation of example and link to cert-manager tutorial
-[8201](https://github.com/kubernetes/ingress-nginx/pull/8201) feat(metrics): add path and method labels to requests countera
-[8199](https://github.com/kubernetes/ingress-nginx/pull/8199) use functional options to reduce number of methods creating an EchoDeployment
-[8196](https://github.com/kubernetes/ingress-nginx/pull/8196) docs: fix inconsistent controller annotation
-[8191](https://github.com/kubernetes/ingress-nginx/pull/8191) Using Go install for misspell
-[8186](https://github.com/kubernetes/ingress-nginx/pull/8186) prometheus+grafana using servicemonitor
-[8185](https://github.com/kubernetes/ingress-nginx/pull/8185) Append elements on match, instead of removing for cors-annotations
-[8179](https://github.com/kubernetes/ingress-nginx/pull/8179) Bump github.com/opencontainers/runc from 1.0.3 to 1.1.0
-[8173](https://github.com/kubernetes/ingress-nginx/pull/8173) Adding annotations to the controller service account
-[8163](https://github.com/kubernetes/ingress-nginx/pull/8163) Update the $req_id placeholder description
-[8162](https://github.com/kubernetes/ingress-nginx/pull/8162) Versioned static manifests
-[8159](https://github.com/kubernetes/ingress-nginx/pull/8159) Adding some geoip variables and default values
-[8155](https://github.com/kubernetes/ingress-nginx/pull/8155) #7271 feat: avoid-pdb-creation-when-default-backend-disabled-and-replicas-gt-1
-[8151](https://github.com/kubernetes/ingress-nginx/pull/8151) Automatically generate helm docs
-[8143](https://github.com/kubernetes/ingress-nginx/pull/8143) Allow to configure delay before controller exits
-[8136](https://github.com/kubernetes/ingress-nginx/pull/8136) add ingressClass option to helm chart - back compatibility with ingress.class annotations
+- [8291](https://github.com/kubernetes/ingress-nginx/pull/8291) remove git tag env from cloud build
+- [8286](https://github.com/kubernetes/ingress-nginx/pull/8286) Fix OpenTelemetry sidecar image build
+- [8277](https://github.com/kubernetes/ingress-nginx/pull/8277) Add OpenSSF Best practices badge
+- [8273](https://github.com/kubernetes/ingress-nginx/pull/8273) Issue#8241
+- [8267](https://github.com/kubernetes/ingress-nginx/pull/8267) Add fsGroup value to admission-webhooks/job-patch charts
+- [8262](https://github.com/kubernetes/ingress-nginx/pull/8262) Updated confusing error
+- [8256](https://github.com/kubernetes/ingress-nginx/pull/8256) fix: deny locations with invalid auth-url annotation
+- [8253](https://github.com/kubernetes/ingress-nginx/pull/8253) Add a certificate info metric
+- [8236](https://github.com/kubernetes/ingress-nginx/pull/8236) webhook: remove useless code.
+- [8227](https://github.com/kubernetes/ingress-nginx/pull/8227) Update libraries in webhook image
+- [8225](https://github.com/kubernetes/ingress-nginx/pull/8225) fix inconsistent-label-cardinality for prometheus metrics: nginx_ingress_controller_requests
+- [8221](https://github.com/kubernetes/ingress-nginx/pull/8221) Do not validate ingresses with unknown ingress class in admission webhook endpoint
+- [8210](https://github.com/kubernetes/ingress-nginx/pull/8210) Bump github.com/prometheus/client_golang from 1.11.0 to 1.12.1
+- [8209](https://github.com/kubernetes/ingress-nginx/pull/8209) Bump google.golang.org/grpc from 1.43.0 to 1.44.0
+- [8204](https://github.com/kubernetes/ingress-nginx/pull/8204) Add Artifact Hub lint
+- [8203](https://github.com/kubernetes/ingress-nginx/pull/8203) Fix Indentation of example and link to cert-manager tutorial
+- [8201](https://github.com/kubernetes/ingress-nginx/pull/8201) feat(metrics): add path and method labels to requests countera
+- [8199](https://github.com/kubernetes/ingress-nginx/pull/8199) use functional options to reduce number of methods creating an EchoDeployment
+- [8196](https://github.com/kubernetes/ingress-nginx/pull/8196) docs: fix inconsistent controller annotation
+- [8191](https://github.com/kubernetes/ingress-nginx/pull/8191) Using Go install for misspell
+- [8186](https://github.com/kubernetes/ingress-nginx/pull/8186) prometheus+grafana using servicemonitor
+- [8185](https://github.com/kubernetes/ingress-nginx/pull/8185) Append elements on match, instead of removing for cors-annotations
+- [8179](https://github.com/kubernetes/ingress-nginx/pull/8179) Bump github.com/opencontainers/runc from 1.0.3 to 1.1.0
+- [8173](https://github.com/kubernetes/ingress-nginx/pull/8173) Adding annotations to the controller service account
+- [8163](https://github.com/kubernetes/ingress-nginx/pull/8163) Update the $req_id placeholder description
+- [8162](https://github.com/kubernetes/ingress-nginx/pull/8162) Versioned static manifests
+- [8159](https://github.com/kubernetes/ingress-nginx/pull/8159) Adding some geoip variables and default values
+- [8155](https://github.com/kubernetes/ingress-nginx/pull/8155) #7271 feat: avoid-pdb-creation-when-default-backend-disabled-and-replicas-gt-1
+- [8151](https://github.com/kubernetes/ingress-nginx/pull/8151) Automatically generate helm docs
+- [8143](https://github.com/kubernetes/ingress-nginx/pull/8143) Allow to configure delay before controller exits
+- [8136](https://github.com/kubernetes/ingress-nginx/pull/8136) add ingressClass option to helm chart - back compatibility with ingress.class annotations
 
 
 ### 1.1.1

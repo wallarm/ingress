@@ -24,7 +24,7 @@ ARRAY=(
  "git@gl.wallarm.com:wallarm-node/libs/libcpire.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libparserutils.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libhubbub.git;$PKGS_BRANCH"
- "https://github.com/GNOME/libxml2.git;v2.9.12"
+ "https://github.com/GNOME/libxml2.git;v2.9.13"
  "git@gl.wallarm.com:wallarm-node/libs/libwlog.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libtws.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libwyajl.git;$PKGS_BRANCH"
