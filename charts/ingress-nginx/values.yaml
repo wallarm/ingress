@@ -790,10 +790,10 @@ controller:
         ## -- List of IP addresses at which the stats-exporter service is available
         ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
         ##
-        externalIPs: [ ]
+        externalIPs: []
 
         # loadBalancerIP: ""
-        loadBalancerSourceRanges: [ ]
+        loadBalancerSourceRanges: []
         servicePort: 18080
         type: ClusterIP
         # externalTrafficPolicy: ""
