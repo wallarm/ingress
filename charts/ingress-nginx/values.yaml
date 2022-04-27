@@ -773,9 +773,7 @@ controller:
       resources: {}
     brute-detect:
       resources: {}
-    addnode:
-      resources: {}
-    exportenv:
+    wallarm-appstructure:
       resources: {}
     metrics:
       port: 18080
@@ -792,14 +790,24 @@ controller:
         ## -- List of IP addresses at which the stats-exporter service is available
         ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
         ##
-        externalIPs: []
+        externalIPs: [ ]
 
         # loadBalancerIP: ""
-        loadBalancerSourceRanges: []
+        loadBalancerSourceRanges: [ ]
         servicePort: 18080
         type: ClusterIP
         # externalTrafficPolicy: ""
         # nodePort: ""
+
+    ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following values:
+    ## addnode, exportenv, synccloud, collectd, acl, mmdb. Otherwise HPA will not work properly.
+    ## Important note: at the time addnode.resources and exportenv.resources are shared between
+    ## 2 pods: wallarm-ingress-controller and wallarm-ingress-controller-tarantool pod.
+    ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
+    addnode:
+      resources: {}
+    exportenv:
+      resources: {}
     synccloud:
       wallarm_syncnode_interval_sec: 120
       resources: {}
@@ -808,8 +816,6 @@ controller:
     acl:
       resources: {}
     mmdb:
-      resources: {}
-    wallarm-appstructure:
       resources: {}
 
 # -- Rollback limit
