@@ -420,6 +420,44 @@ Kubernetes: `>=1.19.0-0`
 | controller.udp.configMapNamespace | string | `""` | Allows customization of the udp-services-configmap; defaults to $(POD_NAMESPACE) |
 | controller.updateStrategy | object | `{}` | The update strategy to apply to the Deployment or DaemonSet |
 | controller.watchIngressWithoutClass | bool | `false` | Process Ingress objects without ingressClass annotation/ingressClassName field Overrides value for --watch-ingress-without-class flag of the controller binary Defaults to false |
+| controller.wallarm.enabled | bool | `false` | if true, `enable` Wallarm protection |
+| controller.wallarm.apiHost | string | `"api.wallarm.com"` | Address of Wallarm API service |
+| controller.wallarm.apiPort | int | `444` | Port of Wallarm API service |
+| controller.wallarm.apiSSL | bool | `true` | TBD |
+| controller.wallarm.token | string | `""` | Cluster Node token to authorize controller in the Wallarm Cloud |
+| controller.wallarm.fallback | string | `"on"` | TBD |
+| controller.wallarm.tarantool.kind | string | `Deployment` | TBD |
+| controller.wallarm.tarantool.service.annotations | object | `{}` | Annotations to be added to the post-analytics service |
+| controller.wallarm.tarantool.replicaCount | int | `1` | Desired number of post-analytics service pods |
+| controller.wallarm.tarantool.arena | string | `"0.2"` | Amount of memory allocated for post-analytics service |
+| controller.wallarm.tarantool.livenessProbe.failureThreshold | int | `3` | Minimum consecutive failures for the probe to be considered failed after having succeeded |
+| controller.wallarm.tarantool.livenessProbe.initialDelaySeconds | int | `10` | Delay before liveness probe is initiated |
+| controller.wallarm.tarantool.livenessProbe.periodSeconds | int | `10` | How often to perform the probe |
+| controller.wallarm.tarantool.livenessProbe.successThreshold | int | `1` | Minimum consecutive successes for the probe to be considered successful after having failed |
+| controller.wallarm.tarantool.livenessProbe.timeoutSeconds | int | `1` | When the probe times out |
+| controller.wallarm.tarantool.resources | object | `{}` | Post-analytics service pod. `tarantool` container resource requests & limits |
+| controller.wallarm.heartbeat.resources | object | `{}` | Post-analytics service pod. `heartbeat` container resource requests & limits |
+| controller.wallarm.sync-markers.resources | object | `{}` | Post-analytics service pod. `sync-markers` container resource requests & limits |
+| controller.wallarm.export-attacks.resources | object | `{}` | Post-analytics service pod. `export-attacks` container resource requests & limits |
+| controller.wallarm.export-counters.resources | object | `{}` | Post-analytics service pod. `export-counters` container resource requests & limits |
+| controller.wallarm.brute-detect.resources | object | `{}` | Post-analytics service pod. `brute-detect` container resource requests & limits |
+| controller.wallarm.wallarm-appstructure.resources | object | `{}` | Post-analytics service pod. `wallarm-appstructure` container resource requests & limits |
+| controller.wallarm.addnode.resources | object | `{}` | Wallarm controller post-analytics pods. `addnode` init container resource requests & limits |
+| controller.wallarm.exportenv.resources | object | `{}` | Wallarm controller post-analytics pods. `exportenv` container resource requests & limits |
+| controller.wallarm.synccloud.wallarm_syncnode_interval_sec | int | `120` | TBD |
+| controller.wallarm.synccloud.resources | object | `{}` | Wallarm controller pod. `synccloud` container resource requests & limits |
+| controller.wallarm.collectd.resources | object | `{}` | Wallarm controller pod. `collectd` container resource requests & limits |
+| controller.wallarm.acl.resources | object | `{}` | Wallarm controller pod. `sync-ip-lists` container resource requests & limits |
+| controller.wallarm.mmdb.resources | object | `{}` | Wallarm controller pod. `sync-ip-lists-source` container resource requests & limits |
+| controller.wallarm.metrics.enabled | bool | `false` | If `true`, enable Prometheus metrics (`controller.metrics.enabled` must be `true` as well) |
+| controller.wallarm.metrics.port | int | `18080` | TBD |
+| controller.wallarm.metrics.service.annotations | object | `{"prometheus.io/scrape": "true", "prometheus.io/path": "/wallarm-metrics", "prometheus.io/port": "18080"}` | Annotations for Prometheus metrics service |
+| controller.wallarm.metrics.service.clusterIP | string | `""` | Internal controller cluster service IP |
+| controller.wallarm.metrics.service.externalIPs | list | `[]` | List of IP addresses at which the stats-exporter service is available |
+| controller.wallarm.metrics.service.loadBalancerIP | string | `""` | IP address to assign to load balancer (if supported) |
+| controller.wallarm.metrics.service.loadBalancerSourceRanges | list | `[]` | List of IP CIDRs allowed access to load balancer (if supported) |
+| controller.wallarm.metrics.service.servicePort | int | `18080` | Prometheus metrics service port |
+| controller.wallarm.metrics.service.type | string | `ClusterIP` | TBD |
 | defaultBackend.affinity | object | `{}` |  |
 | defaultBackend.autoscaling.annotations | object | `{}` |  |
 | defaultBackend.autoscaling.enabled | bool | `false` |  |
