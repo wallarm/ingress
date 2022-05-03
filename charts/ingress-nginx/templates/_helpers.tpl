@@ -116,9 +116,11 @@ Create the name of the controller service account to use
 
 {{- define "ingress-nginx.wallarmTarantoolPort" -}}3313{{- end -}}
 {{- define "ingress-nginx.wallarmTarantoolName" -}}{{ .Values.controller.name }}-wallarm-tarantool{{- end -}}
+{{- define "ingress-nginx.wallarmTarantoolCronConfig" -}}{{ template "ingress-nginx.wallarmTarantoolName" . }}-cron{{- end -}}
+{{- define "ingress-nginx.wallarmControllerCronConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-cron{{- end -}}
 {{- define "ingress-nginx.wallarmSecret" -}}{{ .Values.controller.name }}-secret{{- end -}}
 
-{{- define "ingress-nginx.wallarmInitContainer" -}}
+{{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
 - name: addnode
 {{- if .Values.controller.wallarm.addnode.image }}
   {{- with .Values.controller.wallarm.addnode.image }}
@@ -166,7 +168,7 @@ Create the name of the controller service account to use
 {{ toYaml .Values.controller.wallarm.addnode.resources | indent 4 }}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmExportEnvContainer" -}}
+{{- define "ingress-nginx.wallarmInitContainer.exportEnv" -}}
 - name: exportenv
 {{- if .Values.controller.wallarm.exportenv.image }}
   {{- with .Values.controller.wallarm.exportenv.image }}
@@ -176,7 +178,7 @@ Create the name of the controller service account to use
   image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["sh", "-c", "while true; do timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true; sleep 3600; done"]
+  command: ["sh", "-c", "timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true"]
   env:
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
@@ -186,6 +188,34 @@ Create the name of the controller service account to use
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.exportenv.resources | indent 4 }}
+{{- end -}}
+
+{{- define "ingress-nginx.wallarmCronContainer" -}}
+- name: cron
+{{- if .Values.controller.wallarm.cron.image }}
+  {{- with .Values.controller.wallarm.cron.image }}
+  image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
+  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+{{- end }}
+  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+  command: ["sh", "-c", "supercronic -json /opt/cron/crontab"]
+  env:
+  - name: WALLARM_INGRESS_CONTROLLER_VERSION
+    value: {{ .Chart.Version | quote }}
+  volumeMounts:
+  - mountPath: /etc/wallarm
+    name: wallarm
+  - mountPath: /var/lib/wallarm-acl
+    name: wallarm-acl
+  - mountPath: /opt/cron/crontab
+    name: wallarm-cron
+    subPath: crontab
+    readOnly: true
+  securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
+  resources:
+{{ toYaml .Values.controller.wallarm.cron.resources | indent 4 }}
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmSyncnodeContainer" -}}

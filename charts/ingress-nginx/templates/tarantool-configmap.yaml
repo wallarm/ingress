@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "ingress-nginx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ template "ingress-nginx.wallarmTarantoolName" . }}
+    {{- with .Values.controller.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  name: {{ template "ingress-nginx.wallarmTarantoolCronConfig" . }}
+  namespace: {{ .Release.Namespace }}
+data:
+  crontab: |
+    # brute-detect
+    * * * * * timeout 6m /opt/wallarm/ruby/usr/share/wallarm-common/brute-detect -l STDOUT
+    # export-attacks
+    * * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/export-attacks -l STDOUT
+    # export-environment
+    0 */1 * * * timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT
+    # export-counters
+    * * * * * timeout 11m /opt/wallarm/ruby/usr/share/wallarm-common/export-counters -l STDOUT
+    # sync-markers
+    * * * * * timeout 1h /opt/wallarm/ruby/usr/share/wallarm-common/sync-markers -l STDOUT
+## Controller-wallarm
+## sync-ip-lists
+#*/1 * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT
+## sync-ip-lists-source
+#*/5 * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
