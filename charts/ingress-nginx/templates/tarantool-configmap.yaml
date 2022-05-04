@@ -21,8 +21,3 @@ data:
     * * * * * timeout 11m /opt/wallarm/ruby/usr/share/wallarm-common/export-counters -l STDOUT
     # sync-markers
     * * * * * timeout 1h /opt/wallarm/ruby/usr/share/wallarm-common/sync-markers -l STDOUT
-## Controller-wallarm
-## sync-ip-lists
-#*/1 * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT
-## sync-ip-lists-source
-#*/5 * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
