@@ -262,45 +262,6 @@ Create the name of the controller service account to use
 {{ toYaml .Values.controller.wallarm.synccloud.resources | indent 4 }}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmSyncAclContainer" -}}
-- name: sync-ip-lists
-{{- if .Values.controller.wallarm.acl.image }}
-  {{- with .Values.controller.wallarm.acl.image }}
-  image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
-{{- end }}
-  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["sh", "-c", "while true; do timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT || true; sleep 60; done"]
-  volumeMounts:
-  - mountPath: /etc/wallarm
-    name: wallarm
-  - mountPath: /var/lib/wallarm-acl
-    name: wallarm-acl
-  securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
-  resources:
-{{ toYaml .Values.controller.wallarm.acl.resources | indent 4 }}
-- name: sync-ip-lists-source
-{{- if .Values.controller.wallarm.mmdb.image }}
-  {{- with .Values.controller.wallarm.mmdb.image }}
-  image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
-{{- end }}
-  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["sh", "-c", "while true; do timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT || true; sleep 300; done"]
-  volumeMounts:
-  - mountPath: /etc/wallarm
-    name: wallarm
-  - mountPath: /var/lib/wallarm-acl
-    name: wallarm-acl
-  securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
-  resources:
-{{ toYaml .Values.controller.wallarm.mmdb.resources | indent 4 }}
-{{- end -}}
-
 {{- define "ingress-nginx.wallarmCollectdContainer" -}}
 - name: collectd
 {{- if .Values.controller.wallarm.collectd.image }}
