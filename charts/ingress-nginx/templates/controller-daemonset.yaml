@@ -237,6 +237,9 @@ spec:
           emptyDir: {}
         - name: wallarm-cache
           emptyDir: {}
+        - name: wallarm-cron
+          configMap:
+            name: {{ template "ingress-nginx.wallarmControllerCronConfig" . }}
       {{- end }}
       {{- if .Values.controller.customTemplate.configMapName }}
         - name: nginx-template-volume
