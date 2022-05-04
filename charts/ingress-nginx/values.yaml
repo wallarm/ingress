@@ -765,14 +765,6 @@ controller:
       resources: {}
     heartbeat:
       resources: {}
-    sync-markers:
-      resources: {}
-    export-attacks:
-      resources: {}
-    export-counters:
-      resources: {}
-    brute-detect:
-      resources: {}
     wallarm-appstructure:
       resources: {}
     metrics:
@@ -801,7 +793,7 @@ controller:
 
     ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following values:
     ## addnode, exportenv, synccloud, collectd, cron. Otherwise HPA will not work properly.
-    ## Important note: at the time addnode.resources, exportenv.resources and .resources are shared between
+    ## Important note: at the time addnode.resources, exportenv.resources and cron.resources are shared between
     ## 2 pods: wallarm-ingress-controller and wallarm-ingress-controller-tarantool pod.
     ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
     addnode:
@@ -814,10 +806,6 @@ controller:
       wallarm_syncnode_interval_sec: 120
       resources: {}
     collectd:
-      resources: {}
-    acl:
-      resources: {}
-    mmdb:
       resources: {}
 
 # -- Rollback limit
