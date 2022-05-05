@@ -799,6 +799,28 @@ controller:
     addnode:
       resources: {}
     cron:
+      jobs:
+        exportEnvironment:
+          schedule: "0 */1 * * *"
+          timeout: 10m
+        exportAttacks:
+          schedule: "* * * * *"
+          timeout: 3h
+        exportCounters:
+          schedule: "* * * * *"
+          timeout: 11m
+        bruteDetect:
+          schedule: "* * * * *"
+          timeout: 6m
+        syncIpLists:
+          schedule: "* * * * *"
+          timeout: 3h
+        syncIpListsSource:
+          schedule: "*/5 * * * *"
+          timeout: 3h
+        syncMarkers:
+          schedule: "* * * * *"
+          timeout: 1h
       resources: {}
     exportenv:
       resources: {}

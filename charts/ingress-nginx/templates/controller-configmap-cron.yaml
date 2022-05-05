@@ -11,9 +11,17 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   crontab: |
+    {{- with .Values.controller.wallarm.cron.jobs.exportEnvironment }}
     # export-environment
-    0 */1 * * * timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncIpLists }}
     # sync-ip-lists
-    * * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncIpListsSource }}
     # sync-ip-lists-source
-    */5 * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
+    {{- end }}

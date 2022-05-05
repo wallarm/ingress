@@ -11,13 +11,27 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   crontab: |
-    # brute-detect
-    * * * * * timeout 6m /opt/wallarm/ruby/usr/share/wallarm-common/brute-detect -l STDOUT
+    {{- with .Values.controller.wallarm.cron.jobs.exportAttacks }}
     # export-attacks
-    * * * * * timeout 3h /opt/wallarm/ruby/usr/share/wallarm-common/export-attacks -l STDOUT
-    # export-environment
-    0 */1 * * * timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-attacks -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.exportCounters }}
     # export-counters
-    * * * * * timeout 11m /opt/wallarm/ruby/usr/share/wallarm-common/export-counters -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-counters -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.exportEnvironment }}
+    # export-environment
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.bruteDetect }}
+    # brute-detect
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/brute-detect -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncMarkers }}
     # sync-markers
-    * * * * * timeout 1h /opt/wallarm/ruby/usr/share/wallarm-common/sync-markers -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-markers -l STDOUT
+    {{- end }}
