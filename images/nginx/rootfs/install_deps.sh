@@ -2,7 +2,7 @@
 
 set -ex
 
-PKGS_BRANCH=stable/3.6
+PKGS_BRANCH=stable/4.0
 export CFLAGS="-fPIC -fno-omit-frame-pointer -O2 -ggdb3"
 export CXXFLAGS="$CFLAGS"
 

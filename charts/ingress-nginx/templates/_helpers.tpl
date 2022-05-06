@@ -134,9 +134,9 @@ Create the name of the controller service account to use
   - sh
   - -c
 {{- if eq .Values.controller.wallarm.fallback "on"}}
-{{ print  "- /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT && chmod 0644 /etc/wallarm/* || true" | indent 2}}
+{{ print  "- /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT || true" | indent 2}}
 {{- else }}
-{{ print  "- /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT && chmod 0644 /etc/wallarm/*" | indent 2}}
+{{ print  "- /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT" | indent 2}}
 {{- end}}
   env:
   - name: WALLARM_API_HOST
@@ -200,7 +200,7 @@ Create the name of the controller service account to use
   image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["supercronic", "-json", "/opt/cron/crontab"]
+  command: ["/bin/supercronic", "-json", "/opt/cron/crontab"]
   env:
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
