@@ -678,7 +678,8 @@ http {
     {{ if $cfg.EnableWallarm }}
     # default server, used for wallarm nginx stats
     server {
-        listen [::]:{{ $cfg.WallarmMetricsPort }} ipv6only=off;
+        listen {{ $cfg.WallarmMetricsPort }};
+        {{ if $IsIPV6Enabled }}listen [::]:{{ $cfg.WallarmMetricsPort }};{{ end }}
         set $proxy_upstream_name "wallarm-internal";
 
         keepalive_timeout 0;
