@@ -21,6 +21,11 @@ data:
     {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT
     {{- end }}
 
+    {{- with .Values.controller.wallarm.cron.jobs.exportMetrics }}
+    # export-metrics
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-metrics -l STDOUT
+    {{- end }}
+
     {{- with .Values.controller.wallarm.cron.jobs.syncIpListsSource }}
     # sync-ip-lists-source
     {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT

@@ -815,6 +815,9 @@ controller:
         syncIpLists:
           schedule: "* * * * *"
           timeout: 3h
+        exportMetrics:
+          schedule: "* * * * *"
+          timeout: 3h
         syncIpListsSource:
           schedule: "*/5 * * * *"
           timeout: 3h
