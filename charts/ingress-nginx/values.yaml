@@ -21,7 +21,7 @@ controller:
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "3.6.7-1"
+    tag: "4.0.0-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -746,7 +746,7 @@ controller:
   wallarm:
     enabled: false
     apiHost: api.wallarm.com
-    apiPort: 444
+    apiPort: 443
     apiSSL: true
     token: ""
     fallback: "on"
@@ -764,14 +764,6 @@ controller:
         timeoutSeconds: 1
       resources: {}
     heartbeat:
-      resources: {}
-    sync-markers:
-      resources: {}
-    export-attacks:
-      resources: {}
-    export-counters:
-      resources: {}
-    brute-detect:
       resources: {}
     wallarm-appstructure:
       resources: {}
@@ -800,11 +792,38 @@ controller:
         # nodePort: ""
 
     ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following values:
-    ## addnode, exportenv, synccloud, collectd, acl, mmdb. Otherwise HPA will not work properly.
-    ## Important note: at the time addnode.resources and exportenv.resources are shared between
+    ## addnode, exportenv, synccloud, collectd, cron. Otherwise HPA will not work properly.
+    ## Important note: at the time addnode.resources, exportenv.resources and cron.resources are shared between
     ## 2 pods: wallarm-ingress-controller and wallarm-ingress-controller-tarantool pod.
     ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
     addnode:
+      resources: {}
+    cron:
+      jobs:
+        exportEnvironment:
+          schedule: "0 */1 * * *"
+          timeout: 10m
+        exportAttacks:
+          schedule: "* * * * *"
+          timeout: 3h
+        exportCounters:
+          schedule: "* * * * *"
+          timeout: 11m
+        bruteDetect:
+          schedule: "* * * * *"
+          timeout: 6m
+        syncIpLists:
+          schedule: "* * * * *"
+          timeout: 3h
+        exportMetrics:
+          schedule: "* * * * *"
+          timeout: 3h
+        syncIpListsSource:
+          schedule: "*/5 * * * *"
+          timeout: 3h
+        syncMarkers:
+          schedule: "* * * * *"
+          timeout: 1h
       resources: {}
     exportenv:
       resources: {}
@@ -812,10 +831,6 @@ controller:
       wallarm_syncnode_interval_sec: 120
       resources: {}
     collectd:
-      resources: {}
-    acl:
-      resources: {}
-    mmdb:
       resources: {}
 
 # -- Rollback limit

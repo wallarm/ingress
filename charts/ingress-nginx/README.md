@@ -435,20 +435,15 @@ Kubernetes: `>=1.19.0-0`
 | controller.wallarm.tarantool.livenessProbe.periodSeconds | int | `10` | How often to perform the probe |
 | controller.wallarm.tarantool.livenessProbe.successThreshold | int | `1` | Minimum consecutive successes for the probe to be considered successful after having failed |
 | controller.wallarm.tarantool.livenessProbe.timeoutSeconds | int | `1` | When the probe times out |
-| controller.wallarm.tarantool.resources | object | `{}` | Post-analytics service pod. `tarantool` container resource requests & limits |
-| controller.wallarm.heartbeat.resources | object | `{}` | Post-analytics service pod. `heartbeat` container resource requests & limits |
-| controller.wallarm.sync-markers.resources | object | `{}` | Post-analytics service pod. `sync-markers` container resource requests & limits |
-| controller.wallarm.export-attacks.resources | object | `{}` | Post-analytics service pod. `export-attacks` container resource requests & limits |
-| controller.wallarm.export-counters.resources | object | `{}` | Post-analytics service pod. `export-counters` container resource requests & limits |
-| controller.wallarm.brute-detect.resources | object | `{}` | Post-analytics service pod. `brute-detect` container resource requests & limits |
-| controller.wallarm.wallarm-appstructure.resources | object | `{}` | Post-analytics service pod. `wallarm-appstructure` container resource requests & limits |
-| controller.wallarm.addnode.resources | object | `{}` | Wallarm controller post-analytics pods. `addnode` init container resource requests & limits |
-| controller.wallarm.exportenv.resources | object | `{}` | Wallarm controller post-analytics pods. `exportenv` container resource requests & limits |
+| controller.wallarm.tarantool.resources | object | `{}` | Post-analytics service pod. `tarantool` container resources: requests & limits |
+| controller.wallarm.heartbeat.resources | object | `{}` | Post-analytics service pod. `heartbeat` container resources: requests & limits |
+| controller.wallarm.wallarm-appstructure.resources | object | `{}` | Post-analytics service pod. `wallarm-appstructure` container resources requests & limits |
+| controller.wallarm.addnode.resources | object | `{}` | Wallarm controller and post-analytics pods. `addnode` init container resources: requests & limits |
+| controller.wallarm.cron.resources | object | `{}` | Wallarm controller and post-analytics pods. `cron` container resources: requests & limits |
+| controller.wallarm.exportenv.resources | object | `{}` | Wallarm controller and post-analytics pods. `exportenv` container resources: requests & limits |
 | controller.wallarm.synccloud.wallarm_syncnode_interval_sec | int | `120` | TBD |
-| controller.wallarm.synccloud.resources | object | `{}` | Wallarm controller pod. `synccloud` container resource requests & limits |
-| controller.wallarm.collectd.resources | object | `{}` | Wallarm controller pod. `collectd` container resource requests & limits |
-| controller.wallarm.acl.resources | object | `{}` | Wallarm controller pod. `sync-ip-lists` container resource requests & limits |
-| controller.wallarm.mmdb.resources | object | `{}` | Wallarm controller pod. `sync-ip-lists-source` container resource requests & limits |
+| controller.wallarm.synccloud.resources | object | `{}` | Wallarm controller pod. `synccloud` container resources: requests & limits |
+| controller.wallarm.collectd.resources | object | `{}` | Wallarm controller pod. `collectd` container resources: requests & limits |
 | controller.wallarm.metrics.enabled | bool | `false` | If `true`, enable Prometheus metrics (`controller.metrics.enabled` must be `true` as well) |
 | controller.wallarm.metrics.port | int | `18080` | TBD |
 | controller.wallarm.metrics.service.annotations | object | `{"prometheus.io/scrape": "true", "prometheus.io/path": "/wallarm-metrics", "prometheus.io/port": "18080"}` | Annotations for Prometheus metrics service |

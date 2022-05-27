@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "ingress-nginx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+    {{- with .Values.controller.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  name: {{ template "ingress-nginx.wallarmControllerCronConfig" . }}
+  namespace: {{ .Release.Namespace }}
+data:
+  crontab: |
+    {{- with .Values.controller.wallarm.cron.jobs.exportEnvironment }}
+    # export-environment
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncIpLists }}
+    # sync-ip-lists
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.exportMetrics }}
+    # export-metrics
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-metrics -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncIpListsSource }}
+    # sync-ip-lists-source
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
+    {{- end }}

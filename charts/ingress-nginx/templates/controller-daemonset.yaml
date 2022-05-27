@@ -186,10 +186,9 @@ spec:
         {{ toYaml .Values.controller.extraContainers | nindent 8 }}
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
+        {{ include "ingress-nginx.wallarmCronContainer" . | nindent 8 }}
         {{ include "ingress-nginx.wallarmCollectdContainer" . | nindent 8 }}
         {{ include "ingress-nginx.wallarmSyncnodeContainer" . | nindent 8 }}
-        {{ include "ingress-nginx.wallarmSyncAclContainer" . | nindent 8 }}
-        {{ include "ingress-nginx.wallarmExportEnvContainer" . | nindent 8 }}
       {{- end }}
     {{- if or .Values.controller.extraInitContainers .Values.controller.wallarm.enabled .Values.controller.extraModules }}
       initContainers:
@@ -205,7 +204,8 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
-        {{ include "ingress-nginx.wallarmInitContainer" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmInitContainer.addNode" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmInitContainer.exportEnv" . | nindent 8 }}
       {{- end }}
     {{- if .Values.controller.hostNetwork }}
       hostNetwork: {{ .Values.controller.hostNetwork }}
@@ -237,6 +237,9 @@ spec:
           emptyDir: {}
         - name: wallarm-cache
           emptyDir: {}
+        - name: wallarm-cron
+          configMap:
+            name: {{ template "ingress-nginx.wallarmControllerCronConfig" . }}
       {{- end }}
       {{- if .Values.controller.customTemplate.configMapName }}
         - name: nginx-template-volume
