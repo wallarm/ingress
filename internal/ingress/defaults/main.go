@@ -117,6 +117,11 @@ type Backend struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarminstance
 	WallarmInstance string `json:"wallarm-instance"`
 
+	// An client identifier.
+	// The directive is used to separate tenants for the multi-tenant Wallarm node.
+	// https://docs.wallarm.com/admin-en/configure-parameters-en/#wallarm_partner_client_uuid
+	WallarmPartnerClientUUID string `json:"wallarm-partner-client-uuid"`
+
 	// This directive lets you set up the page returned to the client when blocking an invalid request.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmblockpage
 	WallarmBlockPage string `json:"wallarm-block-page"`

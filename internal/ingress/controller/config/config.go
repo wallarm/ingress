@@ -933,6 +933,7 @@ func NewDefault() Configuration {
 			WallarmModeAllowOverride: "on",
 			WallarmFallback:          "on",
 			WallarmInstance:          "",
+			WallarmPartnerClientUUID: "",
 			WallarmBlockPage:         "",
 			WallarmAclBlockPage:      "",
 			WallarmParseResponse:     "on",

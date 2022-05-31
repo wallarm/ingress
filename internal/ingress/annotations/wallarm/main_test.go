@@ -82,6 +82,7 @@ func (m mockBackend) GetDefaultBackend() defaults.Backend {
 		WallarmParseWebsocket: "off",
 		WallarmUnpackResponse: "on",
 		WallarmParserDisable: []string{},
+		WallarmPartnerClientUUID: "",
 	}
 }
 
@@ -93,6 +94,7 @@ func TestProxy(t *testing.T) {
 	data[parser.GetAnnotationWithPrefix("wallarm-mode-allow-override")] = "strict"
 	data[parser.GetAnnotationWithPrefix("wallarm-fallback")] = "off"
 	data[parser.GetAnnotationWithPrefix("wallarm-instance")] = "42"
+	data[parser.GetAnnotationWithPrefix("wallarm-partner-client-uuid")] = "11111111-1111-1111-1111-111111111111"
 	data[parser.GetAnnotationWithPrefix("wallarm-block-page")] = "block"
 	data[parser.GetAnnotationWithPrefix("wallarm-acl-block-page")] = "block"
 	data[parser.GetAnnotationWithPrefix("wallarm-parse-response")] = "off"
@@ -120,6 +122,9 @@ func TestProxy(t *testing.T) {
 	}
 	if w.Instance != "42" {
 		t.Errorf("expected 42 as wallarm-instance but returned %v", w.Instance)
+	}
+	if w.PartnerClientUUID != "11111111-1111-1111-1111-111111111111" {
+		t.Errorf("expected 11111111-1111-1111-1111-111111111111 as wallarm-partner-client-uuid but returned %v", w.PartnerClientUUID)
 	}
 	if w.BlockPage != "block" {
 		t.Errorf("expected block as wallarm-block-page but returned %v", w.BlockPage)
@@ -166,6 +171,9 @@ func TestProxyWithNoAnnotation(t *testing.T) {
 	}
 	if p.Instance != "" {
 		t.Errorf(`expected "" as wallarm-instance but returned %v`, p.Instance)
+	}
+	if p.PartnerClientUUID != "" {
+		t.Errorf(`expected "" as wallarm-partner-client-uuid but returned %v`, p.PartnerClientUUID)
 	}
 	if p.BlockPage != "" {
 		t.Errorf(`expected "" as wallarm-block-page but returned %v`, p.BlockPage)

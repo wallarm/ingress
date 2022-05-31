@@ -36,6 +36,7 @@ type Config struct {
 	ParseWebsocket string `json:"parseWebsocket"`
 	UnpackResponse string `json:"unpackResponse"`
 	ParserDisable []string `json:"parserDisable"`
+	PartnerClientUUID string `json:"partnerClientUUID"`
 }
 
 // Equal tests for equality between two Configuration types
@@ -76,6 +77,9 @@ func (l1 *Config) Equal(l2 *Config) bool {
 	if l1.AclBlockPage != l2.AclBlockPage {
 		return false
 	}
+	if l1.PartnerClientUUID != l2.PartnerClientUUID {
+		return false
+	}
 
 	return true
 }
@@ -112,6 +116,10 @@ func (a wallarm) Parse(ing *networking.Ingress) (interface{}, error) {
 		if err != nil {
 			instance = defBackend.WallarmInstance
 		}
+	}
+	partnerClientUUID, err := parser.GetStringAnnotation("wallarm-partner-client-uuid", ing)
+	if err != nil {
+		partnerClientUUID = defBackend.WallarmPartnerClientUUID
 	}
 	blockPage, err := parser.GetStringAnnotation("wallarm-block-page", ing)
 	if err != nil {
@@ -155,5 +163,6 @@ func (a wallarm) Parse(ing *networking.Ingress) (interface{}, error) {
 		parseWebsocket,
 		unpackResponse,
 		parserDisable,
+		partnerClientUUID,
 	}, nil
 }

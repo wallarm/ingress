@@ -1182,6 +1182,7 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 		ParseWebsocket:    bdef.WallarmParseWebsocket,
 		UnpackResponse:    bdef.WallarmUnpackResponse,
 		ParserDisable:     bdef.WallarmParserDisable,
+		PartnerClientUUID: bdef.WallarmPartnerClientUUID,
 	}
 
 	// initialize default server and root location

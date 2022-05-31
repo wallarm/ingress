@@ -1187,12 +1187,15 @@ stream {
             wallarm_mode                 {{ $location.Wallarm.Mode }};
             wallarm_mode_allow_override  {{ $location.Wallarm.ModeAllowOverride }};
             {{ if eq $all.Cfg.WallarmFallback "on"}}
-            wallarm_fallback             "on";            
+            wallarm_fallback             "on";
             {{ else }}
             wallarm_fallback             {{ $location.Wallarm.Fallback }};
             {{ end }}
             {{ if not (eq $location.Wallarm.Instance "") }}
             wallarm_application          {{ $location.Wallarm.Instance }};
+            {{ end }}
+            {{ if not (eq $location.Wallarm.PartnerClientUUID "") }}
+            wallarm_partner_client_uuid  {{ $location.Wallarm.PartnerClientUUID }};
             {{ end }}
             {{ if not (eq $location.Wallarm.AclBlockPage "") }}
             wallarm_acl_block_page       {{ $location.Wallarm.AclBlockPage | replace "," " " }};
