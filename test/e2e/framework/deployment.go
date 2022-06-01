@@ -38,7 +38,7 @@ const SlowEchoService = "slow-echo"
 const HTTPBinService = "httpbin"
 
 // NginxBaseImage use for testing
-const NginxBaseImage = "k8s.gcr.io/ingress-nginx/nginx:5402d35663917ccbbf77ff48a22b8c6f77097f48@sha256:ec8a104df307f5c6d68157b7ac8e5e1e2c2f0ea07ddf25bb1c6c43c67e351180"
+const NginxBaseImage = "k8s.gcr.io/ingress-nginx/nginx:cd6f88af3f976a180ed966dadf273473ae768dfa@sha256:18f91105e4099941d2efee71a8ec52c6ef7702d5f7e8214b7cb5f25cc10a0b41"
 
 type deploymentOptions struct {
 	namespace string
@@ -150,8 +150,9 @@ http {
 	f.NGINXWithConfigDeployment(SlowEchoService, cfg)
 }
 
-// NGINXWithConfigDeployment creates an NGINX deployment using a configmap containing the nginx.conf configuration
-func (f *Framework) NGINXWithConfigDeployment(name string, cfg string) {
+// NGINXDeployment creates a new simple NGINX Deployment using NGINX base image
+// and passing the desired configuration
+func (f *Framework) NGINXDeployment(name string, cfg string, waitendpoint bool) {
 	cfgMap := map[string]string{
 		"nginx.conf": cfg,
 	}
@@ -213,8 +214,15 @@ func (f *Framework) NGINXWithConfigDeployment(name string, cfg string) {
 
 	f.EnsureService(service)
 
-	err = WaitForEndpoints(f.KubeClientSet, DefaultTimeout, name, f.Namespace, 1)
-	assert.Nil(ginkgo.GinkgoT(), err, "waiting for endpoints to become ready")
+	if waitendpoint {
+		err = WaitForEndpoints(f.KubeClientSet, DefaultTimeout, name, f.Namespace, 1)
+		assert.Nil(ginkgo.GinkgoT(), err, "waiting for endpoints to become ready")
+	}
+}
+
+// NGINXWithConfigDeployment creates an NGINX deployment using a configmap containing the nginx.conf configuration
+func (f *Framework) NGINXWithConfigDeployment(name string, cfg string) {
+	f.NGINXDeployment(name, cfg, true)
 }
 
 // NewGRPCBinDeployment creates a new deployment of the
@@ -227,7 +235,7 @@ func (f *Framework) NewGRPCBinDeployment() {
 		PeriodSeconds:       1,
 		SuccessThreshold:    1,
 		TimeoutSeconds:      1,
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{
 				Port: intstr.FromInt(9000),
 			},
@@ -318,7 +326,7 @@ func newDeployment(name, namespace, image string, port int32, replicas int32, co
 		SuccessThreshold:    1,
 		TimeoutSeconds:      2,
 		FailureThreshold:    6,
-		Handler: corev1.Handler{
+		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
 				Port: intstr.FromString("http"),
 				Path: "/",

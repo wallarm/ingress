@@ -16,12 +16,14 @@ commonLabels: {}
 controller:
   name: controller
   image:
+    ## Keep false as default for now!
+    chroot: false
     registry: docker.io
     image: wallarm/ingress-controller
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "4.0.2-1"
+    tag: "4.0.3-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -273,7 +275,7 @@ controller:
   ##
   topologySpreadConstraints: []
     # - maxSkew: 1
-    #   topologyKey: failure-domain.beta.kubernetes.io/zone
+    #   topologyKey: topology.kubernetes.io/zone
     #   whenUnsatisfiable: DoNotSchedule
     #   labelSelector:
     #     matchLabels:
@@ -458,7 +460,8 @@ controller:
     ##
     externalIPs: []
 
-    # loadBalancerIP: ""
+    # -- Used by cloud providers to connect the resulting `LoadBalancer` to a pre-existing static IP according to https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
+    loadBalancerIP: ""
     loadBalancerSourceRanges: []
 
     enableHttp: true
@@ -576,8 +579,8 @@ controller:
 
   extraModules: []
   ## Modules, which are mounted into the core nginx image
-  # - name: opentelemetry:v20220331-controller-v1.1.2-36-g7517b7ecf@sha256:e3f635474b5da24ccd0ea6b078fb190dae68b8b4a44b52bea19ec2561f0102ec
-  #   image: k8s.gcr.io/ingress-nginx/opentelemetry:
+  # - name: opentelemetry
+  #   image: k8s.gcr.io/ingress-nginx/opentelemetry:v20220415-controller-v1.2.0-beta.0-2-g81c2afd97@sha256:ce61e2cf0b347dffebb2dcbf57c33891d2217c1bad9c0959c878e5be671ef941
   #
   # The image must contain a `/usr/local/bin/init_module.sh` executable, which
   # will be executed as initContainers, to move its config files within the
@@ -996,17 +999,21 @@ serviceAccount:
 imagePullSecrets: []
 # - name: secretName
 
-# -- TCP service key:value pairs
+# -- TCP service key-value pairs
 ## Ref: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/exposing-tcp-udp-services.md
 ##
 tcp: {}
 #  8080: "default/example-tcp-svc:9000"
 
-# -- UDP service key:value pairs
+# -- UDP service key-value pairs
 ## Ref: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/exposing-tcp-udp-services.md
 ##
 udp: {}
 #  53: "kube-system/kube-dns:53"
+
+# -- Prefix for TCP and UDP ports names in ingress controller service
+## Some cloud providers, like Yandex Cloud may have a requirements for a port name regex to support cloud load balancer integration
+portNamePrefix: ""
 
 # -- (string) A base64-encoded Diffie-Hellman parameter.
 # This can be generated with: `openssl dhparam 4096 2> /dev/null | base64`
