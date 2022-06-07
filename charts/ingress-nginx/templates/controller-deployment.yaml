@@ -156,11 +156,11 @@ spec:
           {{- end }}
           {{- if .Values.controller.wallarm.enabled }}
             - name: wallarm
-              mountPath: /etc/wallarm
-            - mountPath: /var/lib/wallarm-acl
-              name: wallarm-acl
-            - mountPath: /var/lib/nginx/wallarm/
-              name: wallarm-cache
+              mountPath: {{ include "wallarm.path" . }}
+            - name: wallarm-acl
+              mountPath: {{ include "wallarm-acl.path" . }}
+            - name: wallarm-cache
+              mountPath: {{ include "wallarm-cache.path" . }}
           {{- end }}
           {{- if .Values.controller.customTemplate.configMapName }}
             - mountPath: /etc/nginx/template

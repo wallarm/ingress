@@ -52,6 +52,33 @@ allowPrivilegeEscalation: {{ .Values.controller.image.allowPrivilegeEscalation }
 {{- end -}}
 
 {{/*
+Get specific paths
+*/}}
+{{- define "wallarm.path" -}}
+{{- if .Values.controller.image.chroot -}}
+{{- printf "/chroot/etc/wallarm" -}}
+{{- else -}}
+{{- printf "/etc/wallarm" -}}
+{{- end }}
+{{- end -}}
+
+{{- define "wallarm-acl.path" -}}
+{{- if .Values.controller.image.chroot -}}
+{{- printf "/chroot/var/lib/wallarm-acl" -}}
+{{- else -}}
+{{- printf "/var/lib/wallarm-acl" -}}
+{{- end }}
+{{- end -}}
+
+{{- define "wallarm-cache.path" -}}
+{{- if .Values.controller.image.chroot -}}
+{{- printf "/chroot/var/lib/nginx/wallarm" -}}
+{{- else -}}
+{{- printf "/var/lib/nginx/wallarm" -}}
+{{- end }}
+{{- end -}}
+
+{{/*
 Get specific image
 */}}
 {{- define "ingress-nginx.image" -}}
