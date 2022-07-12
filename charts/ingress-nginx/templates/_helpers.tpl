@@ -198,7 +198,7 @@ Create the name of the controller service account to use
   - name: WALLARM_API_HOST
     value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
   - name: WALLARM_API_PORT
-    value: {{ .Values.controller.wallarm.apiPort | default "444" | quote }}
+    value: {{ .Values.controller.wallarm.apiPort | default "443" | quote }}
   - name: WALLARM_API_USE_SSL
     {{- if or (.Values.controller.wallarm.apiSSL) (eq (.Values.controller.wallarm.apiSSL | toString) "<nil>") }}
     value: "true"
@@ -292,7 +292,7 @@ Create the name of the controller service account to use
   - name: WALLARM_API_HOST
     value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
   - name: WALLARM_API_PORT
-    value: {{ .Values.controller.wallarm.apiPort | default "444" | quote }}
+    value: {{ .Values.controller.wallarm.apiPort | default "443" | quote }}
   - name: WALLARM_API_USE_SSL
     {{- if or (.Values.controller.wallarm.apiSSL) (eq (.Values.controller.wallarm.apiSSL | toString) "<nil>") }}
     value: "true"

@@ -425,7 +425,7 @@ Kubernetes: `>=1.19.0-0`
 | controller.watchIngressWithoutClass | bool | `false` | Process Ingress objects without ingressClass annotation/ingressClassName field Overrides value for --watch-ingress-without-class flag of the controller binary Defaults to false |
 | controller.wallarm.enabled | bool | `false` | if true, `enable` Wallarm protection |
 | controller.wallarm.apiHost | string | `"api.wallarm.com"` | Address of Wallarm API service |
-| controller.wallarm.apiPort | int | `444` | Port of Wallarm API service |
+| controller.wallarm.apiPort | int | `443` | Port of Wallarm API service |
 | controller.wallarm.apiSSL | bool | `true` | TBD |
 | controller.wallarm.token | string | `""` | Cluster Node token to authorize controller in the Wallarm Cloud |
 | controller.wallarm.fallback | string | `"on"` | TBD |
