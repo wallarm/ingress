@@ -23,7 +23,7 @@ controller:
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "4.0.3-1"
+    tag: "4.0.4-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -594,6 +594,15 @@ controller:
     ## These annotations will be added to the ValidatingWebhookConfiguration and
     ## the Jobs Spec of the admission webhooks.
     enabled: true
+    # -- Additional environment variables to set
+    extraEnvs: []
+    # extraEnvs:
+    #   - name: FOO
+    #     valueFrom:
+    #       secretKeyRef:
+    #         key: FOO
+    #         name: secret-resource
+    # -- Admission Webhook failure policy to use
     failurePolicy: Fail
     # timeoutSeconds: 10
     port: 8443
