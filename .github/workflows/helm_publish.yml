@@ -8,7 +8,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       -
         name: Extract tag name
         run: echo "X_TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\+.*$//g')" >> $GITHUB_ENV
