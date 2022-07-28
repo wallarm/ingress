@@ -256,7 +256,8 @@ Create the name of the controller service account to use
   image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["/bin/supercronic", "-json", "/opt/cron/crontab"]
+  command: ["/bin/dumb-init", "--"]
+  args: ["/bin/supercronic", "-json", "/opt/cron/crontab"]
   env:
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
