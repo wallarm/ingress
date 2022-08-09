@@ -54,6 +54,7 @@ ifneq ($(PLATFORM),)
 endif
 
 MAC_OS = $(shell uname -s)
+
 ifeq ($(MAC_OS), Darwin)
 	MAC_DOCKER_FLAGS="--load"
 else
@@ -219,7 +220,10 @@ dev-env-stop: ## Deletes local Kubernetes cluster created by kind.
 
 .PHONY: live-docs
 live-docs: ## Build and launch a local copy of the documentation website in http://localhost:8000
-	@docker build ${PLATFORM_FLAG} ${PLATFORM} -t ingress-nginx-docs .github/actions/mkdocs
+	@docker build ${PLATFORM_FLAG} ${PLATFORM} \
+                  		--no-cache \
+                  		$(MAC_DOCKER_FLAGS) \
+                  		 -t ingress-nginx-docs .github/actions/mkdocs
 	@docker run ${PLATFORM_FLAG} ${PLATFORM} --rm -it \
 		-p 8000:8000 \
 		-v ${PWD}:/docs \

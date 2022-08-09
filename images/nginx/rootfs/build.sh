@@ -53,8 +53,8 @@ export JAEGER_VERSION=0.7.0
 # Check for recent changes: https://github.com/msgpack/msgpack-c/compare/cpp-3.3.0...master
 export MSGPACK_VERSION=3.3.0
 
-# Check for recent changes: https://github.com/DataDog/dd-opentracing-cpp/compare/v1.3.0...master
-export DATADOG_CPP_VERSION=af53c523787cca108ae9f458ea5c962e48187a36
+# Check for recent changes: https://github.com/DataDog/dd-opentracing-cpp/compare/v1.3.2...master
+export DATADOG_CPP_VERSION=1.3.2
 
 # Check for recent changes: https://github.com/SpiderLabs/ModSecurity-nginx/compare/v1.0.2...master
 export MODSECURITY_VERSION=1.0.2
@@ -126,6 +126,9 @@ export LUA_RESTY_IPMATCHER_VERSION=211e0d2eb8bbb558b79368f89948a0bafdc23654
 
 # Check for recent changes: https://github.com/ElvinEfendi/lua-resty-global-throttle/compare/v0.2.0...main
 export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
+
+# Check for recent changes:  https://github.com/microsoft/mimalloc/compare/v1.7.6...master
+export MIMALOC_VERSION=1.7.6
 
 export BUILD_PATH=/tmp/build
 
@@ -261,8 +264,8 @@ get_src 1ee6dad809a5bb22efb45e6dac767f7ce544ad652d353a93d7f26b605f69fe3f \
         "https://github.com/openresty/luajit2/archive/v$LUAJIT_VERSION.tar.gz"
 fi
 
-get_src f29393f2cd9288105a0029a6a324fe1f7558a9e7e852d59a6355f7581bb90e30 \
-        "https://github.com/DataDog/dd-opentracing-cpp/archive/$DATADOG_CPP_VERSION.tar.gz"
+get_src 586f92166018cc27080d34e17c59d68219b85af745edf3cc9fe41403fc9b4ac6 \
+        "https://github.com/DataDog/dd-opentracing-cpp/archive/v$DATADOG_CPP_VERSION.tar.gz"
 
 get_src 1af5a5632dc8b00ae103d51b7bf225de3a7f0df82f5c6a401996c080106e600e \
         "https://github.com/influxdata/nginx-influxdb-module/archive/$NGINX_INFLUXDB_VERSION.tar.gz"
@@ -319,6 +322,9 @@ get_src b8dbd502751140993a852381bcd8e98a402454596bd91838c1e51268d42db261 \
 
 get_src 0fb790e394510e73fdba1492e576aaec0b8ee9ef08e3e821ce253a07719cf7ea \
         "https://github.com/ElvinEfendi/lua-resty-global-throttle/archive/v$LUA_RESTY_GLOBAL_THROTTLE_VERSION.tar.gz"
+
+get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
+        "https://github.com/microsoft/mimalloc/archive/refs/tags/v${MIMALOC_VERSION}.tar.gz"
 
 # improve compilation times
 CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
@@ -716,11 +722,7 @@ INST_LUADIR=/usr/local/lib/lua make install
 cd "$BUILD_PATH/lua-resty-global-throttle-$LUA_RESTY_GLOBAL_THROTTLE_VERSION"
 make install
 
-# mimalloc
-cd "$BUILD_PATH"
-git clone --depth=1 -b v1.6.7 https://github.com/microsoft/mimalloc
-cd mimalloc
-
+cd "$BUILD_PATH/mimalloc-$MIMALOC_VERSION"
 mkdir -p out/release
 cd out/release
 
