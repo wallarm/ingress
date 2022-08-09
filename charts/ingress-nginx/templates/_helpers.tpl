@@ -285,10 +285,8 @@ Create the name of the controller service account to use
   image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command:
-  - sh
-  - -c
-  - /opt/wallarm/ruby/usr/share/wallarm-common/synccloud
+  command: ["/bin/dumb-init", "--"]
+  args: ["/opt/wallarm/ruby/usr/share/wallarm-common/syncnode", "-p", "-r", "120", "-l", "STDOUT", "-L", "DEBUG"]
   env:
   - name: WALLARM_API_HOST
     value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}

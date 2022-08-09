@@ -2,7 +2,7 @@
 
 set -ex
 
-PKGS_BRANCH=stable/4.0
+PKGS_BRANCH=stable/4.2
 export CFLAGS="-fPIC -fno-omit-frame-pointer -O2 -ggdb3"
 export CXXFLAGS="$CFLAGS"
 
@@ -14,7 +14,7 @@ apk add openssh-client-default sudo \
 
 ARRAY=(
  "https://github.com/maxmind/libmaxminddb.git;1.6.0"
- "https://github.com/sqlite/sqlite.git;version-3.35.5"
+ "https://github.com/sqlite/sqlite.git;version-3.39.2"
  "git@gl.wallarm.com:wallarm-node/libs/libwacl.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libwallarmmisc.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libdetection.git;$PKGS_BRANCH"
@@ -24,7 +24,7 @@ ARRAY=(
  "git@gl.wallarm.com:wallarm-node/libs/libcpire.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libparserutils.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libhubbub.git;$PKGS_BRANCH"
- "https://github.com/GNOME/libxml2.git;v2.9.13"
+ "https://github.com/GNOME/libxml2.git;v2.9.14"
  "git@gl.wallarm.com:wallarm-node/libs/libwlog.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libtws.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libwyajl.git;$PKGS_BRANCH"

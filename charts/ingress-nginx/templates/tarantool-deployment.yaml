@@ -71,7 +71,8 @@ spec:
           image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          command: ["/opt/wallarm/ruby/usr/share/wallarm-common/synccloud"]
+          command: ["/bin/dumb-init", "--"]
+          args: ["/opt/wallarm/ruby/usr/share/wallarm-common/syncnode", "-p", "-r", "120", "-l", "STDOUT", "-L", "DEBUG"]
           env:
           - name: WALLARM_API_HOST
             value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
@@ -111,6 +112,22 @@ spec:
             name: wallarm
           resources:
 {{ toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "resources") | indent 12 }}
+        - name: wallarm-antibot
+{{- if (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
+  {{- with (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
+          image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
+          image: "wallarm/ingress-python:{{ .Values.controller.image.tag }}"
+{{- end }}
+          imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+          command: ["/opt/wallarm/python/usr/bin/antibotapiextractor"]
+          securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+          - mountPath: /etc/wallarm
+            name: wallarm
+          resources:
+{{ toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "resources") | indent 12 }}
     {{- if .Values.controller.wallarm.tarantool.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.controller.wallarm.tarantool.nodeSelector | indent 8 }}

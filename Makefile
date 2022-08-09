@@ -250,6 +250,7 @@ ensure-buildx:
 show-version:
 	echo -n $(TAG)
 
+PLATFORMS ?= amd64
 BUILDX_PLATFORMS ?= linux/amd64
 
 .PHONY: release # Build a multi-arch docker image
