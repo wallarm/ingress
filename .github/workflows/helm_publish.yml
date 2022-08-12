@@ -26,3 +26,14 @@ jobs:
           index_dir: .
           app_version: "${{ env.X_TAG }}"
           chart_version: "${{ env.X_TAG }}"
+      -
+        name: Call Wallarm News API
+        run: |
+          curl \
+          --data '{"component_type": "wallarm-ingress-controller", "version": "${{ env.X_TAG }}"}' \
+          --header "Authorization: Basic ${{ secrets.NEWS_API_CREDS }}" \
+          --header "Content-Type: application/json" \
+          --request POST \
+          --retry 5 \
+          --silent \
+          https://api.wallarm.com/v1/versions
