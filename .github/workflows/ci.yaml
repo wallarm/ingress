@@ -17,6 +17,10 @@ jobs:
           version: latest
 
       - name: Build
+        env:
+          GITLAB_TOKEN_NAME: ${{ secrets.GITLAB_TOKEN_NAME }}
+          GITLAB_TOKEN_SECRET: ${{ secrets.GITLAB_TOKEN_SECRET }}
         run: |
-          eval $(ssh-agent)
+          eval $(ssh-agent -s)  
+          ssh-add --help
           cd images/nginx && make build

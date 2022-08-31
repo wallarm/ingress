@@ -34,16 +34,12 @@ PLATFORMS?=linux/amd64
 OUTPUT=
 PROGRESS=plain
 build: ensure-buildx
-ifdef CI
-	echo "CI DETECTED: $${CI}"
-else
 	docker buildx build \
 		--platform=${PLATFORMS} $(OUTPUT) \
 		--ssh default \
 		--progress=$(PROGRESS) \
 		--pull \
 		--tag $(IMAGE):$(TAG) rootfs
-endif
 
 # push the cross built image
 push: OUTPUT=--push
