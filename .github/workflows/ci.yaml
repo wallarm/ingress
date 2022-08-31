@@ -17,10 +17,10 @@ jobs:
           version: latest
 
       - name: Build
-        env:
-          GITLAB_TOKEN_NAME: ${{ secrets.GITLAB_TOKEN_NAME }}
-          GITLAB_TOKEN_SECRET: ${{ secrets.GITLAB_TOKEN_SECRET }}
         run: |
-          eval $(ssh-agent -s)  
-          ssh-add --help
-          cd images/nginx && make build
+          set -x
+          eval $(ssh-agent -s)
+          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | ssh-add - 
+          ssh-add -l
+          cd images/nginx && make push
+          docker images
