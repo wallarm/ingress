@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_base:
+    name: Build base
+    runs-on: custom-runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: cd images/nginx && make build
