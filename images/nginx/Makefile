@@ -23,7 +23,9 @@ INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 # 0.0.0 shouldn't clobber any released builds
 TAG ?= $(shell cat ../../TAG)
 REGISTRY ?= wallarm
-
+CI ?= false
+CI_TOKEN_USER
+CI_TOKEN_SECRET
 IMAGE = $(REGISTRY)/ingress-nginx
 
 # required to enable buildx
@@ -34,12 +36,16 @@ PLATFORMS?=linux/amd64
 OUTPUT=
 PROGRESS=plain
 build: ensure-buildx
+ifdef CI
+	echo "CI DETECTED: $${CI}"
+else
 	docker buildx build \
 		--platform=${PLATFORMS} $(OUTPUT) \
 		--ssh default \
 		--progress=$(PROGRESS) \
 		--pull \
 		--tag $(IMAGE):$(TAG) rootfs
+endif
 
 # push the cross built image
 push: OUTPUT=--push
