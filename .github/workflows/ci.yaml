@@ -7,18 +7,22 @@ jobs:
   build_base:
     name: Build base
     runs-on: custom-runner
+    env:
+      DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          version: latest
+#      - name: Set up Docker Buildx
+#        uses: docker/setup-buildx-action@v2
+#        with:
+#          version: latest
 
       - name: Build
         run: |
           eval $(ssh-agent -s)
           echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add - 
+          env | grep "DOCKER_CLI_EXPERIMENTAL"
+          docker info
           cd images/nginx && make push
           docker images
