@@ -36,6 +36,7 @@ ARRAY=(
 mkdir -p ~/.ssh || true
 cat ~/.ssh/known_hosts | grep gl.wallarm.com || ssh-keyscan gl.wallarm.com >> ~/.ssh/known_hosts
 
+
 rm -rf /tmp/pkgs
 mkdir -p /tmp/pkgs
 cd /tmp/pkgs
