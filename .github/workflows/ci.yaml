@@ -20,7 +20,8 @@ jobs:
         run: |
           set -x
           eval $(ssh-agent -s)
-          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | ssh-add - 
+          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add - 
           ssh-add -l
+          .images/nginx/rootfs/install_deps.sh
           cd images/nginx && make push
           docker images
