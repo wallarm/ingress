@@ -1,5 +1,4 @@
 #!/bin/bash
-ssh-add -l
 /install_deps.sh
 # Copyright 2015 The Kubernetes Authors.
 #
