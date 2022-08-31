@@ -18,12 +18,7 @@ jobs:
 
       - name: Build
         run: |
-          set -x
           eval $(ssh-agent -s)
           echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add - 
-          ssh-add -l
-          mkdir -p ~/.ssh || true
-          ssh-keyscan gl.wallarm.com >> ~/.ssh/known_hosts
-          git clone --depth 1 --branch stable/4.2 git@gl.wallarm.com:wallarm-node/libs/libwacl.git
           cd images/nginx && make push
           docker images
