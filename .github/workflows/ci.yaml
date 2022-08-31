@@ -6,7 +6,7 @@ on:
 jobs:
   build_base:
     name: Build base
-    runs-on: custom-runner
+    runs-on: ubuntu-latest
     env:
       DOCKER_CLI_EXPERIMENTAL: enabled
     steps:
