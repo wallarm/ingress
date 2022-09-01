@@ -47,5 +47,6 @@ jobs:
         env:
           ARCH: amd64
         run: |
-         make release
-         docker images
+          eval $(ssh-agent -s)
+          make release
+          docker images
