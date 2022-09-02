@@ -19,7 +19,7 @@ controller:
     ## Keep false as default for now!
     chroot: false
     registry: docker.io
-    image: wallarm/ingress-controller
+    image: dmikhin/ingress-controller
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:

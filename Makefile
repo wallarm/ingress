@@ -61,7 +61,7 @@ else
 	MAC_DOCKER_FLAGS=
 endif
 
-REGISTRY ?= wallarm
+REGISTRY ?= dmikhin
 
 BASE_IMAGE ?= $(REGISTRY)/ingress-nginx:$(TAG)
 

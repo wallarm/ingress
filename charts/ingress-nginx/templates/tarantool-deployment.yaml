@@ -41,7 +41,7 @@ spec:
           image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-          image: "wallarm/ingress-tarantool:{{ .Values.controller.image.tag }}"
+          image: "dmikhin/ingress-tarantool:{{ .Values.controller.image.tag }}"
 {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           env:
@@ -68,7 +68,7 @@ spec:
           image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-          image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+          image: "dmikhin/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["/bin/dumb-init", "--"]
@@ -103,7 +103,7 @@ spec:
           image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-          image: "wallarm/ingress-python:{{ .Values.controller.image.tag }}"
+          image: "dmikhin/ingress-python:{{ .Values.controller.image.tag }}"
 {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
@@ -118,7 +118,7 @@ spec:
           image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-          image: "wallarm/ingress-python:{{ .Values.controller.image.tag }}"
+          image: "dmikhin/ingress-python:{{ .Values.controller.image.tag }}"
 {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["/opt/wallarm/python/usr/bin/antibotapiextractor"]

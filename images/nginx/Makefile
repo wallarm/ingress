@@ -22,7 +22,7 @@ INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 
 # 0.0.0 shouldn't clobber any released builds
 TAG ?= $(shell cat ../../TAG)
-REGISTRY ?= wallarm
+REGISTRY ?= dmikhin
 
 IMAGE = $(REGISTRY)/ingress-nginx
 

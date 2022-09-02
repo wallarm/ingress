@@ -183,7 +183,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+  image: "dmikhin/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command:
@@ -231,7 +231,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+  image: "dmikhin/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command: ["sh", "-c", "timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true"]
@@ -253,7 +253,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+  image: "dmikhin/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command: ["/bin/dumb-init", "--"]
@@ -282,7 +282,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+  image: "dmikhin/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command: ["/bin/dumb-init", "--"]
@@ -324,7 +324,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-collectd:{{ .Values.controller.image.tag }}"
+  image: "dmikhin/ingress-collectd:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   volumeMounts:
