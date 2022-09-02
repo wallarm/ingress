@@ -595,7 +595,6 @@ func (n NGINXController) generateTemplate(cfg ngx_config.Configuration, ingressC
 		BacklogSize:              sysctlSomaxconn(),
 		Backends:                 ingressCfg.Backends,
 		PassthroughBackends:      ingressCfg.PassthroughBackends,
-		WallarmTarantoolUpstream: ingressCfg.WallarmTarantoolUpstream,
 		Servers:                  ingressCfg.Servers,
 		TCPBackends:              ingressCfg.TCPEndpoints,
 		UDPBackends:              ingressCfg.UDPEndpoints,

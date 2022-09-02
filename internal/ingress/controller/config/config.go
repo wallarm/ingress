@@ -720,7 +720,7 @@ type Configuration struct {
 	// By default this is enabled
 	EnableWallarm bool `json:"enable-wallarm"`
 
-	// Name of Wallarm Tarantool service in form "namespace/name"
+	// Name of Wallarm Tarantool service in form "name"
 	WallarmUpstreamService string `json:"wallarm-upstream-service"`
 
 	// The number of reconnection attempts to Tarantool upstream.
@@ -1016,7 +1016,6 @@ type TemplateConfig struct {
 	BacklogSize              int
 	Backends                 []*ingress.Backend
 	PassthroughBackends      []*ingress.SSLPassthroughBackend
-	WallarmTarantoolUpstream *ingress.Backend
 	Servers                  []*ingress.Server
 	TCPBackends              []ingress.L4Service
 	UDPBackends              []ingress.L4Service

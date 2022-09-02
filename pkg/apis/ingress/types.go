@@ -65,9 +65,6 @@ type Configuration struct {
 	// +optional
 	PassthroughBackends []*SSLPassthroughBackend `json:"passthroughBackends,omitempty"`
 
-	// WallarmTarantoolUpstream contains the backend used as Wallarm postanalyst database
-	WallarmTarantoolUpstream *Backend `json:"wallarmTarantoolUpstream,omitempty"`
-
 	// BackendConfigChecksum contains the particular checksum of a Configuration object
 	BackendConfigChecksum string `json:"BackendConfigChecksum,omitempty"`
 
