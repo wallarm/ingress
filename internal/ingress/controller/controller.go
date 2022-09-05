@@ -566,7 +566,6 @@ func (n *NGINXController) getConfiguration(ingresses []*ingress.Ingress) (sets.S
 		TCPEndpoints:          n.getStreamServices(n.cfg.TCPConfigMapName, apiv1.ProtocolTCP),
 		UDPEndpoints:          n.getStreamServices(n.cfg.UDPConfigMapName, apiv1.ProtocolUDP),
 		PassthroughBackends:   passUpstreams,
-		WallarmTarantoolUpstream:   n.getWallarmTarantoolUpstream(),
 		BackendConfigChecksum: n.store.GetBackendConfiguration().Checksum,
 		DefaultSSLCertificate: n.getDefaultSSLCertificate(),
 		StreamSnippets:        n.getStreamSnippets(ingresses),
@@ -884,29 +883,6 @@ func (n *NGINXController) getBackendServers(ingresses []*ingress.Ingress) ([]*in
 	})
 
 	return aUpstreams, aServers
-}
-
-func (n *NGINXController) getWallarmTarantoolUpstream() *ingress.Backend {
-	if !n.store.GetBackendConfiguration().EnableWallarm {
-		return nil
-	}
-
-	svcKey := n.store.GetBackendConfiguration().WallarmUpstreamService
-	svc, err := n.store.GetService(svcKey)
-	if err != nil {
-		klog.Warningf("Error getting Wallarm Tarantool Upstream %q from local store: %v", svcKey, err)
-		return nil
-	}
-	port := &svc.Spec.Ports[0]
-	endpoints := getEndpoints(svc, port, port.Protocol, n.store.GetServiceEndpoints)
-	if len(endpoints) == 0 {
-		klog.Warning("No Wallarm Tarantool Upstream endpoints found")
-		return nil
-	}
-
-	return &ingress.Backend{
-		Endpoints: endpoints,
-	}
 }
 
 // createUpstreams creates the NGINX upstreams (Endpoints) for each Service

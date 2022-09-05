@@ -505,11 +505,11 @@ http {
     {{ $cfg.HTTPSnippet }}
     {{ end }}
 
-    {{ if $all.WallarmTarantoolUpstream }}
+    {{ if $cfg.EnableWallarm }}
     upstream wallarm_tarantool {
-        {{ range $server := $all.WallarmTarantoolUpstream.Endpoints }}server {{ $server.Address | formatIP }}:{{ $server.Port }};
-        {{ end }}
-        keepalive {{ $all.WallarmTarantoolUpstream.Endpoints | len }};
+        server {{ $cfg.WallarmUpstreamService }}:3313 max_fails=0 fail_timeout=0 max_conns=16;
+        keepalive 16;
+        keepalive_requests 100;
     }
     wallarm_tarantool_upstream wallarm_tarantool;
     {{ end }}
