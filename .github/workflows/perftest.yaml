@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
  
       - name: Install K6
         env:
@@ -37,7 +37,7 @@ jobs:
           if [[ -z ${podName} ]] ; then 
             sleep 5
           fi
-          kubectl wait pods -n ingress-nginx --for condition=Ready --all --timeout=180s
+          kubectl wait pod -n ingress-nginx --for condition=Ready $podName --timeout=180s
           kubectl get all -n ingress-nginx
 
       - name: Deploy workload
