@@ -37,7 +37,7 @@ jobs:
           if [[ -z ${podName} ]] ; then 
             sleep 5
           fi
-          kubectl wait pods -n ingress-nginx --for condition=Ready --all
+          kubectl wait pods -n ingress-nginx --for condition=Ready --all --timeout=180s
           kubectl get all -n ingress-nginx
 
       - name: Deploy workload
@@ -67,6 +67,6 @@ jobs:
           vmstat -at 5 | tee vmstat_report &
           #./k6 login cloud -t $K6_TOKEN
           #./k6 run -o cloud ./smoketest.js
-          ./k6 run test/k6/smoketest.js
+          ./k6 run test/k6/smoketest.js --insecure-skip-tls-verify
           pkill vmstat
           cat vmstat_report
