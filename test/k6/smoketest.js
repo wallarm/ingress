@@ -58,7 +58,7 @@ export default function () {
     }
   }
   for(let i=0; i<20; i++){
-    const res = http.batch([req0, req1, req2, req3, req4], params);
+    const res = http.batch([req1, req2, req3, req4], params);
     sleep(1);
   }
 }
