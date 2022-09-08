@@ -21,11 +21,13 @@ jobs:
         uses: actions/checkout@v1
  
       - name: Install K6
+        env:
+          VERSION: v0.40.0
         run: |
-          wget https://github.com/grafana/k6/releases/download/v0.38.2/k6-v0.38.2-linux-amd64.tar.gz
-          tar -xvf k6-v0.38.2-linux-amd64.tar.gz k6-v0.38.2-linux-amd64/k6
-          mv k6-v0.38.2-linux-amd64/k6 .
-          ./k6
+          wget -q https://github.com/grafana/k6/releases/download/${VERSION}/k6-${VERSION}-linux-amd64.tar.gz
+          tar -xvf k6-${VERSION}-linux-amd64.tar.gz k6-${VERSION}-linux-amd64/k6
+          mv k6-${VERSION}-linux-amd64/k6 .
+          ./k6 version
 
       - name: Make dev-env
         run: |
@@ -35,8 +37,8 @@ jobs:
           if [[ -z ${podName} ]] ; then 
             sleep 5
           fi
-          kubectl wait pod -n ingress-nginx --for condition=Ready $podName
-          kubectl get all -A
+          kubectl wait pods -n ingress-nginx --for condition=Ready --all
+          kubectl get all -n ingress-nginx
 
       - name: Deploy workload
         run: |
