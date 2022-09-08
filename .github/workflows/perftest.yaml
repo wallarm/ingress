@@ -64,7 +64,7 @@ jobs:
 
       - name: Run smoke test
         run: |
-          vmstat -at 5 | tee vmstat_report &
+          vmstat -at 5 | tee vmstat_report
           ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify
           pkill vmstat
           cat vmstat_report
