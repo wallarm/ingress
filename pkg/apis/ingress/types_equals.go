@@ -76,17 +76,6 @@ func (c1 *Configuration) Equal(c2 *Configuration) bool {
 		}
 	}
 
-	if c1.WallarmTarantoolUpstream != nil {
-		if c2.WallarmTarantoolUpstream == nil {
-			return false
-		}
-		if !c1.WallarmTarantoolUpstream.Equal(c2.WallarmTarantoolUpstream) {
-			return false
-		}
-	} else if c2.WallarmTarantoolUpstream != nil {
-		return false
-	}
-
 	if c1.BackendConfigChecksum != c2.BackendConfigChecksum {
 		return false
 	}
