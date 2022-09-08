@@ -65,8 +65,6 @@ jobs:
       - name: Run smoke test
         run: |
           vmstat -at 5 | tee vmstat_report &
-          #./k6 login cloud -t $K6_TOKEN
-          #./k6 run -o cloud ./smoketest.js
-          ./k6 run test/k6/smoketest.js --insecure-skip-tls-verify
+          ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify
           pkill vmstat
           cat vmstat_report
