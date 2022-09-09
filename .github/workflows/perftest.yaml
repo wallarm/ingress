@@ -33,7 +33,7 @@ jobs:
           wget -q https://github.com/grafana/k6/releases/download/${VERSION}/k6-${VERSION}-linux-amd64.tar.gz
           tar -xvf k6-${VERSION}-linux-amd64.tar.gz k6-${VERSION}-linux-amd64/k6
           chmod +x k6-${VERSION}-linux-amd64/k6
-          mv k6-${VERSION}-linux-amd64/k6 /usr/local/bin/k6
+          sudo mv k6-${VERSION}-linux-amd64/k6 /usr/local/bin/k6
           k6 version
 
       - name: Install Kind
@@ -42,7 +42,7 @@ jobs:
         run: |
           curl -Lo ./kind https://kind.sigs.k8s.io/dl/${VERSION}/kind-linux-amd64
           chmod +x ./kind
-          mv ./kind /usr/local/bin/kind
+          sudo mv ./kind /usr/local/bin/kind
           kind version
 
       - name: Make dev-env
