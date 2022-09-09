@@ -53,18 +53,5 @@ jobs:
           kubectl wait pod --for condition=Ready $podName
           kubectl get all,secrets,ing
 
-      - name: Tune OS
-        run : |
-          sudo sysctl -A 2>/dev/null | egrep -i "local_port_range|tw_reuse|tcp_timestamps"
-          sudo sh -c "ulimit"
-          sudo sysctl -w net.ipv4.ip_local_port_range="1024 65535"
-          sudo sysctl -w net.ipv4.tcp_tw_reuse=1
-          sudo sysctl -w net.ipv4.tcp_timestamps=1
-          sudo sh -c "ulimit "
-
-      - name: Run smoke test
-        run: |
-          vmstat -at 5 | tee vmstat_report
-          ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify
-          pkill vmstat
-          cat vmstat_report
+      - name: Run load test
+        run: ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify
