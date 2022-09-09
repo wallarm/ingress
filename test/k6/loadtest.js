@@ -8,9 +8,9 @@ import { sleep } from 'k6';
 
 export const options = {
   stages: [
-    { duration: '2m', target: 100 }, // simulate ramp-up of traffic from 1 to 100 users over 5 minutes.
-    { duration: '4m', target: 100 }, // stay at 100 users for 10 minutes
-    { duration: '1m', target: 0 }, // ramp-down to 0 users fo 5 minutes
+    { duration: '5m', target: 100 }, // simulate ramp-up of traffic from 1 to 100 users over 5 minutes.
+    { duration: '10m', target: 100 }, // stay at 100 users for 10 minutes
+    { duration: '5m', target: 0 }, // ramp-down to 0 users fo 5 minutes
   ],
   hosts: {
     'test.ingress-nginx-controller.ga:80': '127.0.0.1:80',
