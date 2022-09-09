@@ -50,7 +50,6 @@ jobs:
           VERSION: v1.25.0
         run: |
           wget -q https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl
-          tar -xvf helm-${VERSION}-linux-amd64.tar.gz
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/kubectl
           kubectl version -o yaml
