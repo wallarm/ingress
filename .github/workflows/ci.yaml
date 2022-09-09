@@ -33,7 +33,7 @@ jobs:
 
       - name: Setup Go 1.19.0
         id: go
-        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.2.0
+        uses: actions/setup-go@v3
         with:
           go-version: '1.19.0'
 
@@ -46,6 +46,7 @@ jobs:
       - name: Build images
         env:
           ARCH: amd64
+          DOCKER_IN_DOCKER_ENABLED: true
         run: |
           make build image
           docker images
