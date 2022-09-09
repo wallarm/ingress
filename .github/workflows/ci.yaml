@@ -4,29 +4,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_base:
-    name: Build base
-    runs-on: custom-runner
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          version: latest
-          use: false
-
-      - name: Build
-        run: |
-          eval $(ssh-agent -s)
-          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
-          cd images/nginx && make OUTPUT=--load build
-          docker images
+#  build_base:
+#    name: Build base
+#    runs-on: custom-runner
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#
+#      - name: Setup Docker Buildx
+#        uses: docker/setup-buildx-action@v2
+#        with:
+#          version: latest
+#          use: false
+#
+#      - name: Build
+#        run: |
+#          eval $(ssh-agent -s)
+#          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
+#          cd images/nginx && make OUTPUT=--load build
+#          docker images
 
   build_controller:
     name: Build controller
-    runs-on: ubuntu-latest
+    runs-on: custom-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v3
