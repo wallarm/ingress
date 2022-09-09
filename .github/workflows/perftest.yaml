@@ -52,5 +52,11 @@ jobs:
           kubectl wait pod --for condition=Ready $podName
           kubectl get all,secrets,ing
 
-      - name: Run load test
-        run: ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify
+      - name: Run test
+        run: ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify --out json=results.json
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: k6-report
+          path: results.json
