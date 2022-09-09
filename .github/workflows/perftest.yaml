@@ -42,10 +42,9 @@ jobs:
 
       - name: Deploy workload
         run: |
-          kubectl create deploy k6 --image kennethreitz/httpbin --port 80 && \
-            kubectl expose deploy k6 --port 80 && \
-            kubectl create ing k6 --class nginx \
-            --rule test.ingress-nginx-controller.ga/*=k6:80
+          kubectl create deploy k6 --image kennethreitz/httpbin --port 80 --replicas 3
+          kubectl expose deploy k6 --port 80
+          kubectl create ing k6 --class nginx --rule test.ingress-nginx-controller.ga/*=k6:80
           podName=`kubectl get po | grep -i k6 | awk '{print $1}'`
           if [[ -z ${podName} ]] ; then 
             sleep 5
