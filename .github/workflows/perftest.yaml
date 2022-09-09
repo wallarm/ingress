@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   k6_test_run:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout
