@@ -20,6 +20,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Install K6
+        env:
+          VERSION: v0.40.0
+        run: |
+          wget -q https://github.com/grafana/k6/releases/download/${VERSION}/k6-${VERSION}-linux-amd64.tar.gz
+          tar -xvf k6-${VERSION}-linux-amd64.tar.gz k6-${VERSION}-linux-amd64/k6
+          mv k6-${VERSION}-linux-amd64/k6 .
+          ./k6 version
+
       - name: Make dev-env
         run: |
           mkdir $HOME/.kube
@@ -44,7 +53,4 @@ jobs:
           kubectl get all,secrets,ing
 
       - name: Run load test
-        uses: grafana/k6-action@v0.2.0
-        with:
-          filename: test/k6/loadtest.js
-          flags: --insecure-skip-tls-verify
+        run: ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify

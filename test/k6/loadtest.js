@@ -24,7 +24,7 @@ export const options = {
 };
 
 export default function () {
-    const BASE_URL = 'https://test.ingress-nginx-controller.ga';
+    const BASE_URL = 'https://test.ingress-nginx-controller.ga:443';
     const req1 = {
       method: 'GET',
       url: `${BASE_URL}/ip`,
