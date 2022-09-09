@@ -21,16 +21,13 @@ export const options = {
 };
 
 export default function () {
-  const params = {
-    headers: {'host': 'test.ingress-nginx-controller.ga'},
-  };
   const req1 = {
   	method: 'GET',
   	url: 'http://test.ingress-nginx-controller.ga/ip',
   };
   const req2 = {
   	method: 'GET',
-  	url: 'http://test.ingress-nginx-controller.ga/image/svg',
+  	url: 'http://test.ingress-nginx-controller.ga/get',
   };
   const req3 = {
   	params: {
@@ -44,6 +41,6 @@ export default function () {
   	  hello: 'world!',
   	},
   };
-  const res = http.batch([req1, req2, req3], params);
+  const res = http.batch([req1, req2, req3]);
   sleep(1);
 }
