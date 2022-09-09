@@ -69,6 +69,8 @@ jobs:
           kind version
 
       - name: Make dev-env
+        env:
+          DOCKER_OPTS: --user="1000:1000"
         run: |
           mkdir $HOME/.kube
           make dev-env
