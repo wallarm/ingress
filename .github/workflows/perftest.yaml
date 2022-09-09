@@ -36,6 +36,25 @@ jobs:
           sudo mv k6-${VERSION}-linux-amd64/k6 /usr/local/bin/k6
           k6 version
 
+      - name: Install Helm
+        env:
+          VERSION: v3.9.4
+        run: |  
+          wget -q https://get.helm.sh/helm-${VERSION}-linux-amd64.tar.gz
+          tar -xvf helm-${VERSION}-linux-amd64.tar.gz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          helm version -o yaml
+
+      - name: Install kubectl
+        env:
+          VERSION: v1.25.0
+        run: |
+          wget -q https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl
+          tar -xvf helm-${VERSION}-linux-amd64.tar.gz
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --short
+
       - name: Install Kind
         env:
           VERSION: v0.15.0
