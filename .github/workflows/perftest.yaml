@@ -52,7 +52,7 @@ jobs:
           wget -q https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/kubectl
-          kubectl version -o yaml
+          kubectl version -o yaml || true
 
       - name: Install Kind
         env:
