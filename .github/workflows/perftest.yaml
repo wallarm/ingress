@@ -20,7 +20,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install K6
+      - name: Install Go
+        id: go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19.0'
+
+      - name: Install k6
         env:
           VERSION: v0.40.0
         run: |
