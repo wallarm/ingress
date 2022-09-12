@@ -87,6 +87,5 @@ jobs:
       - name: Load image
         run: kind load image-archive docker.tar
 
-      - name: Install Helm chart
 
 
