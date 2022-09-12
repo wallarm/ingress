@@ -40,8 +40,8 @@ jobs:
       - name: Build images
         env:
           ARCH: amd64
-          DOCKER_IN_DOCKER_ENABLED: false
-          USER: runner
+#          DOCKER_IN_DOCKER_ENABLED: false
+#          USER: runner
         run: |
           set -x
           make build image
