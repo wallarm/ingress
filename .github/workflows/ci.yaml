@@ -51,5 +51,38 @@ jobs:
       - name: Cache image
         uses: actions/upload-artifact@v3
         with:
+          retention-days: 1
           name: docker.tar
           path: docker.tar
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load cache
+        uses: actions/download-artifact@v3
+        with:
+          name: docker.tar
+
+      - name: Create cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          verbosity: "0"
+          wait: "240s"
+          version: v0.15.0
+          image: kindest/node:v1.24.4
+          config: test/e2e/kind.yaml
+
+      - name: Wait cluster
+        run: |
+          kubectl cluster-info
+          kubectl wait --for=condition=Ready pods --all --timeout=180s -n kube-system
+          echo "current-context:" $(kubectl config current-context)
+          echo "environment-kubeconfig:" ${KUBECONFIG}
+
+      - name: Load image
+        run: kind load docker.tar
+
+
