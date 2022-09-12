@@ -87,7 +87,7 @@ jobs:
 
       - name: Load image
         run: |
-          KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | awk '{printf (NR>1?",":"") $1}')
+          KIND_WORKERS=$(kind get nodes --name="kind" | awk '{printf (NR>1?",":"") $1}')
           kind load image-archive docker.tar --nodes=${KIND_WORKERS}
 
 
