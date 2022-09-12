@@ -109,7 +109,7 @@ jobs:
 
       - name: Install Helm chart
         run: |
-          helm install wallarm-ingress charts \
+          helm install wallarm-ingress ./charts/ingress-nginx \
             --set controller.image.tag=1.0.0-dev \
             --set controller.wallarm.token=test \
             --timeout 5m0s \
