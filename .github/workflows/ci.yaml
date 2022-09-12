@@ -83,7 +83,8 @@ jobs:
                 - containerPort: 443
                   hostPort: 443
                   protocol: TCP
-            EOF
+          EOF
+          cat kind.yaml
 
       - name: Create cluster
         uses: helm/kind-action@v1.3.0
