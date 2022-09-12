@@ -76,6 +76,7 @@ jobs:
           version: v0.15.0
           node_image: kindest/node:v1.24.4
           config: test/e2e/kind.yaml
+          cluster_name: kind
 
       - name: Wait cluster
         run: |
