@@ -108,5 +108,15 @@ jobs:
           echo $KIND_WORKERS
           kind load image-archive docker.tar --nodes=${KIND_WORKERS}
 
+      - name: Install Helm chart
+        run: |
+          helm install wallarm-ingress charts \
+            --set controller.image.tag=1.0.0-dev \
+            --set controller.wallarm.token=test \
+            --timeout 5m0s \
+            --wait
+            
+          
+          
 
 
