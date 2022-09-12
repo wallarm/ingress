@@ -2,14 +2,17 @@ name: CI
 
 on:
   workflow_dispatch:
-
+env:
+  BASE_IMAGE_NAME: wallarm/ingress-nginx
+  CONTROLLER_IMAGE_NAME: wallarm/ingress-controller
+  TAG: {{ env.GITHUB_SHA }}
 jobs:
 #  build_base:
 #    name: Build base
 #    runs-on: custom-runner
 #    steps:
 #      - name: Checkout
-#        uses: actions/checkout@v3
+#        uses: actions/checkout@v31
 #
 #      - name: Setup Docker Buildx
 #        uses: docker/setup-buildx-action@v2
@@ -43,6 +46,7 @@ jobs:
 #          DOCKER_IN_DOCKER_ENABLED: false
 #          USER: runner
         run: |
+          env | grep TAG
           set -x
           make build image
           docker images
