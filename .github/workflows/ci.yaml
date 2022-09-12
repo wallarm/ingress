@@ -43,6 +43,7 @@ jobs:
           REGISTRY: wallarm
           TAG: 1.0.0-dev
         run: |
+          export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
           make build image
           docker images
           docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev
@@ -50,5 +51,5 @@ jobs:
       - name: Cache image
         uses: actions/upload-artifact@v3
         with:
-          name: docker.tar.gz
-          path: docker.tar.gz
+          name: docker.tar
+          path: docker.tar
