@@ -46,7 +46,8 @@ jobs:
       - name: Build images
         env:
           ARCH: amd64
-          DOCKER_IN_DOCKER_ENABLED: true
+          DOCKER_IN_DOCKER_ENABLED: false
+          USER: runner
         run: |
           make build image
           docker images
