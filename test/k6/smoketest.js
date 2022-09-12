@@ -14,6 +14,7 @@ export const options = {
   // below 3 lines documented at https://k6.io
   duration: '1m',
   vus: 50,
+//  iterations: 50,
   thresholds: {
     http_req_failed: ['rate<0.01'], // http errors should be less than 1%
     http_req_duration: ['p(95)<500'], // 95 percent of response times must be below 500ms
@@ -57,8 +58,6 @@ export default function () {
       }
     }
   }
-  for(let i=0; i<20; i++){
-    const res = http.batch([req1, req2, req3, req4], params);
-    sleep(1);
-  }
+  const res = http.batch([req1, req2, req3, req4], params);
+  sleep(1);
 }

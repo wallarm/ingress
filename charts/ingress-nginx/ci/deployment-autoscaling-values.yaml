@@ -1,6 +1,6 @@
 controller:
   image:
-    repository: ingress-controller/controller
+    repository: wallarm/ingress-controller
     tag: 1.0.0-dev
     digest: null
   autoscaling:

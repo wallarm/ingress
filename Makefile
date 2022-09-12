@@ -73,7 +73,7 @@ help:  ## Display this help
 .PHONY: image
 image: clean-image ## Build image for a particular arch.
 	echo "Building docker image ($(ARCH))..."
-	docker build \
+	docker buildx build \
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
 		$(MAC_DOCKER_FLAGS) \
