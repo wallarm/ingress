@@ -31,12 +31,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-#      - name: Setup Go 1.19.0
-#        id: go
-#        uses: actions/setup-go@v3
-#        with:
-#          go-version: '1.19.0'
-
       - name: Build image
         env:
           ARCH: amd64
@@ -68,6 +62,29 @@ jobs:
         with:
           name: docker.tar
 
+      - name: Prepare cluster config
+        run: |
+          cat << EOF > kind.yaml
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+                - |
+                  kind: InitConfiguration
+                  nodeRegistration:
+                    kubeletExtraArgs:
+                      node-labels: "ingress-ready=true"
+                      authorization-mode: "AlwaysAllow"
+              extraPortMappings:
+                - containerPort: 80
+                  hostPort: 80
+                  protocol: TCP
+                - containerPort: 443
+                  hostPort: 443
+                  protocol: TCP
+            EOF
+
       - name: Create cluster
         uses: helm/kind-action@v1.3.0
         with:
@@ -75,7 +92,7 @@ jobs:
           wait: "240s"
           version: v0.15.0
           node_image: kindest/node:v1.24.4
-          config: test/e2e/kind.yaml
+          config: kind.yaml
           cluster_name: kind
 
       - name: Wait cluster
@@ -88,6 +105,7 @@ jobs:
       - name: Load image
         run: |
           KIND_WORKERS=$(kind get nodes --name="kind" | awk '{printf (NR>1?",":"") $1}')
+          echo $KIND_WORKERS
           kind load image-archive docker.tar --nodes=${KIND_WORKERS}
 
 
