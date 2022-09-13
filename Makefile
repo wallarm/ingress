@@ -94,7 +94,6 @@ image-chroot: clean-chroot-image ## Build image for a particular arch.
 	echo "Building docker image ($(ARCH))..."
 	docker build \
 		--no-cache \
-		$(MAC_DOCKER_FLAGS) \
 		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
@@ -111,7 +110,7 @@ clean-image: ## Removes local image
 
 .PHONY: clean-chroot-image
 clean-chroot-image: ## Removes local image
-	echo "removing old image $(REGISTRY)/controller-chroot:$(TAG)"
+	echo "removing old image $(REGISTRY)/ingress-controller-chroot:$(TAG)"
 	@docker rmi -f $(REGISTRY)/ingress-controller-chroot:$(TAG) || true
 
 

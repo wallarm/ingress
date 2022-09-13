@@ -32,7 +32,7 @@ function on_exit {
     test $error_code == 0 && return;
 
     echo "Obtaining ingress controller pod logs..."
-    kubectl logs -l app.kubernetes.io/name=ingress-nginx -n $NAMESPACE
+    kubectl logs -l app.kubernetes.io/name=wallarm-ingress -n $NAMESPACE
 }
 trap on_exit EXIT
 
@@ -58,7 +58,7 @@ else
 fullnameOverride: nginx-ingress
 controller:
   image:
-    repository: ingress-controller/controller
+    repository: wallarm/ingress-controller
     chroot: true
     tag: 1.0.0-dev
     digest:

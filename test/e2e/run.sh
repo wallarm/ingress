@@ -49,7 +49,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
 export TAG=1.0.0-dev
 export ARCH=${ARCH:-amd64}
-export REGISTRY=ingress-controller
+export REGISTRY=wallarm
 
 NGINX_BASE_IMAGE=$(cat $DIR/../../NGINX_BASE)
 
@@ -98,10 +98,10 @@ echo "[dev-env] copying docker images to cluster..."
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} nginx-ingress-controller:e2e
 
 if [ "${IS_CHROOT:-false}" = "true" ]; then
-   docker tag ${REGISTRY}/controller-chroot:${TAG} ${REGISTRY}/controller:${TAG}
+   docker tag ${REGISTRY}/controller-chroot:${TAG} ${REGISTRY}/ingress-controller:${TAG}
 fi
 
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/controller:${TAG}
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/ingress-controller:${TAG}
 
 echo "[dev-env] running e2e tests..."
 make -C ${DIR}/../../ e2e-test
