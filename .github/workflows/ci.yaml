@@ -65,7 +65,7 @@ jobs:
 
       - name: Load images from cache
         run: |
-          docker load docker.tar
+          docker load -i docker.tar
           docker images
 
       - name: Install Helm
