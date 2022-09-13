@@ -76,7 +76,7 @@ if [ $VER -lt 24 ]; then
 fi
 
 
-echo -e "Starting the e2e test pod"
+echo -e "${BGREEN} Starting the e2e test pod...${NC}"
 
 kubectl run --rm \
   --attach \
