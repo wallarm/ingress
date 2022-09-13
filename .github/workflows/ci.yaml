@@ -24,7 +24,7 @@ jobs:
 #          cd images/nginx && make OUTPUT=--load build
 #          docker images
 
-  build_controller:
+  build-controller:
     name: Build controller
     runs-on: ubuntu-latest
     steps:
@@ -38,9 +38,9 @@ jobs:
           TAG: 1.0.0-dev
         run: |
           export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
-          make build image
-          docker images
-          docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev
+          make clean-image build image
+          make -C test/e2e-image image
+          docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
 
       - name: Cache image
         uses: actions/upload-artifact@v3
@@ -48,11 +48,12 @@ jobs:
           retention-days: 1
           name: docker.tar
           path: docker.tar
+
   test:
-    name: Test
-    runs-on: ubuntu-latest
+    name: E2E test
+    runs-on: custom-runner
     needs:
-      - build_controller
+      - build-controller
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -62,29 +63,15 @@ jobs:
         with:
           name: docker.tar
 
-      - name: Prepare cluster config
+      - name: Load images from cache
         run: |
-          cat << EOF > kind.yaml
-          kind: Cluster
-          apiVersion: kind.x-k8s.io/v1alpha4
-          nodes:
-            - role: control-plane
-              kubeadmConfigPatches:
-                - |
-                  kind: InitConfiguration
-                  nodeRegistration:
-                    kubeletExtraArgs:
-                      node-labels: "ingress-ready=true"
-                      authorization-mode: "AlwaysAllow"
-              extraPortMappings:
-                - containerPort: 80
-                  hostPort: 80
-                  protocol: TCP
-                - containerPort: 443
-                  hostPort: 443
-                  protocol: TCP
-          EOF
-          cat kind.yaml
+          docker load docker.tar
+          docker images
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.8.0'
 
       - name: Create cluster
         uses: helm/kind-action@v1.3.0
@@ -93,7 +80,7 @@ jobs:
           wait: "240s"
           version: v0.15.0
           node_image: kindest/node:v1.24.4
-          config: kind.yaml
+          config: test/e2e/kind.yaml
           cluster_name: kind
 
       - name: Wait cluster
@@ -103,24 +90,25 @@ jobs:
           echo "current-context:" $(kubectl config current-context)
           echo "environment-kubeconfig:" ${KUBECONFIG}
 
-      - name: Load image
+      - name: Run e2e tests
+        env:
+          KIND_CLUSTER_NAME: kind
+          SKIP_CLUSTER_CREATION: true
+          SKIP_IMAGE_CREATION: true
         run: |
-          kind load image-archive docker.tar
-
-      - name: Install Helm chart
-        run: |
-          set -x
-          helm install wallarm-ingress ./charts/ingress-nginx \
-            --set controller.image.tag=1.0.0-dev \
-            --set controller.wallarm.fallback="off" \
-            --set controller.wallarm.token=${{ secrets.WALLARM_NODE_TOKEN }} \
-            --set controller.hostPort.enabled=true \
-            --set controller.service.type=NodePort \
-            --timeout 5m0s \
-            --debug \
-            --wait
-            
-          
-          
+          kind get kubeconfig > $HOME/.kube/kind-config-kind
+          make E2E_NODES=20 kind-e2e-test
 
 
+#      - name: Install Helm chart
+#        run: |
+#          set -x
+#          helm install wallarm-ingress ./charts/ingress-nginx \
+#            --set controller.image.tag=1.0.0-dev \
+#            --set controller.wallarm.fallback="off" \
+#            --set controller.wallarm.token=${{ secrets.WALLARM_NODE_TOKEN }} \
+#            --set controller.hostPort.enabled=true \
+#            --set controller.service.type=NodePort \
+#            --timeout 5m0s \
+#            --debug \
+#            --wait
