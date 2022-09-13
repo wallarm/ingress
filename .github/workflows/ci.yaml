@@ -95,10 +95,13 @@ jobs:
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
+          KUBETEST_IN_DOCKER: true
           ARCH: amd64
         run: |
+          kubectl cluster-info
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          export KUBECONFIG="$HOME/.kube/kind-config-kind"
+          kubectl config use-context kind-kind
+          kubectl cluster-info
           make E2E_NODES=20 kind-e2e-test
 
 
