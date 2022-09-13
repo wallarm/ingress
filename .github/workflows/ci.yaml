@@ -93,7 +93,7 @@ jobs:
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
-          KUBETEST_IN_DOCKER: false
+          KUBETEST_IN_DOCKER: true
           ARCH: amd64
         run: |
           kubectl get all
