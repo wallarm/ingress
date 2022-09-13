@@ -98,6 +98,7 @@ jobs:
           ARCH: amd64
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
+          export KUBECONFIG="$HOME/.kube/kind-config-kind"
           make E2E_NODES=20 kind-e2e-test
 
 
