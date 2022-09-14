@@ -85,6 +85,8 @@ kubectl run --rm \
   --env="FOCUS=${FOCUS}" \
   --env="E2E_CHECK_LEAKS=${E2E_CHECK_LEAKS}" \
   --env="NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE}" \
+  --env="WALLARM_ENABLED=${WALLARM_ENABLED}" \
+  --env="WALLARM_TOKEN=${WALLARM_TOKEN}" \
   --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e"}}' \
   e2e --image=nginx-ingress-controller:e2e
 

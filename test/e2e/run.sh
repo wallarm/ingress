@@ -61,6 +61,11 @@ export DOCKER_CLI_EXPERIMENTAL=enabled
 
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
+export WALLARM_ENABLED="${WALLARM_ENABLED:-false}"
+
+export WALLARM_TOKEN="${WALLARM_TOKEN:-}"
+
+
 if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] creating Kubernetes cluster with kind"
 
@@ -102,6 +107,21 @@ if [ "${IS_CHROOT:-false}" = "true" ]; then
 fi
 
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/ingress-controller:${TAG}
+
+if [ "${WALLARM_ENABLED}" = "true" ]; then
+  helper_tag=$(cat "${DIR}"/../../TAG)
+  helper_images=(
+    wallarm/ingress-ruby
+    wallarm/ingress-tarantool
+    wallarm/ingress-python
+    wallarm/ingress-collectd
+  )
+  for image in "${helper_images[@]}"; do
+    docker pull "${image}":"${helper_tag}"
+    docker tag "${image}":"${helper_tag}" "${image}":"${TAG}"
+    kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" "${image}":"${TAG}"
+  done
+fi
 
 echo "[dev-env] running e2e tests..."
 make -C ${DIR}/../../ e2e-test

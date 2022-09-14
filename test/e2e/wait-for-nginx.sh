@@ -57,6 +57,10 @@ else
 # TODO: remove the need to use fullnameOverride
 fullnameOverride: nginx-ingress
 controller:
+  wallarm:
+    enabled: ${WALLARM_ENABLED}
+    token: ${WALLARM_TOKEN}
+    fallback: "off"
   image:
     repository: wallarm/ingress-controller
     chroot: true
