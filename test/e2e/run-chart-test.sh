@@ -16,15 +16,9 @@
 
 KIND_LOG_LEVEL="1"
 
-if [ -n "${DEBUG}" ]; then
+if ! [ -z $DEBUG ]; then
   set -x
   KIND_LOG_LEVEL="6"
-fi
-
-if [ -z "${HELM_EXTRA_ARGS}" ]; then
-  HELM_EXTRA_ARGS="--timeout 60s"
-else
-  HELM_EXTRA_ARGS="--timeout 60s ${HELM_EXTRA_ARGS}"
 fi
 
 set -o errexit
@@ -106,4 +100,4 @@ docker run --rm --interactive --network host \
     --workdir /workdir \
     aledbf/chart-testing:v3.3.1-next ct install \
         --charts charts/ingress-nginx \
-        --helm-extra-args "${HELM_EXTRA_ARGS}"
+        --helm-extra-args "--timeout 60s"
