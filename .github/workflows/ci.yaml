@@ -102,7 +102,7 @@ jobs:
           kubectl config use-context kind-kind
           kubectl cluster-info
           kubectl cluster-info --context kind-kind
-          make E2E_NODES=25 kind-e2e-test
+          make E2E_NODES=20 kind-e2e-test
 
 
 #      - name: Install Helm chart
