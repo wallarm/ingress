@@ -63,7 +63,7 @@ controller:
     fallback: "off"
   image:
     repository: wallarm/ingress-controller
-    chroot: true
+    chroot: ${IS_CHROOT}
     tag: 1.0.0-dev
     digest:
     digestChroot:

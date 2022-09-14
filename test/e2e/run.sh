@@ -65,6 +65,8 @@ export WALLARM_ENABLED="${WALLARM_ENABLED:-false}"
 
 export WALLARM_TOKEN="${WALLARM_TOKEN:-}"
 
+export IS_CHROOT="${IS_CHROOT:-false}"
+
 
 if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] creating Kubernetes cluster with kind"
@@ -102,7 +104,7 @@ echo "[dev-env] copying docker images to cluster..."
 
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} nginx-ingress-controller:e2e
 
-if [ "${IS_CHROOT:-false}" = "true" ]; then
+if [ "${IS_CHROOT}" = "true" ]; then
    docker tag ${REGISTRY}/controller-chroot:${TAG} ${REGISTRY}/ingress-controller:${TAG}
 fi
 
