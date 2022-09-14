@@ -485,7 +485,7 @@ func (f *Framework) newHTTPTestClient(config *tls.Config, setIngressURL bool) *h
 // WaitForNginxListening waits until NGINX starts accepting connections on a port
 func (f *Framework) WaitForNginxListening(port int) {
 	err := waitForPodsReady(f.KubeClientSet, DefaultTimeout, 1, f.Namespace, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/name=wallarm-ingress",
+		LabelSelector: "app.kubernetes.io/name=wallarm-ingress,app.kubernetes.io/component=controller",
 	})
 	assert.Nil(ginkgo.GinkgoT(), err, "waiting for ingress pods to be ready")
 
