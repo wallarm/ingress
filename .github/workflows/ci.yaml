@@ -63,7 +63,7 @@ jobs:
         with:
           name: docker.tar
 
-      - name: Load images from cache
+      - name: Load images
         run: docker load -i docker.tar
 
       - name: Install Helm
@@ -85,8 +85,6 @@ jobs:
         run: |
           kubectl cluster-info
           kubectl wait --for=condition=Ready pods --all --timeout=180s -n kube-system
-          echo "current-context:" $(kubectl config current-context)
-          echo "environment-kubeconfig:" ${KUBECONFIG}
 
       - name: Run e2e tests
         env:
@@ -96,7 +94,7 @@ jobs:
           ARCH: amd64
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=15 kind-e2e-test
+          make E2E_NODES=10 kind-e2e-test
 
 
   e2e-test-wallarm-on:
@@ -113,7 +111,7 @@ jobs:
         with:
           name: docker.tar
 
-      - name: Load images from cache
+      - name: Load images
         run: docker load -i docker.tar
 
       - name: Install Helm
@@ -146,4 +144,4 @@ jobs:
           WALLARM_TOKEN: ${{ secrets.WALLARM_NODE_TOKEN }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=5 kind-e2e-test
+          make E2E_NODES=10 kind-e2e-test
