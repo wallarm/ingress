@@ -4,6 +4,70 @@ on:
   workflow_dispatch:
 
 jobs:
+  smoke:
+    # depends on build-controller
+    # if changes in GO code of controller
+    name: Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v31
+
+      - name: Install helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.8.0'
+
+      - name: Prepare cluster config
+        run: |
+          cat << EOF > kind.yaml
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+                - |
+                  kind: InitConfiguration
+                  nodeRegistration:
+                    kubeletExtraArgs:
+                      node-labels: "ingress-ready=true"
+                      authorization-mode: "AlwaysAllow"
+              extraPortMappings:
+                - containerPort: 80
+                  hostPort: 80
+                  protocol: TCP
+                - containerPort: 443
+                  hostPort: 443
+                  protocol: TCP
+          EOF
+
+
+      - name: Create cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          verbosity: "0"
+          wait: "240s"
+          version: v0.15.0
+          node_image: kindest/node:v1.24.4
+          config: kind.yaml
+
+      - name: Wait for cluster readiness
+        run: kubectl wait --for=condition=Ready pods --all --timeout=180s -n kube-system
+
+      ##TOD conditionally load image and compute helm arguments
+
+      - name: Deploy chart
+        run: |
+          helm install wallarm-ingress ./charts/ingress-nginx \
+            --set controller.image.tag=1.0.0-dev \
+            --set controller.wallarm.token=test \
+            --set controller.hostPort.enabled=true \
+            --set controller.service.type=NodePort \
+            --timeout 5m0s \
+            --debug \
+            --wait        
+        
+
 #  build_base:
 #    name: Build base
 #    runs-on: custom-runner
@@ -24,123 +88,124 @@ jobs:
 #          cd images/nginx && make OUTPUT=--load build
 #          docker images
 
-  build-controller:
-    name: Build controller
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Build image
-        env:
-          ARCH: amd64
-          REGISTRY: wallarm
-          TAG: 1.0.0-dev
-        run: |
-          export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
-          make clean-image build image
-          make -C test/e2e-image image
-          docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
-
-      - name: Cache image
-        uses: actions/upload-artifact@v3
-        with:
-          retention-days: 1
-          name: docker.tar
-          path: docker.tar
-
-  e2e:
-    name: E2E - Wallarm disabled
-    runs-on: ubuntu-latest
-    needs:
-      - build-controller
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Load cache
-        uses: actions/download-artifact@v3
-        with:
-          name: docker.tar
-
-      - name: Load images
-        run: docker load -i docker.tar
-
-      - name: Install Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'v3.8.0'
-
-      - name: Create cluster
-        uses: helm/kind-action@v1.3.0
-        with:
-          verbosity: "0"
-          wait: "240s"
-          version: v0.15.0
-          node_image: kindest/node:v1.24.4
-          config: test/e2e/kind.yaml
-          cluster_name: kind
-
-      - name: Wait cluster
-        run: |
-          kubectl cluster-info
-          kubectl wait --for=condition=Ready pods --all --timeout=180s -n kube-system
-
-      - name: Run e2e tests
-        env:
-          KIND_CLUSTER_NAME: kind
-          SKIP_CLUSTER_CREATION: true
-          SKIP_IMAGE_CREATION: true
-          ARCH: amd64
-        run: |
-          kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=10 kind-e2e-test
-
-  e2e-wallarm-enabled:
-    name: E2E - Wallarm enabled
-    runs-on: self-hosted
-    needs:
-      - build-controller
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Load cache
-        uses: actions/download-artifact@v3
-        with:
-          name: docker.tar
-
-      - name: Load images
-        run: docker load -i docker.tar
-
-      - name: Install Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'v3.8.0'
-
-      - name: Create cluster
-        uses: helm/kind-action@v1.3.0
-        with:
-          verbosity: "0"
-          wait: "240s"
-          version: v0.15.0
-          node_image: kindest/node:v1.24.4
-          config: test/e2e/kind.yaml
-          cluster_name: kind
-
-      - name: Wait cluster
-        run: |
-          kubectl cluster-info
-          kubectl wait --for=condition=Ready pods --all --timeout=180s -n kube-system
-
-      - name: Run e2e tests
-        env:
-          KIND_CLUSTER_NAME: kind
-          SKIP_CLUSTER_CREATION: true
-          SKIP_IMAGE_CREATION: true
-          ARCH: amd64
-          WALLARM_ENABLED: true
-          WALLARM_TOKEN: ${{ secrets.WALLARM_NODE_TOKEN }}
-        run: |
-          kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=10 kind-e2e-test
+#  build-controller:
+#    name: Build controller
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#
+#      - name: Build image
+#        env:
+#          ARCH: amd64
+#          REGISTRY: wallarm
+#          TAG: 1.0.0-dev
+#        run: |
+#          # If base was not changed
+#          export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
+#          # TODO handle case when base image was changed
+#          # export BASE_IMAGE="wallarm/ingress-nginx:1.0.0-dev"
+#          make clean-image build image
+#          make -C test/e2e-image image
+#          docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
+#
+#      - name: Cache image
+#        uses: actions/upload-artifact@v3
+#        with:
+#          retention-days: 1
+#          name: docker.tar
+#          path: docker.tar
+#
+#  e2e:
+#    name: E2E - Wallarm disabled
+#    runs-on: ubuntu-latest
+#    needs:
+#      - build-controller
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#
+#      - name: Load cache
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: docker.tar
+#
+#      - name: Load images
+#        run: docker load -i docker.tar
+#
+#      - name: Install Helm
+#        uses: azure/setup-helm@v3
+#        with:
+#          version: 'v3.8.0'
+#
+#      - name: Create cluster
+#        uses: helm/kind-action@v1.3.0
+#        with:
+#          verbosity: "0"
+#          wait: "240s"
+#          version: v0.15.0
+#          node_image: kindest/node:v1.24.4
+#          config: test/e2e/kind.yaml
+#          cluster_name: kind
+#
+#      - name: Wait for cluster readiness
+#        run: kubectl wait --for=condition=Ready pods --all --timeout=180s -n kube-system
+#
+#      - name: Run e2e tests
+#        env:
+#          KIND_CLUSTER_NAME: kind
+#          SKIP_CLUSTER_CREATION: true
+#          SKIP_IMAGE_CREATION: true
+#          ARCH: amd64
+#        run: |
+#          kind get kubeconfig > $HOME/.kube/kind-config-kind
+#          make E2E_NODES=10 kind-e2e-test
+#
+#
+#
+#  e2e-wallarm-enabled:
+#    name: E2E - Wallarm enabled
+#    runs-on: self-hosted
+#    needs:
+#      - build-controller
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#
+#      - name: Load cache
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: docker.tar
+#
+#      - name: Load images
+#        run: docker load -i docker.tar
+#
+#      - name: Install Helm
+#        uses: azure/setup-helm@v3
+#        with:
+#          version: 'v3.8.0'
+#
+#      - name: Create cluster
+#        uses: helm/kind-action@v1.3.0
+#        with:
+#          verbosity: "0"
+#          wait: "240s"
+#          version: v0.15.0
+#          node_image: kindest/node:v1.24.4
+#          config: test/e2e/kind.yaml
+#          cluster_name: kind
+#
+#      - name: Wait for cluster readiness
+#        run: kubectl wait --for=condition=Ready pods --all --timeout=180s -n kube-system
+#
+#      - name: Run e2e tests
+#        env:
+#          KIND_CLUSTER_NAME: kind
+#          SKIP_CLUSTER_CREATION: true
+#          SKIP_IMAGE_CREATION: true
+#          ARCH: amd64
+#          WALLARM_ENABLED: true
+#          WALLARM_TOKEN: ${{ secrets.WALLARM_NODE_TOKEN }}
+#        run: |
+#          kind get kubeconfig > $HOME/.kube/kind-config-kind
+#          make E2E_NODES=10 kind-e2e-test
