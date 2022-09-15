@@ -144,4 +144,4 @@ jobs:
           WALLARM_TOKEN: ${{ secrets.WALLARM_NODE_TOKEN }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=15 kind-e2e-test
+          make E2E_NODES=10 kind-e2e-test
