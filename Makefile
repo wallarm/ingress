@@ -15,6 +15,8 @@
 # Add the following 'help' target to your Makefile
 # And add help text after each target name starting with '\#\#'
 
+-include .env
+
 .DEFAULT_GOAL:=help
 
 .EXPORT_ALL_VARIABLES:
@@ -63,7 +65,7 @@ endif
 
 REGISTRY ?= wallarm
 
-BASE_IMAGE ?= $(REGISTRY)/ingress-nginx:$(TAG)
+BASE_IMAGE ?= $(shell cat NGINX_BASE)
 
 GOARCH=$(ARCH)
 
@@ -158,6 +160,14 @@ lua-test: ## Run lua unit tests.
 		BUSTED_ARGS=$(BUSTED_ARGS) \
 		MAC_OS=$(MAC_OS) \
 		test/test-lua.sh
+
+.PHONY: smoke-test
+smoke-test:  ## Run smoke tests (expects access to a working Kubernetes cluster).
+	@test/smoke/run-smoke-suite.sh
+
+.PHONY: kind-smoke-test
+kind-smoke-test:  ## Run smoke tests using kind.
+	@test/smoke/run.sh
 
 .PHONY: e2e-test
 e2e-test:  ## Run e2e tests (expects access to a working Kubernetes cluster).
