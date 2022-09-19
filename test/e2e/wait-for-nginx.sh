@@ -53,7 +53,7 @@ if [[ ! -z "$NAMESPACE_OVERLAY" && -d "$DIR/namespace-overlays/$NAMESPACE_OVERLA
         --namespace=$NAMESPACE \
         --values "$DIR/namespace-overlays/$NAMESPACE_OVERLAY/values.yaml" \
         --set controller.wallarm.enabled="${WALLARM_ENABLED}" \
-        --set controller.wallarm.token="${WALLARM_TOKEN}" \
+        --set controller.wallarm.token="${WALLARM_API_TOKEN}" \
         --set controller.wallarm.fallback="off"
 else
     cat << EOF | helm install nginx-ingress ${DIR}/charts/ingress-nginx --namespace=$NAMESPACE --values -
@@ -62,7 +62,7 @@ fullnameOverride: nginx-ingress
 controller:
   wallarm:
     enabled: ${WALLARM_ENABLED}
-    token: ${WALLARM_TOKEN}
+    token: ${WALLARM_API_TOKEN}
     fallback: "off"
   image:
     repository: wallarm/ingress-controller

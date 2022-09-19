@@ -63,7 +63,7 @@ export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
 export WALLARM_ENABLED="${WALLARM_ENABLED:-false}"
 
-export WALLARM_TOKEN="${WALLARM_TOKEN:-}"
+export WALLARM_API_TOKEN="${WALLARM_API_TOKEN:-}"
 
 export IS_CHROOT="${IS_CHROOT:-false}"
 
