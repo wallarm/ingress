@@ -42,10 +42,10 @@ if [ "$missing" = true ]; then
   exit 1
 fi
 
-echo "Retrieving Wallarm Node UUID from controller ..."
-CONTROLLER_POD=$(kubectl get pod -n wallarm-ingress -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
-NODE_UUID=$(kubectl logs -n wallarm-ingress "${CONTROLLER_POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
-echo "UUID: ${NODE_UUID}"
+echo "Retrieving Wallarm Node UUID ..."
+POD=$(kubectl get pod -n wallarm-ingress -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
+NODE_UUID=$(kubectl logs -n wallarm-ingress "${POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
+echo "Node UUID: ${NODE_UUID}"
 
 trap 'kubectl delete pod pytest --ignore-not-found=true' ERR EXIT
 

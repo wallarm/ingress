@@ -38,7 +38,7 @@ cleanup() {
   if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
     kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
   fi
-  if [[ "${CI:-false}" == "true" ]]; then
+  if [[ "${CI:-}" == "true" ]]; then
     kind delete cluster \
       --verbosity=${KIND_LOG_LEVEL} \
       --name ${KIND_CLUSTER_NAME}
@@ -134,6 +134,9 @@ controller:
     digest:
   config:
     worker-processes: "1"
+    enable-real-ip: true
+    forwarded-for-header: X-Real-IP
+    proxy-real-ip-cidr: 0.0.0.0/0
   readinessProbe:
     initialDelaySeconds: 3
     periodSeconds: 1
@@ -154,21 +157,22 @@ EOF
 kubectl wait -n wallarm-ingress --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] deploying test workload ..."
-KUBECTL_ARGS="--dry-run=client --save-config -o yaml"
 
 kubectl create deployment httpbin \
         --image kennethreitz/httpbin \
         --port 80 \
         --replicas 1 \
-        ${KUBECTL_ARGS} | kubectl apply -f -
+        --dry-run=client \
+        -o yaml \
+        -- gunicorn --access-logfile - -b 0.0.0.0:80 httpbin:app | kubectl apply -f -
 kubectl expose deployment httpbin \
         --port 80 \
-        ${KUBECTL_ARGS} | kubectl apply -f -
+        --dry-run=client -o yaml | kubectl apply -f -
 kubectl create ingress httpbin \
         --class nginx \
         --rule "/*=httpbin:80" \
         --annotation="nginx.ingress.kubernetes.io/wallarm-mode=block" \
-        ${KUBECTL_ARGS} | kubectl apply -f -
+        --dry-run=client -o yaml | kubectl apply -f -
 
 echo "[test-env] running smoke tests suite ..."
 make -C ${DIR}/../../ smoke-test
