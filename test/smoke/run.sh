@@ -118,9 +118,7 @@ docker pull --quiet "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
 kind load docker-image --name="${KIND_CLUSTER_NAME}" "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
 
 echo "[test-env] installing Helm chart ..."
-kubectl create namespace wallarm-ingress &> /dev/null || true
-
-cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-nginx" --namespace=wallarm-ingress --wait --values -
+cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-nginx" --wait --values -
 fullnameOverride: wallarm-ingress
 controller:
   wallarm:
@@ -154,10 +152,9 @@ controller:
       http: 30000
 EOF
 
-kubectl wait -n wallarm-ingress --for=condition=Ready pods --all --timeout=60s
+kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] deploying test workload ..."
-
 kubectl create deployment httpbin \
         --image kennethreitz/httpbin \
         --port 80 \
