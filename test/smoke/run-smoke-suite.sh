@@ -1,6 +1,21 @@
 #!/bin/bash
 
+if [[ -n "${DEBUG}" ]]; then
+  set -x
+fi
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-ingress-smoke-test}"
+
+PYTEST_ARGS="${PYTEST_ARGS:-}"
 PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
+
+if [[ -n "${PYTEST_ARGS}" ]]; then
+  PYTEST_ARGS=$(echo "${PYTEST_ARGS}" | xargs)
+fi
 
 declare -a mandatory
 mandatory=(
@@ -27,17 +42,14 @@ if [ "$missing" = true ]; then
   exit 1
 fi
 
-export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-ingress-smoke-test}"
-
 echo "Retrieving Wallarm Node UUID from controller ..."
 CONTROLLER_POD=$(kubectl get pod -n wallarm-ingress -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
-NODE_UUID=$(kubectl logs -n wallarm-ingress ${CONTROLLER_POD} -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
+NODE_UUID=$(kubectl logs -n wallarm-ingress "${CONTROLLER_POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
 echo "UUID: ${NODE_UUID}"
 
-echo -e "Starting the smoke test pod..."
+trap 'kubectl delete pod pytest --ignore-not-found=true' ERR EXIT
 
-trap 'kubectl delete pod pytest || true' ERR EXIT
-
+echo "Starting the smoke test pod..."
 kubectl run pytest \
   --rm \
   --attach \
@@ -53,4 +65,4 @@ kubectl run pytest \
   --image-pull-policy=Never \
   --restart=Never \
   --overrides='{ "apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0}}' \
-  --command -- pytest "-n ${PYTEST_WORKERS}" "-s"
+  --command -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}

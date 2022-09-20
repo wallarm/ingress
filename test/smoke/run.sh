@@ -38,13 +38,14 @@ cleanup() {
   if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
     kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
   fi
-
-  kind delete cluster \
-    --verbosity=${KIND_LOG_LEVEL} \
-    --name ${KIND_CLUSTER_NAME}
+  if [[ "${CI:-false}" == "true" ]]; then
+    kind delete cluster \
+      --verbosity=${KIND_LOG_LEVEL} \
+      --name ${KIND_CLUSTER_NAME}
+  fi
 }
 
-#trap cleanup EXIT
+trap cleanup EXIT
 
 declare -a mandatory
 mandatory=(
@@ -153,7 +154,6 @@ EOF
 kubectl wait -n wallarm-ingress --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] deploying test workload ..."
-set -x
 KUBECTL_ARGS="--dry-run=client --save-config -o yaml"
 
 kubectl create deployment httpbin \
