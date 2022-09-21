@@ -13,8 +13,7 @@ Routines described in the document create local test environment and run smoke t
 ### Software
 The following software should be installed locally: 
 * [Docker](https://docs.docker.com/get-docker/)
-* [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) 
-* [GO](https://go.dev/doc/install)
+* [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
 
 ### Access to container registry
 Need to have an access (read-only is enough) to `dkr.wallarm.com/tests/smoke-tests` registry.
@@ -23,7 +22,7 @@ You should be able to make `docker pull dkr.wallarm.com/tests/smoke-tests`.
 ## Configuration
 Create `.env` file in the root directory of the repository with the following content
 ```
-NODE_BASE_URL=http://wallarm-ingress-controller.default.svc:80/anything
+NODE_BASE_URL=http://wallarm-ingress-controller.default.svc
 
 # Wallarm API settings. Used for Helm chart deployment and to run tests 
 WALLARM_API_HOST=api.wallarm.com
@@ -47,12 +46,15 @@ PYTEST_ARGS="--allure-features=Node"
 # Location of Pytest Docker image
 SMOKE_IMAGE_NAME=dkr.wallarm.com/tests/smoke-tests
 SMOKE_IMAGE_TAG=latest
+
+# Just keep it here since it is used in main Makefile if we don't have GO installed locally
+ARCH=amd64
 ```
 
 ## Running tests
 * To create test environment and run tests for first time run `make kind-smoke-test`
 * To run smoke tests against existing environment run `make smoke-test`
 * To get access to local Kubernetes cluster set `export KUBECONFIG="$HOME/.kube/kind-config-ingress-smoke-test"`
-* To delete test environment run `kkind delete cluster -n ingress-smoke-test`
+* To delete test environment run `kind delete cluster -n ingress-smoke-test`
 If you `SMOKE_IMAGE_*` or `WALALRM_API_*` variables were updated in `.env` file when environment was already exists,
 run `make kind-smoke-test` to apply these changes.

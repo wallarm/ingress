@@ -155,21 +155,8 @@ EOF
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] deploying test workload ..."
-kubectl create deployment httpbin \
-        --image kennethreitz/httpbin \
-        --port 80 \
-        --replicas 1 \
-        --dry-run=client \
-        -o yaml \
-        -- gunicorn --access-logfile - -b 0.0.0.0:80 httpbin:app | kubectl apply -f -
-kubectl expose deployment httpbin \
-        --port 80 \
-        --dry-run=client -o yaml | kubectl apply -f -
-kubectl create ingress httpbin \
-        --class nginx \
-        --rule "/*=httpbin:80" \
-        --annotation="nginx.ingress.kubernetes.io/wallarm-mode=block" \
-        --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f ${DIR}/workload.yaml
+kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] running smoke tests suite ..."
 make -C ${DIR}/../../ smoke-test

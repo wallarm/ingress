@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workload
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes  3;
+    error_log  /var/log/nginx/error.log;
+    events {
+      worker_connections 10240;
+    }
+    http {
+      log_format main '$remote_addr - $remote_user [$time_local] '
+                      '"$request" $status $bytes_sent '
+                      '"$http_referer" "$http_user_agent" "$gzip_ratio"';
+      access_log /var/log/nginx/access.log main;
+      server {
+        listen 80;
+        server_name  _;
+        location / {
+          return 200;
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workload
+spec:
+  selector:
+    matchLabels:
+      app: workload
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: workload
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:stable-alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: workload
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workload
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: workload
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/wallarm-mode: block
+  name: workload
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: workload
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix
