@@ -100,18 +100,7 @@ echo "[test-env] copying ${REGISTRY}/ingress-controller:${TAG} image to cluster.
 kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/ingress-controller:${TAG}
 
 echo "[test-env] copying helper images to cluster..."
-helper_tag=$(cat "${DIR}"/../../TAG)
-helper_images=(
-  wallarm/ingress-ruby
-  wallarm/ingress-tarantool
-  wallarm/ingress-python
-  wallarm/ingress-collectd
-)
-for image in "${helper_images[@]}"; do
-  docker pull --quiet "${image}:${helper_tag}"
-  docker tag "${image}:${helper_tag}" "${image}:${TAG}"
-  kind load docker-image --quiet --name="${KIND_CLUSTER_NAME}" "${image}:${TAG}"
-done
+${DIR}/../../build/load-images.sh
 
 echo "[test-env] copying test image to cluster ..."
 docker pull --quiet "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
@@ -130,6 +119,7 @@ controller:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
     digest:
+  imagePullPolicy: Never
   config:
     worker-processes: "1"
     enable-real-ip: true

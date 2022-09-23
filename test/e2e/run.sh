@@ -29,10 +29,11 @@ cleanup() {
   if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
     kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
   fi
-
-  kind delete cluster \
-    --verbosity=${KIND_LOG_LEVEL} \
-    --name ${KIND_CLUSTER_NAME}
+  if [[ "${CI:-}" == "true" ]]; then
+    kind delete cluster \
+      --verbosity=${KIND_LOG_LEVEL} \
+      --name ${KIND_CLUSTER_NAME}
+  fi
 }
 
 trap cleanup EXIT
@@ -98,7 +99,7 @@ if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
 fi
 
 # Preload images used in e2e tests
-KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{printf (NR>1?",":"") $1}')
+export KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{printf (NR>1?",":"") $1}')
 
 echo "[dev-env] copying docker images to cluster..."
 
@@ -111,18 +112,13 @@ fi
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/ingress-controller:${TAG}
 
 if [ "${WALLARM_ENABLED}" = "true" ]; then
-  helper_tag=$(cat "${DIR}"/../../TAG)
-  helper_images=(
-    wallarm/ingress-ruby
-    wallarm/ingress-tarantool
-    wallarm/ingress-python
-    wallarm/ingress-collectd
-  )
-  for image in "${helper_images[@]}"; do
-    docker pull "${image}":"${helper_tag}"
-    docker tag "${image}":"${helper_tag}" "${image}":"${TAG}"
-    kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" "${image}":"${TAG}"
-  done
+  if [ -z "${WALLARM_API_TOKEN}" ]; then
+    echo "WALLARM_API_TOKEN must be set! Exiting ..."
+    exit 1
+  fi
+
+  echo "[dev-env] copying helper images to cluster..."
+  ${DIR}/../../build/load-images.sh
 fi
 
 echo "[dev-env] running e2e tests..."
