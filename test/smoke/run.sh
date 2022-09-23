@@ -26,9 +26,13 @@ export TAG=1.0.0-dev
 export ARCH=${ARCH:-amd64}
 
 export DOCKER_CLI_EXPERIMENTAL=enabled
-export K8S_VERSION=${K8S_VERSION:-v1.24.2}
-export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
+export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
+
+export SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
+export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
+
+K8S_VERSION=${K8S_VERSION:-v1.24.2}
 
 set -o errexit
 set -o nounset

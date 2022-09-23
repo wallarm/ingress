@@ -95,10 +95,11 @@ jobs:
           USER_UUID: ${{ secrets.WALLARM_API_USER_UUID }}
           USER_SECRET: ${{ secrets.WALLARM_API_USER_SECRET }}
           CLIENT_ID: ${{ secrets.WALLARM_API_CLIENT_ID }}
+          NODE_BASE_URL:
         run: |
           echo ${{ secrets.GITLAB_TOKEN_SECRET }} | docker login -u ${{ secrets.GITLAB_TOKEN_NAME }} --password-stdin dkr.wallarm.com
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make kind-smoke-test
+          make KUBECONFIG=$HOME/.kube/kind-config-kind kind-smoke-test
 
 #  e2e:
 #    name: E2E - Wallarm disabled

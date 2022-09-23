@@ -10,12 +10,15 @@ set -o pipefail
 
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-ingress-smoke-test}"
 
-PYTEST_ARGS="${PYTEST_ARGS:-}"
+# =============================
+# Smoke test related variables
+WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-True}"
+NODE_BASE_URL="${NODE_BASE_URL:-'http://wallarm-ingress-controller.default.svc'}"
+PYTEST_ARGS="${PYTEST_ARGS:-'--allure-features=Node'}"
 PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
-
-if [[ -n "${PYTEST_ARGS}" ]]; then
-  PYTEST_ARGS=$(echo "${PYTEST_ARGS}" | xargs)
-fi
+#TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
+HOSTNAME_OLD_NODE="smoke-tests-old-node"
+# =============================
 
 declare -a mandatory
 mandatory=(
