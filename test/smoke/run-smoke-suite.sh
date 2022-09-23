@@ -24,15 +24,9 @@ HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
 declare -a mandatory
 mandatory=(
-  NODE_BASE_URL
-  WALLARM_API_HOST
-  WALLARM_API_CA_VERIFY
   CLIENT_ID
   USER_UUID
   USER_SECRET
-  HOSTNAME_OLD_NODE
-  SMOKE_IMAGE_NAME
-  SMOKE_IMAGE_TAG
 )
 
 missing=false
