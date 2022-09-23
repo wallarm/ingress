@@ -25,7 +25,6 @@ fi
 export TAG=1.0.0-dev
 export ARCH=${ARCH:-amd64}
 
-export DOCKER_CLI_EXPERIMENTAL=enabled
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 
