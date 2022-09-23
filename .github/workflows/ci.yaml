@@ -96,7 +96,7 @@ jobs:
           USER_SECRET: ${{ secrets.WALLARM_API_USER_SECRET }}
           CLIENT_ID: ${{ secrets.WALLARM_API_CLIENT_ID }}
         run: |
-          docker login -u ${{ secret.GITLAB_TOKEN_NAME }} -p ${{ secret.GITLAB_TOKEN_SECRET }} dkr.wallarm.com
+          docker login -u ${{ secrets.GITLAB_TOKEN_NAME }} -p ${{ secrets.GITLAB_TOKEN_SECRET }} dkr.wallarm.com
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make kind-smoke-test
 
