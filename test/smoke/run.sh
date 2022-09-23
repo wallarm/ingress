@@ -52,8 +52,6 @@ trap cleanup EXIT
 
 declare -a mandatory
 mandatory=(
-  WALLARM_API_HOST
-  WALLARM_API_TOKEN
   SMOKE_IMAGE_NAME
   SMOKE_IMAGE_TAG
 )
