@@ -135,7 +135,7 @@ jobs:
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
-          kind-e2e-chart-tests
+          make kind-e2e-chart-tests
 
 
 #  e2e:
