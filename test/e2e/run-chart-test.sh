@@ -21,13 +21,11 @@ if [ -n "${DEBUG}" ]; then
   KIND_LOG_LEVEL="6"
 fi
 
-HELM_EXTRA_SET_ARGS=" \
+HELM_EXTRA_SET_ARGS="\
+ --set controller.wallarm.apiHost=${WALLARM_API_HOST:-http://wallarm-ingress-controller.default.svc} \
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
- --set controller.wallarm.apiHost=${WALLARM_API_HOST} \
  --set controller.wallarm.enabled=true \
  --set fullnameOverride=wallarm-ingress"
-
-echo "HELM_EXTRA_SET_ARGS: ${HELM_EXTRA_SET_ARGS}"
 
 set -o errexit
 set -o nounset
@@ -37,12 +35,13 @@ cleanup() {
   if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
     kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
   fi
-
-  kind delete cluster \
-    --name ${KIND_CLUSTER_NAME}
+  if [[ "${CI:-}" == "true" ]]; then
+    kind delete cluster \
+      --name ${KIND_CLUSTER_NAME}
+  fi
 }
 
-#trap cleanup EXIT
+trap cleanup EXIT
 
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-nginx-dev}
 
@@ -105,7 +104,7 @@ docker run \
     --interactive \
     --network host \
     --name ct \
-    --volume $KUBECONFIG:/root/.kube/config \
+    --volume "${KUBECONFIG}":/root/.kube/config \
     --volume "${DIR}/../../":/workdir \
     --workdir /workdir \
     quay.io/dmitriev/chart-testing:latest-amd64 ct install \
