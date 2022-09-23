@@ -82,7 +82,6 @@ jobs:
         uses: helm/kind-action@v1.3.0
         with:
           version: v0.15.0
-          config: test/smoke/kind.yaml
           cluster_name: kind
           node_image: kindest/node:${{ matrix.k8s }}
 
