@@ -81,10 +81,9 @@ jobs:
       - name: Create cluster
         uses: helm/kind-action@v1.3.0
         with:
-          verbosity: "0"
           version: v0.15.0
           config: test/smoke/kind.yaml
-          image: kindest/node:${{ matrix.k8s }}
+          node_image: kindest/node:${{ matrix.k8s }}
 
       - name: Run smoke tests
         env:
@@ -96,7 +95,7 @@ jobs:
           USER_SECRET: ${{ secrets.WALLARM_API_USER_SECRET }}
           CLIENT_ID: ${{ secrets.WALLARM_API_CLIENT_ID }}
         run: |
-          docker login -u ${{ secrets.GITLAB_TOKEN_NAME }} -p ${{ secrets.GITLAB_TOKEN_SECRET }} dkr.wallarm.com
+          echo ${{ secrets.GITLAB_TOKEN_SECRET }} | docker login -u ${{ secrets.GITLAB_TOKEN_NAME }} --password-stdin dkr.wallarm.com
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make kind-smoke-test
 
