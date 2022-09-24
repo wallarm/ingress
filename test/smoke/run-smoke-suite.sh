@@ -66,3 +66,5 @@ kubectl run pytest \
   --restart=Never \
   --overrides='{ "apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0}}' \
   --command -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
+
+kubectl get all
