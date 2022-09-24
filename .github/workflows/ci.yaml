@@ -131,7 +131,7 @@ jobs:
           cluster_name: kind
           node_image: kindest/node:v1.24.4
 
-      - name: Run E2E tests
+      - name: Run E2E chart tests
         env:
           ARCH: amd64
           KIND_CLUSTER_NAME: kind
