@@ -95,7 +95,7 @@ jobs:
           WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
           USER_UUID: ${{ secrets.WALLARM_API_USER_UUID }}
           USER_SECRET: ${{ secrets.WALLARM_API_USER_SECRET }}
-          CLIENT_ID: ${{ secrets.WALLARM_API_CLIENT_ID }}
+          CLIENT_ID: 4
         run: |
           echo ${{ secrets.GITLAB_TOKEN_SECRET }} | docker login -u ${{ secrets.GITLAB_TOKEN_NAME }} --password-stdin dkr.wallarm.com
           kind get kubeconfig > $HOME/.kube/kind-config-kind

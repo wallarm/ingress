@@ -146,7 +146,7 @@ controller:
       http: 30000
 EOF
 
-kubectl wait --for=condition=Ready pods --all --timeout=60s
+kubectl wait --for=condition=Ready pods --all --timeout=100s
 
 echo "[test-env] deploying test workload ..."
 kubectl apply -f "${DIR}"/workload.yaml
