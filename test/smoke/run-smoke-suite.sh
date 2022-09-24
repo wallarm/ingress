@@ -63,6 +63,7 @@ kubectl run pytest \
   --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
   --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
   --image-pull-policy=Never \
+  --pod-running-timeout=2m0s \
   --restart=Never \
   --overrides='{ "apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0}}' \
   --command -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
