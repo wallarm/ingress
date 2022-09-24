@@ -43,9 +43,10 @@ fi
 
 if [[ "${CI:-false}" == "false" ]]; then
   trap 'kubectl delete pod pytest --now' EXIT ERR
-  STDIN="--stdin=true"
+  # Colorize pytest output
+  EXEC_ARGS="--tty --stdin"
 else
-  STDIN="--stdin=false"
+  EXEC_ARGS="--tty"
 fi
 
 echo "Retrieving Wallarm Node UUID ..."
@@ -73,4 +74,4 @@ kubectl run pytest \
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "Run smoke tests ..."
-kubectl exec pytest --tty ${STDIN} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
+kubectl exec pytest ${EXEC_ARGS} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
