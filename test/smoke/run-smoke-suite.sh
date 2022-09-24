@@ -66,6 +66,8 @@ kubectl run pytest \
   --pod-running-timeout=2m0s \
   --restart=Never \
   --overrides='{ "apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0}}' \
-  --command -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
+  --command -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS} || true
 
 kubectl get all
+kubectl get pod pytest -o yaml || true
+kubectl describe pod pytest || true
