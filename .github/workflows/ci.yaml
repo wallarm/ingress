@@ -132,6 +132,11 @@ jobs:
           node_image: kindest/node:v1.24.4
 
       - name: Run E2E tests
+        env:
+          ARCH: amd64
+          KIND_CLUSTER_NAME: kind
+          SKIP_CLUSTER_CREATION: true
+          SKIP_IMAGE_CREATION: true
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
