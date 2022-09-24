@@ -55,7 +55,7 @@ jobs:
 
   smoke:
     name: Smoke
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs:
       - build-controller
 #    strategy:
@@ -103,135 +103,132 @@ jobs:
           make kind-smoke-test
 
 
-#  helm:
-#    name: Helm
-#    runs-on: self-hosted
-#    needs:
-#      - build-controller
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#
-#      - name: Load cache
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: docker.tar
-#
-#      - name: Load images
-#        run: docker load -i docker.tar
-#
-#      - name: Install helm
-#        uses: azure/setup-helm@v3
-#        with:
-#          version: 'v3.8.0'
-#
-#      - name: Create cluster
-#        uses: helm/kind-action@v1.3.0
-#        with:
-#          version: v0.15.0
-#          cluster_name: kind
-#          node_image: kindest/node:v1.24.4
-#
-#      - name: Run E2E chart tests
-#        env:
-#          ARCH: amd64
-#          KIND_CLUSTER_NAME: kind
-#          SKIP_CLUSTER_CREATION: true
-#          SKIP_IMAGE_CREATION: true
-#          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
-#        run: |
-#          kind get kubeconfig > $HOME/.kube/kind-config-kind
-#          export KUBECONFIG=$HOME/.kube/kind-config-kind
-#          make kind-e2e-chart-tests
-#
-#
+  helm:
+    name: Helm
+    runs-on: self-hosted
+    needs:
+      - build-controller
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
-#  e2e:
-#    name: E2E - Wallarm disabled
-#    runs-on: ubuntu-latest
-#    needs:
-#      - build-controller
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#
-#      - name: Load cache
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: docker.tar
-#
-#      - name: Load images
-#        run: docker load -i docker.tar
-#
-#      - name: Install Helm
-#        uses: azure/setup-helm@v3
-#        with:
-#          version: 'v3.8.0'
-#
-#      - name: Create cluster
-#        uses: helm/kind-action@v1.3.0
-#        with:
-#          verbosity: "0"
-#          wait: "240s"
-#          version: v0.15.0
-#          node_image: kindest/node:v1.24.4
-#          config: test/e2e/kind.yaml
-#          cluster_name: kind
-#
-#
-#      - name: Run e2e tests
-#        env:
-#          KIND_CLUSTER_NAME: kind
-#          SKIP_CLUSTER_CREATION: true
-#          SKIP_IMAGE_CREATION: true
-#          ARCH: amd64
-#        run: |
-#          kind get kubeconfig > $HOME/.kube/kind-config-kind
-#          make E2E_NODES=10 kind-e2e-test
-#
-#
-#
-#  e2e-wallarm-enabled:
-#    name: E2E - Wallarm enabled
-#    runs-on: self-hosted
-#    needs:
-#      - build-controller
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#
-#      - name: Load cache
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: docker.tar
-#
-#      - name: Load images
-#        run: docker load -i docker.tar
-#
-#      - name: Install Helm
-#        uses: azure/setup-helm@v3
-#        with:
-#          version: 'v3.8.0'
-#
-#      - name: Create cluster
-#        uses: helm/kind-action@v1.3.0
-#        with:
-#          verbosity: "0"
-#          wait: "240s"
-#          version: v0.15.0
-#          node_image: kindest/node:v1.24.4
-#          config: test/e2e/kind.yaml
-#          cluster_name: kind
-#
-#      - name: Run e2e tests
-#        env:
-#          ARCH: amd64
-#          KIND_CLUSTER_NAME: kind
-#          SKIP_CLUSTER_CREATION: true
-#          SKIP_IMAGE_CREATION: true
-#          ARCH: amd64
-#          WALLARM_ENABLED: true
-#          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
-#        run: |
-#          kind get kubeconfig > $HOME/.kube/kind-config-kind
-#          make E2E_NODES=10 kind-e2e-test
+      - name: Load cache
+        uses: actions/download-artifact@v3
+        with:
+          name: docker.tar
+
+      - name: Load images
+        run: docker load -i docker.tar
+
+      - name: Install helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.8.0'
+
+      - name: Create cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          version: v0.15.0
+          cluster_name: kind
+          node_image: kindest/node:v1.24.4
+
+      - name: Run E2E chart tests
+        env:
+          ARCH: amd64
+          KIND_CLUSTER_NAME: kind
+          SKIP_CLUSTER_CREATION: true
+          SKIP_IMAGE_CREATION: true
+          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
+        run: |
+          kind get kubeconfig > $HOME/.kube/kind-config-kind
+          export KUBECONFIG=$HOME/.kube/kind-config-kind
+          make kind-e2e-chart-tests
+
+
+
+  e2e:
+    name: E2E - Wallarm disabled
+    runs-on: ubuntu-latest
+    needs:
+      - build-controller
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load cache
+        uses: actions/download-artifact@v3
+        with:
+          name: docker.tar
+
+      - name: Load images
+        run: docker load -i docker.tar
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.8.0'
+
+      - name: Create cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          verbosity: "0"
+          wait: "240s"
+          version: v0.15.0
+          node_image: kindest/node:v1.24.4
+          config: test/e2e/kind.yaml
+          cluster_name: kind
+
+      - name: Run e2e tests
+        env:
+          KIND_CLUSTER_NAME: kind
+          SKIP_CLUSTER_CREATION: true
+          SKIP_IMAGE_CREATION: true
+          ARCH: amd64
+        run: |
+          kind get kubeconfig > $HOME/.kube/kind-config-kind
+          make E2E_NODES=10 kind-e2e-test
+
+
+  e2e-wallarm-enabled:
+    name: E2E - Wallarm enabled
+    runs-on: self-hosted
+    needs:
+      - build-controller
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load cache
+        uses: actions/download-artifact@v3
+        with:
+          name: docker.tar
+
+      - name: Load images
+        run: docker load -i docker.tar
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.8.0'
+
+      - name: Create cluster
+        uses: helm/kind-action@v1.3.0
+        with:
+          verbosity: "0"
+          wait: "240s"
+          version: v0.15.0
+          node_image: kindest/node:v1.24.4
+          config: test/e2e/kind.yaml
+          cluster_name: kind
+
+      - name: Run e2e tests
+        env:
+          ARCH: amd64
+          KIND_CLUSTER_NAME: kind
+          SKIP_CLUSTER_CREATION: true
+          SKIP_IMAGE_CREATION: true
+          WALLARM_ENABLED: true
+          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
+        run: |
+          kind get kubeconfig > $HOME/.kube/kind-config-kind
+          make E2E_NODES=10 kind-e2e-test
