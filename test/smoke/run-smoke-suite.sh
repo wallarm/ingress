@@ -41,18 +41,17 @@ if [ "$missing" = true ]; then
   exit 1
 fi
 
+if [[ "${CI:-false}" == "false" ]]; then
+    trap ' kubectl delete pod pytest --now' EXIT ERR
+fi
+
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
 NODE_UUID=$(kubectl logs "${POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
 echo "UUID: ${NODE_UUID}"
 
-echo "Run smoke tests ..."
-env
-set -x
-kubectl config current-context
-kubectl cluster-info
+echo "Deploying pytest pod ..."
 kubectl run pytest \
-  --tty --stdin --quiet \
   --env="NODE_BASE_URL=${NODE_BASE_URL}" \
   --env="NODE_UUID=${NODE_UUID}" \
   --env="WALLARM_API_HOST=${WALLARM_API_HOST}" \
@@ -63,12 +62,12 @@ kubectl run pytest \
   --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
   --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
   --image-pull-policy=Never \
-  --pod-running-timeout=2m0s \
+  --pod-running-timeout=1m0s \
   --restart=Never \
   --overrides='{ "apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0}}' \
-  --command -- pytest "-n ${PYTEST_WORKERS}" "${PYTEST_ARGS}" || true
+  --command -- sleep infinity
 
-kubectl get all
-kubectl describe event pytest --namespace default || true
-kubectl get pod pytest -o yaml || true
-kubectl describe pod pytest || true
+kubectl wait --for=condition=Ready pods --all --timeout=60s
+
+echo "Run smoke tests ..."
+kubectl exec pytest -it -- pytest "-n ${PYTEST_WORKERS}" "${PYTEST_ARGS}"
