@@ -22,7 +22,7 @@ if [ -n "${DEBUG}" ]; then
 fi
 
 HELM_EXTRA_SET_ARGS="\
- --set controller.wallarm.apiHost=${WALLARM_API_HOST:-http://wallarm-ingress-controller.default.svc} \
+ --set controller.wallarm.apiHost=${WALLARM_API_HOST:-api.wallarm.com} \
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
  --set controller.wallarm.enabled=true \
  --set fullnameOverride=wallarm-ingress"

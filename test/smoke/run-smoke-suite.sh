@@ -47,7 +47,8 @@ NODE_UUID=$(kubectl logs "${POD}" -c addnode | grep 'Registered new instance' | 
 echo "UUID: ${NODE_UUID}"
 
 echo "Run smoke tests ..."
-set +x
+env
+set -x
 
 kubectl run pytest \
   --rm --tty --stdin --quiet \
