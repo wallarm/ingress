@@ -49,7 +49,7 @@ cleanup() {
   fi
 }
 
-trap cleanup EXIT
+#trap cleanup EXIT
 
 declare -a mandatory
 mandatory=(
