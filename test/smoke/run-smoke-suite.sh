@@ -49,7 +49,8 @@ echo "UUID: ${NODE_UUID}"
 echo "Run smoke tests ..."
 env
 set -x
-
+kubectl config current-context
+kubectl cluster-info
 kubectl run pytest \
   --rm --tty --stdin --quiet \
   --env="NODE_BASE_URL=${NODE_BASE_URL}" \
