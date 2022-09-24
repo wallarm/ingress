@@ -97,11 +97,11 @@ fi
 
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   echo "[test-env] building controller image..."
-  make -C ${DIR}/../../ clean-image build image
+  make -C "${DIR}"/../../ clean-image build image
 fi
 
 echo "[test-env] copying ${REGISTRY}/ingress-controller:${TAG} image to cluster..."
-kind load docker-image --name="${KIND_CLUSTER_NAME}" ${REGISTRY}/ingress-controller:${TAG}
+kind load docker-image --name="${KIND_CLUSTER_NAME}" "${REGISTRY}/ingress-controller:${TAG}"
 
 echo "[test-env] copying helper images to cluster..."
 ${DIR}/../../build/load-images.sh
@@ -149,8 +149,8 @@ EOF
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] deploying test workload ..."
-kubectl apply -f ${DIR}/workload.yaml
+kubectl apply -f "${DIR}"/workload.yaml
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] running smoke tests suite ..."
-make -C ${DIR}/../../ smoke-test
+make -C "${DIR}"/../../ smoke-test

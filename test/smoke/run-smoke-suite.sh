@@ -42,7 +42,10 @@ if [ "$missing" = true ]; then
 fi
 
 if [[ "${CI:-false}" == "false" ]]; then
-    trap ' kubectl delete pod pytest --now' EXIT ERR
+  trap 'kubectl delete pod pytest --now' EXIT ERR
+  STDIN="--stdin=true"
+else
+  STDIN="--stdin=false"
 fi
 
 echo "Retrieving Wallarm Node UUID ..."
@@ -70,4 +73,4 @@ kubectl run pytest \
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "Run smoke tests ..."
-kubectl exec pytest -it -- pytest "-n ${PYTEST_WORKERS}" "${PYTEST_ARGS}"
+kubectl exec pytest --tty ${STDIN} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
