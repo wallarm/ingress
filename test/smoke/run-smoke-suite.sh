@@ -52,7 +52,7 @@ set -x
 kubectl config current-context
 kubectl cluster-info
 kubectl run pytest \
-  --rm --tty --stdin --quiet \
+  --tty --stdin --quiet \
   --env="NODE_BASE_URL=${NODE_BASE_URL}" \
   --env="NODE_UUID=${NODE_UUID}" \
   --env="WALLARM_API_HOST=${WALLARM_API_HOST}" \
