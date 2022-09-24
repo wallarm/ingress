@@ -69,5 +69,6 @@ kubectl run pytest \
   --command -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS} || true
 
 kubectl get all
+kubectl describe event pytest --namespace default || true
 kubectl get pod pytest -o yaml || true
 kubectl describe pod pytest || true
