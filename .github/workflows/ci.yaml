@@ -55,7 +55,7 @@ jobs:
 
   smoke:
     name: Smoke
-    runs-on: self-hosted
+    runs-on: self-hosted-2cpu
     needs:
       - build-controller
 #    strategy:
@@ -105,7 +105,7 @@ jobs:
 
   helm:
     name: Helm
-    runs-on: self-hosted
+    runs-on: self-hosted-2cpu
     needs:
       - build-controller
     steps:
@@ -148,7 +148,7 @@ jobs:
 
   e2e:
     name: E2E - Wallarm disabled
-    runs-on: ubuntu-latest
+    runs-on: self-hosted-4cpu
     needs:
       - build-controller
     steps:
@@ -191,7 +191,7 @@ jobs:
 
   e2e-wallarm-enabled:
     name: E2E - Wallarm enabled
-    runs-on: self-hosted
+    runs-on: self-hosted-4cpu
     needs:
       - build-controller
     steps:

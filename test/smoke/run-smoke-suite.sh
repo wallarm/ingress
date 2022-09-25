@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 if [[ -n "${DEBUG}" ]]; then
   set -x
 fi
