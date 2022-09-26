@@ -4,25 +4,25 @@ on:
   workflow_dispatch:
 
 jobs:
-#  build-base:
-#    name: Build base
-#    runs-on: custom-runner
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v31
-#
-#      - name: Setup Docker Buildx
-#        uses: docker/setup-buildx-action@v2
-#        with:
-#          version: latest
-#          use: false
-#
-#      - name: Build
-#        run: |
-#          eval $(ssh-agent -s)
-#          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
-#          cd images/nginx && make OUTPUT=--load build
-#          docker images
+  build-base:
+    name: Build base
+    runs-on: self-hosted-8cpu
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v31
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          version: latest
+          use: false
+
+      - name: Build
+        run: |
+          eval $(ssh-agent -s)
+          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
+          cd images/nginx && make OUTPUT=--load build
+          docker images
 
   build-controller:
     name: Build controller
@@ -55,7 +55,7 @@ jobs:
 
   smoke:
     name: Smoke
-    runs-on: self-hosted-2cpu
+    runs-on: self-hosted-1cpu
     needs:
       - build-controller
     strategy:
@@ -107,7 +107,7 @@ jobs:
 
   helm:
     name: Helm
-    runs-on: self-hosted-2cpu
+    runs-on: self-hosted-1cpu
     needs:
       - build-controller
     steps:
