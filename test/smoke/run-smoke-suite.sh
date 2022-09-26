@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+
 if [[ -n "${DEBUG}" ]]; then
   set -x
 fi
@@ -43,7 +43,7 @@ fi
 
 if [[ "${CI:-false}" == "false" ]]; then
   trap 'kubectl delete pod pytest --now' EXIT ERR
-  # Colorize pytest output
+  # Colorize pytest output if run locally
   EXEC_ARGS="--tty --stdin"
 else
   EXEC_ARGS="--tty"
