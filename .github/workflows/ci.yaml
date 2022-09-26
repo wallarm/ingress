@@ -88,6 +88,8 @@ jobs:
 
       - name: Run smoke tests
         env:
+          # TODO remove SMOKE_IMAGE_TAG after testing!
+          SMOKE_IMAGE_TAG: 0.0.9-rc1664186219
           ARCH: amd64
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
@@ -231,4 +233,4 @@ jobs:
           WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=7 kind-e2e-test
+          make E2E_NODES=10 kind-e2e-test
