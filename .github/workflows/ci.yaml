@@ -4,30 +4,71 @@ on:
   workflow_dispatch:
 
 jobs:
-#  build-base:
-#    name: Build base
-#    runs-on: self-hosted-8cpu
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#
-#      - name: Setup Docker Buildx
-#        uses: docker/setup-buildx-action@v2
-#        with:
-#          version: latest
-#          use: false
-#
-#      - name: Build
-#        run: |
-#          eval $(ssh-agent -s)
-#          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
-#          cd images/nginx && make OUTPUT=--load build
-#          docker images
-#
+  changes:
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: self-hosted-1cpu
+    outputs:
+      base: ${{ steps.filter.outputs.base }}
+      go: ${{ steps.filter.outputs.go }}
+      charts: ${{ steps.filter.outputs.charts }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+
+      - uses: dorny/paths-filter@b2feaf19c27470162a626bd6fa8438ae5b263721 # v2.10.2
+        id: filter
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            base:
+              - 'NGINX_BASE'
+            go:
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - 'rootfs/**/*'
+              - 'TAG'
+              - 'test/e2e/**/*'
+            charts:
+              - 'charts/ingress-nginx/Chart.yaml'
+              - 'charts/ingress-nginx/**/*'
+
+  build-base:
+    name: Build base
+    runs-on: self-hosted-8cpu
+    needs:
+      - changes
+      - build
+    if: |
+      (needs.changes.outputs.base == 'true')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          version: latest
+          use: false
+
+      - name: Build
+        run: |
+          eval $(ssh-agent -s)
+          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
+          cd images/nginx && make OUTPUT=--load build
+          docker save -o docker.tar $(cat NGINX_BASE)
 
   build-controller:
     name: Build controller
-    runs-on: self-hosted-2cpu
+    runs-on: self-hosted-4cpu
+    needs:
+      - changes
+      - build
+      - build-base
+#    if: |
+#      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true')
     steps:
       - name: Checkout
         uses: actions/checkout@v3
