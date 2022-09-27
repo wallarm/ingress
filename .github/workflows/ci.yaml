@@ -51,12 +51,15 @@ jobs:
           TAG: 1.0.0-dev
           USER: runner
         run: |
-          id
           # If base was not changed
           export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
           # TODO handle case when base image was changed
           # export BASE_IMAGE="wallarm/ingress-nginx:1.0.0-dev"
+          set -x
+          echo "Building controller"
           make clean-image build image
+          docker images
+          echo "Building E2E image"
           make -C test/e2e-image image
           docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
 
