@@ -57,7 +57,14 @@ jobs:
           eval $(ssh-agent -s)
           echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
           cd images/nginx && make OUTPUT=--load build
-          docker save -o docker.tar $(cat NGINX_BASE)
+          docker save -o base.tar $(cat NGINX_BASE)
+
+      - name: Cache image
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 1
+          name: base.tar
+          path: base.tar
 
   build-controller:
     name: Build controller
@@ -65,11 +72,21 @@ jobs:
     needs:
       - changes
       - build-base
-#    if: |
-#      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true')
+    if: |
+      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true')
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Load cache
+        if: needs.changes.outputs.base == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: base.tar
+
+      - name: Load base image
+        if: needs.changes.outputs.base == 'true'
+        run: docker load -i base.tar
 
       - name: Set up Go 1.19.1
         id: go
@@ -88,10 +105,8 @@ jobs:
           export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
           # TODO handle case when base image was changed
           # export BASE_IMAGE="wallarm/ingress-nginx:1.0.0-dev"
-          set -x
-          echo "Building controller"
+          echo "Building controller images"
           make clean-image build image
-          docker images
           echo "Building E2E image"
           make -C test/e2e-image image
           docker images
