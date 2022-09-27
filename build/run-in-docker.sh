@@ -87,7 +87,7 @@ if [[ "$DOCKER_IN_DOCKER_ENABLED" == "true" ]]; then
   go env
   set -x
   go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
-  find / -type f -name ginkgo || true #2>/dev/null
+  find ${HOME} -type f -name ginkgo 2>/dev/null
   which ginkgo
   /bin/bash -c "${FLAGS}"
   set +x
