@@ -49,6 +49,7 @@ jobs:
           ARCH: amd64
           REGISTRY: wallarm
           TAG: 1.0.0-dev
+          USER: runner
         run: |
           id
           # If base was not changed
