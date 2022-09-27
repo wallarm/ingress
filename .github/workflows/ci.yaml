@@ -64,7 +64,6 @@ jobs:
     runs-on: self-hosted-4cpu
     needs:
       - changes
-      - build
       - build-base
 #    if: |
 #      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true')
