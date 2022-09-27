@@ -43,7 +43,7 @@ jobs:
           ARCH: amd64
           REGISTRY: wallarm
           TAG: 1.0.0-dev
-          DOCKER_IN_DOCKER_ENABLED: true
+          DOCKER_IN_DOCKER_ENABLED: false
         run: |
           id
           # If base was not changed
