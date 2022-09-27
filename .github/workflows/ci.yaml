@@ -121,7 +121,7 @@ jobs:
 
   helm:
     name: Helm
-    runs-on: self-hosted-2cpu
+    runs-on: self-hosted-1cpu
     needs:
       - build-controller
     steps:
