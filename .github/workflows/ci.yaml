@@ -8,7 +8,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
-    runs-on: self-hosted-1cpu
+    runs-on: ubuntu-latest
     outputs:
       base: ${{ steps.filter.outputs.base }}
       go: ${{ steps.filter.outputs.go }}
@@ -56,7 +56,7 @@ jobs:
         run: |
           eval $(ssh-agent -s)
           echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
-          cd images/nginx && make OUTPUT=--load build
+          make -C images/nginx OUTPUT=--load build
           docker save -o base.tar $(cat NGINX_BASE)
 
       - name: Cache image
