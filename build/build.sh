@@ -50,7 +50,10 @@ echo "Building targets for ${ARCH}, generated targets in ${TARGETS_DIR} director
 echo "Building ${PKG}/cmd/nginx"
 
 pushd /go/src/k8s.io/ingress-nginx
-git config --add safe.directory /go/src/k8s.io/ingress-nginx
+pwd
+ls -la
+git --no-pager log --decorate=short --pretty=oneline -n1
+git config --global --add safe.directory /go/src/k8s.io/ingress-nginx
 popd
 
 ${GO_BUILD_CMD} \
