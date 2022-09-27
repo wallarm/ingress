@@ -45,6 +45,7 @@ jobs:
           TAG: 1.0.0-dev
           DOCKER_IN_DOCKER_ENABLED: true
         run: |
+          id
           # If base was not changed
           export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
           # TODO handle case when base image was changed

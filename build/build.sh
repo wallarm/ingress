@@ -48,7 +48,7 @@ TARGETS_DIR="rootfs/bin/${ARCH}"
 echo "Building targets for ${ARCH}, generated targets in ${TARGETS_DIR} directory."
 
 echo "Building ${PKG}/cmd/nginx"
-
+id
 pushd /go/src/k8s.io/ingress-nginx
 git config --add safe.directory /go/src/k8s.io/ingress-nginx
 popd
