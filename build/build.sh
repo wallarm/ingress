@@ -53,8 +53,8 @@ echo "Building ${PKG}/cmd/nginx"
 ls -la
 id -u
 id -g
-
-git config --global --add safe.directory /go/src/k8s.io/ingress-nginx
+git status
+git config --add safe.directory /go/src/k8s.io/ingress-nginx
 #popd
 
 ${GO_BUILD_CMD} \
