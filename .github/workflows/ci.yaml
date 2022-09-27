@@ -4,29 +4,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-base:
-    name: Build base
-    runs-on: self-hosted-8cpu
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v31
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          version: latest
-          use: false
-
-      - name: Build
-        run: |
-          eval $(ssh-agent -s)
-          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
-          cd images/nginx && make OUTPUT=--load build
-          docker images
+#  build-base:
+#    name: Build base
+#    runs-on: self-hosted-8cpu
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v31
+#
+#      - name: Setup Docker Buildx
+#        uses: docker/setup-buildx-action@v2
+#        with:
+#          version: latest
+#          use: false
+#
+#      - name: Build
+#        run: |
+#          eval $(ssh-agent -s)
+#          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
+#          cd images/nginx && make OUTPUT=--load build
+#          docker images
+#
 
   build-controller:
     name: Build controller
-    runs-on: ubuntu-latest
+    runs-on: self-hosted-4cpu
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -56,9 +57,11 @@ jobs:
   smoke:
     name: Smoke
     runs-on: self-hosted-1cpu
+    continue-on-error: true
     needs:
       - build-controller
     strategy:
+      fail-fast: false
       matrix:
         k8s: [v1.23.10, v1.24.4, v1.25.0]
     steps:
@@ -105,6 +108,7 @@ jobs:
           make kind-smoke-test
 
 
+
   helm:
     name: Helm
     runs-on: self-hosted-1cpu
@@ -145,6 +149,7 @@ jobs:
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-e2e-chart-tests
+
 
 
 
@@ -189,6 +194,7 @@ jobs:
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=10 kind-e2e-test
+
 
 
   e2e-wallarm-enabled:
