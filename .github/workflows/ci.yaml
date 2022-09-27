@@ -103,7 +103,7 @@ jobs:
       - name: Run smoke tests
         env:
           # TODO remove SMOKE_IMAGE_TAG after testing!
-          SMOKE_IMAGE_TAG: 0.0.9-rc1664186219
+          SMOKE_IMAGE_TAG: 0.0.9-rc1664274176
           ARCH: amd64
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
@@ -118,9 +118,10 @@ jobs:
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-smoke-test
 
+
   helm:
     name: Helm
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-2cpu
     needs:
       - build-controller
     steps:
