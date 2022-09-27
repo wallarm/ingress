@@ -50,6 +50,7 @@ jobs:
           REGISTRY: wallarm
           TAG: 1.0.0-dev
           USER: runner
+          MAC_DOCKER_FLAGS: --load
         run: |
           # If base was not changed
           export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
@@ -61,6 +62,7 @@ jobs:
           docker images
           echo "Building E2E image"
           make -C test/e2e-image image
+          docker images
           docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
 
       - name: Cache image
