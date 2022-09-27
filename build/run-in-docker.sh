@@ -70,7 +70,7 @@ MAC_OS="${MAC_OS:-}"
 if [[ ${MAC_OS} == "Darwin" ]]; then
 	MAC_DOCKER_FLAGS=""
 else
-	MAC_DOCKER_FLAGS="-u $(id -u ${USER}):$(id -g ${USER})" #idk why mac/git fails on the gobuild if these are presented to dockerrun.sh script
+	MAC_DOCKER_FLAGS="-u 1000:1000" #idk why mac/git fails on the gobuild if these are presented to dockerrun.sh script
 fi
 echo "MAC_OS = ${MAC_OS}, MAC_OS_FLAGS = ${MAC_DOCKER_FLAGS}"
 
@@ -80,7 +80,7 @@ uname -a
 env
 echo "DIND_ENABLED=$DOCKER_IN_DOCKER_ENABLED"
 echo "done..printing env & other vars to stdout"
-
+set -x
 if [[ "$DOCKER_IN_DOCKER_ENABLED" == "true" ]]; then
   echo "..reached DIND check TRUE block, inside run-in-docker.sh"
   echo "FLAGS=$FLAGS"
