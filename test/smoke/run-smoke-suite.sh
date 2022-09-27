@@ -17,7 +17,7 @@ SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-True}"
 WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
 NODE_BASE_URL="${NODE_BASE_URL:-http://wallarm-ingress-controller.default.svc}"
-PYTEST_ARGS="${PYTEST_ARGS:---allure-features=Node}"
+PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node}" | xargs)
 PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
@@ -49,8 +49,6 @@ else
   EXEC_ARGS="--tty"
 fi
 
-set -x
-
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
 NODE_UUID=$(kubectl logs "${POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
@@ -76,4 +74,4 @@ kubectl run pytest \
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "Run smoke tests ..."
-kubectl exec pytest ${EXEC_ARGS} -- pytest -n ${PYTEST_WORKERS} $(echo ${PYTEST_ARGS} | xargs)
+kubectl exec pytest ${EXEC_ARGS} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
