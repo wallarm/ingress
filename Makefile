@@ -57,12 +57,6 @@ endif
 
 MAC_OS = $(shell uname -s)
 
-ifeq ($(MAC_OS), Darwin)
-	MAC_DOCKER_FLAGS="--load"
-else
-	MAC_DOCKER_FLAGS=
-endif
-
 REGISTRY ?= wallarm
 
 BASE_IMAGE ?= $(shell cat NGINX_BASE)
@@ -75,8 +69,7 @@ help:  ## Display this help
 .PHONY: image
 image: clean-image ## Build image for a particular arch.
 	echo "Building docker image ($(ARCH))..."
-	set -x
-	docker buildx build \
+	docker build \
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
 		$(MAC_DOCKER_FLAGS) \
