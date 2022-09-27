@@ -42,7 +42,7 @@ if [ "$missing" = true ]; then
 fi
 
 if [[ "${CI:-false}" == "false" ]]; then
-  trap 'kubectl delete pod pytest --now' EXIT ERR
+  trap 'kubectl delete pod pytest --now  --ignore-not-found' EXIT ERR
   # Colorize pytest output if run locally
   EXEC_ARGS="--tty --stdin"
 else
