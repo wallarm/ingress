@@ -43,6 +43,7 @@ jobs:
           ARCH: amd64
           REGISTRY: wallarm
           TAG: 1.0.0-dev
+          DOCKER_IN_DOCKER_ENABLED: true
         run: |
           # If base was not changed
           export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"

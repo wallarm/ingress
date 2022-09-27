@@ -49,14 +49,9 @@ echo "Building targets for ${ARCH}, generated targets in ${TARGETS_DIR} director
 
 echo "Building ${PKG}/cmd/nginx"
 
-#pushd /go/src/k8s.io/ingress-nginx
-echo GIT_DIR: ${GIT_DIR}
-ls -la
-id -u
-id -g
-git status
+pushd /go/src/k8s.io/ingress-nginx
 git config --add safe.directory /go/src/k8s.io/ingress-nginx
-#popd
+popd
 
 ${GO_BUILD_CMD} \
   -trimpath -ldflags="-buildid= -w -s \
