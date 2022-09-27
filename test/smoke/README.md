@@ -20,11 +20,12 @@ Need to have an access (read-only is enough) to `dkr.wallarm.com/tests/smoke-tes
 It is required to perform `docker login dkr.wallarm.com` using personal access token, before to run tests.
 You should be able to make `docker pull dkr.wallarm.com/tests/smoke-tests`. 
 ## Configuration
-Create `.env` file in the root directory of the repository with the following content
+Create `.env` file in the root directory of the repository with the following content. All parameters which commented out are optional.
 ```
-NODE_BASE_URL=http://wallarm-ingress-controller.default.svc
+# Node base URL
+# NODE_BASE_URL=http://wallarm-ingress-controller.default.svc
 
-# Wallarm API settings. Used for Helm chart deployment and to run tests 
+# Wallarm API settings. Used for Helm chart deployment and smoke tests 
 WALLARM_API_HOST=api.wallarm.com
 WALLARM_API_TOKEN=...
 WALLARM_API_CA_VERIFY=True
@@ -34,9 +35,6 @@ CLIENT_ID=...
 USER_UUID=...
 USER_SECRET=...
 
-# We need to keep it here since required to run tests, but is not really used
-HOSTNAME_OLD_NODE=smoke-tests-old-node
-
 # Pytest arguments. Double quotes here must be used here
 PYTEST_ARGS="--allure-features=Node"
 
@@ -44,8 +42,8 @@ PYTEST_ARGS="--allure-features=Node"
 # PYTEST_WORKERS=10
 
 # Location of Pytest Docker image
-SMOKE_IMAGE_NAME=dkr.wallarm.com/tests/smoke-tests
-SMOKE_IMAGE_TAG=latest
+# SMOKE_IMAGE_NAME=dkr.wallarm.com/tests/smoke-tests
+# SMOKE_IMAGE_TAG=latest
 
 # Just keep it here since it is used in main Makefile if we don't have GO installed locally
 ARCH=amd64
@@ -56,5 +54,5 @@ ARCH=amd64
 * To run smoke tests against existing environment run `make smoke-test`
 * To get access to local Kubernetes cluster set `export KUBECONFIG="$HOME/.kube/kind-config-ingress-smoke-test"`
 * To delete test environment run `kind delete cluster -n ingress-smoke-test`
-If you `SMOKE_IMAGE_*` or `WALALRM_API_*` variables were updated in `.env` file when environment was already exists,
+If `SMOKE_IMAGE_*` or `WALALRM_API_*` variables were updated in `.env` file when environment was already exists,
 run `make kind-smoke-test` to apply these changes.
