@@ -75,6 +75,7 @@ help:  ## Display this help
 .PHONY: image
 image: clean-image ## Build image for a particular arch.
 	echo "Building docker image ($(ARCH))..."
+	set -x
 	docker buildx build \
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
