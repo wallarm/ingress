@@ -68,7 +68,7 @@ jobs:
 
   build-controller:
     name: Build controller
-    runs-on: self-hosted-4cpu
+    runs-on: self-hosted-2cpu
     needs:
       - changes
       - build-base
