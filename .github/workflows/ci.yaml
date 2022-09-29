@@ -145,7 +145,7 @@ jobs:
     continue-on-error: true
     needs:
       - check-build
-    if: needs.check-build.continue
+    #if: needs.check-build.continue
     strategy:
       fail-fast: false
       matrix:
