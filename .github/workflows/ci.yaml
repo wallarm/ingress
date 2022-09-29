@@ -124,7 +124,7 @@ jobs:
     continue-on-error: true
     needs:
       - build-controller
-    if: needs.build-controller.result == 'success'
+    if: success() && needs.build-controller.result == 'success'
     strategy:
       fail-fast: false
       matrix:
