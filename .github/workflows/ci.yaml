@@ -108,14 +108,14 @@ jobs:
           echo "Building E2E image"
           make -C test/e2e-image image
           docker images
-          docker save -o docker.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
+          docker save -o controller.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
 
       - name: Cache image
         uses: actions/upload-artifact@v3
         with:
           retention-days: 1
-          name: docker.tar
-          path: docker.tar
+          name: controller.tar
+          path: controller.tar
 
 
   smoke:
@@ -136,10 +136,10 @@ jobs:
       - name: Load cache
         uses: actions/download-artifact@v3
         with:
-          name: docker.tar
+          name: controller.tar
 
       - name: Load images
-        run: docker load -i docker.tar
+        run: docker load -i controller.tar
 
       - name: Install helm
         uses: azure/setup-helm@v3
@@ -189,10 +189,10 @@ jobs:
       - name: Load cache
         uses: actions/download-artifact@v3
         with:
-          name: docker.tar
+          name: controller.tar
 
       - name: Load images
-        run: docker load -i docker.tar
+        run: docker load -i controller.tar
 
       - name: Install helm
         uses: azure/setup-helm@v3
@@ -232,10 +232,10 @@ jobs:
       - name: Load cache
         uses: actions/download-artifact@v3
         with:
-          name: docker.tar
+          name: controller.tar
 
       - name: Load images
-        run: docker load -i docker.tar
+        run: docker load -i controller.tar
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -263,8 +263,6 @@ jobs:
           make E2E_NODES=10 kind-e2e-test
 
 
-
-
   e2e-wallarm-enabled:
     name: E2E - Wallarm enabled
     runs-on: self-hosted-4cpu
@@ -281,10 +279,10 @@ jobs:
       - name: Load cache
         uses: actions/download-artifact@v3
         with:
-          name: docker.tar
+          name: controller.tar
 
       - name: Load images
-        run: docker load -i docker.tar
+        run: docker load -i controller.tar
 
       - name: Install Helm
         uses: azure/setup-helm@v3

@@ -25,7 +25,7 @@ HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.apiHost=${WALLARM_API_HOST:-api.wallarm.com} \
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
  --set controller.wallarm.enabled=true \
- --set fullnameOverride=wallarm-ingress"
+ --set fullnameOverride=wallarm-ingress ${HELM_EXTRA_SET_ARGS}"
 
 set -o errexit
 set -o nounset
