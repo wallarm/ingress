@@ -96,7 +96,7 @@ jobs:
         with:
           go-version: '1.19.1'
 
-      - name: Build image
+      - name: Build images
         env:
           ARCH: amd64
           REGISTRY: wallarm
@@ -110,7 +110,7 @@ jobs:
           docker images
           docker save -o controller.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
 
-      - name: Cache image
+      - name: Cache images
         uses: actions/upload-artifact@v3
         with:
           retention-days: 1
