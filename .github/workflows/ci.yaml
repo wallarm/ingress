@@ -22,8 +22,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           filters: |
-            base:
+            base-tag:
               - 'NGINX_BASE'
+            controller-tag:
+              - 'TAG'
             go:
               - '**/*.go'
               - 'go.mod'
@@ -42,7 +44,7 @@ jobs:
       - changes
     # TODO false is set for debug. Revert to true!
     if: |
-      (needs.changes.outputs.base == 'false')
+      (needs.changes.outputs.base-tag == 'false')
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -75,7 +77,7 @@ jobs:
       - build-base
     if: |
       always() && 
-      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true') &&
+      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base-tag == 'true') &&
       (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
     steps:
       - name: Checkout
@@ -127,7 +129,7 @@ jobs:
     continue-on-error: true
     needs:
       - build-controller
-    if: success() && needs.build-controller.result == 'success'
+    if: always() && needs.build-controller.result == 'success'
     strategy:
       fail-fast: false
       matrix:
