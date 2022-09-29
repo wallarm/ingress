@@ -81,13 +81,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Load cache
-        if: needs.changes.outputs.base == 'true'
+        if: needs.changes.outputs.base == 'false'
         uses: actions/download-artifact@v3
         with:
           name: base.tar
 
       - name: Load base image
-        if: needs.changes.outputs.base == 'true'
+        if: needs.changes.outputs.base == 'false'
         run: docker load -i base.tar
 
       - name: Set up Go 1.19.1
@@ -103,10 +103,6 @@ jobs:
           TAG: 1.0.0-dev
           USER: runner
         run: |
-          # If base was not changed
-          export BASE_IMAGE="wallarm/ingress-nginx:$(cat TAG)"
-          # TODO handle case when base image was changed
-          # export BASE_IMAGE="wallarm/ingress-nginx:1.0.0-dev"
           echo "Building controller images"
           make clean-image build image
           echo "Building E2E image"
