@@ -73,7 +73,9 @@ jobs:
       - changes
       - build-base
     if: |
-      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true')
+      always() && 
+      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true') &&
+      (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
     steps:
       - name: Checkout
         uses: actions/checkout@v3
