@@ -8,7 +8,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-ingress-smoke-test}"
+export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
+export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
 SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
