@@ -178,9 +178,6 @@ jobs:
     needs:
       - changes
       - build-controller
-    if: | 
-      (needs.build-controller.result == 'success' || needs.build-controller.result == 'skipped')
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -223,7 +220,6 @@ jobs:
     runs-on: self-hosted-4cpu
     needs:
       - build-controller
-    if: needs.build-controller.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -267,7 +263,6 @@ jobs:
     runs-on: self-hosted-4cpu
     needs:
       - build-controller
-    if: needs.build-controller.result == 'success'
     strategy:
       matrix:
         k8s: [ v1.23.10, v1.24.4, v1.25.0 ]
