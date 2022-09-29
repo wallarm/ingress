@@ -41,7 +41,7 @@ jobs:
     needs:
       - changes
     if: |
-      (needs.changes.outputs.base == 'true')
+      (needs.changes.outputs.base == 'false')
     steps:
       - name: Checkout
         uses: actions/checkout@v3

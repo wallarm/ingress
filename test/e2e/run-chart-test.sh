@@ -110,5 +110,5 @@ docker run \
     quay.io/dmitriev/chart-testing:latest-amd64 ct install \
         --charts charts/ingress-nginx \
         --helm-extra-set-args "${HELM_EXTRA_SET_ARGS}" \
-        --helm-extra-args "--timeout 60s" \
+        --helm-extra-args "--timeout 60s" --upgrade \
         --debug

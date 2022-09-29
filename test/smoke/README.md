@@ -36,7 +36,7 @@ USER_UUID=...
 USER_SECRET=...
 
 # Pytest arguments. Double quotes here must be used here
-PYTEST_ARGS="--allure-features=Node"
+# PYTEST_ARGS="--allure-features=Node"
 
 # Number of pytest workers. This variable is optional and set to 10 by default 
 # PYTEST_WORKERS=10
