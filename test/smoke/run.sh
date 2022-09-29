@@ -29,6 +29,7 @@ export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
 export WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
+export WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 export SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
@@ -53,9 +54,6 @@ trap cleanup EXIT ERR
 
 declare -a mandatory
 mandatory=(
-  SMOKE_IMAGE_NAME
-  SMOKE_IMAGE_TAG
-  WALLARM_API_HOST
   WALLARM_API_TOKEN
 )
 
@@ -118,6 +116,7 @@ controller:
     enabled: true
     token: ${WALLARM_API_TOKEN}
     apiHost: ${WALLARM_API_HOST}
+    apiCaVerify: ${WALLARM_API_CA_VERIFY}
     fallback: "off"
   image:
     repository: ${REGISTRY}/ingress-controller

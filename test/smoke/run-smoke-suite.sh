@@ -15,7 +15,7 @@ SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
 # Pytest related variables
-WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-True}"
+WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
 NODE_BASE_URL="${NODE_BASE_URL:-http://wallarm-ingress-controller.default.svc}"
 PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node}" | xargs)
