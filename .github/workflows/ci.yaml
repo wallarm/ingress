@@ -124,6 +124,7 @@ jobs:
     continue-on-error: true
     needs:
       - build-controller
+    if: always() && needs.build-controller.result == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -175,7 +176,12 @@ jobs:
     name: Helm
     runs-on: self-hosted-1cpu
     needs:
+      - changes
       - build-controller
+    if: |
+      always() && 
+      (needs.build-controller.result == 'success' || needs.build-controller.result == 'skipped')
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -213,13 +219,12 @@ jobs:
           make kind-e2e-chart-tests
 
 
-
-
   e2e:
     name: E2E - Wallarm disabled
     runs-on: self-hosted-4cpu
     needs:
       - build-controller
+    if: always() && needs.build-controller.result == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -265,6 +270,7 @@ jobs:
     runs-on: self-hosted-4cpu
     needs:
       - build-controller
+    if: always() && needs.build-controller.result == 'success'
     strategy:
       matrix:
         k8s: [ v1.23.10, v1.24.4, v1.25.0 ]
