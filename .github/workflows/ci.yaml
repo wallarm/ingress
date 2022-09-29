@@ -309,3 +309,6 @@ jobs:
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=10 kind-e2e-test
+
+
+# If pushed to main branch - build and push  base/controller
