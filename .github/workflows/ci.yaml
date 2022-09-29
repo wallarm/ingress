@@ -137,6 +137,7 @@ jobs:
           else
             echo "::set-output name=continue::false
           fi
+          true
 
   smoke:
     name: Smoke
