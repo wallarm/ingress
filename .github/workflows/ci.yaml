@@ -32,7 +32,7 @@ jobs:
               - 'rootfs/**/*'
               - 'TAG'
               - 'test/e2e/**/*'
-            charts:
+            helm:
               - 'charts/ingress-nginx/Chart.yaml'
               - 'charts/ingress-nginx/**/*'
 
@@ -129,6 +129,8 @@ jobs:
     continue-on-error: true
     needs:
       - controller
+      - changes
+    if: needs.changes.outputs.go == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -180,7 +182,8 @@ jobs:
     runs-on: self-hosted-1cpu
     needs:
       - controller
-      - check
+      - changes
+    if: needs.changes.outputs.helm == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -223,8 +226,8 @@ jobs:
     runs-on: self-hosted-4cpu
     needs:
       - controller
-      - check
-    if: needs.check-build.continue
+      - changes
+    if: needs.changes.outputs.go == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -267,9 +270,9 @@ jobs:
     name: E2E - Wallarm enabled
     runs-on: self-hosted-4cpu
     needs:
-      - check
+      - changes
       - controller
-    if: needs.check-build.continue
+    if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
         k8s: [ v1.23.10, v1.24.4, v1.25.0 ]
@@ -310,7 +313,4 @@ jobs:
           WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=10 kind-e2e-test
-
-
-# If pushed to main branch - build and push  base/controller
+          make E2E_NODES=7 kind-e2e-test
