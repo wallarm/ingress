@@ -85,14 +85,14 @@ jobs:
 
       - name: Load cache
         # TODO false is set for debug. Revert to true!
-        if: needs.changes.outputs.base == 'false'
+        if: needs.changes.outputs.base == 'true'
         uses: actions/download-artifact@v3
         with:
           name: base.tar
 
       - name: Load base image
         # TODO false is set for debug. Revert to true!
-        if: needs.changes.outputs.base == 'false'
+        if: needs.changes.outputs.base == 'true'
         run: docker load -i base.tar
 
       - name: Set up Go 1.19.1
