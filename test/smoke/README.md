@@ -53,6 +53,13 @@ ARCH=amd64
 * To create test environment and run tests for first time run `make kind-smoke-test`
 * To run smoke tests against existing environment run `make smoke-test`
 * To get access to local Kubernetes cluster set `export KUBECONFIG="$HOME/.kube/kind-config-ingress-smoke-test"`
-* To delete test environment run `kind delete cluster -n ingress-smoke-test`
+
 If `SMOKE_IMAGE_*` or `WALALRM_API_*` variables were updated in `.env` file when environment was already exists,
 run `make kind-smoke-test` to apply these changes.
+
+## Cleanup
+To delete test environment run:
+```shell
+kind delete cluster -n ingress-smoke-test
+rm $HOME/.kube/kind-config-ingress-smoke-test
+```
