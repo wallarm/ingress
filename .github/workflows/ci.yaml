@@ -75,7 +75,7 @@ jobs:
     runs-on: self-hosted-4cpu
     needs:
       - changes
-      - base
+      #- base
 #    if: |
 #      always() &&
 #      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true') &&
@@ -263,7 +263,7 @@ jobs:
           make E2E_NODES=10 kind-e2e-test
 
 
-  e2e-wallarm-enabled:
+  e2e-wallarm:
     name: E2E - Wallarm
     runs-on: self-hosted-4cpu
     needs:
@@ -308,6 +308,56 @@ jobs:
           SKIP_IMAGE_CREATION: true
           WALLARM_ENABLED: true
           WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
+        run: |
+          kind get kubeconfig > $HOME/.kube/kind-config-kind
+          make E2E_NODES=10 kind-e2e-test
+
+  e2e-wallarm-chroot:
+    name: E2E - Wallarm (chroot)
+    runs-on: self-hosted-4cpu
+    needs:
+      - changes
+      - controller
+    if: needs.changes.outputs.go == 'true'
+    strategy:
+      matrix:
+        k8s: [ v1.23.10, v1.24.4, v1.25.0 ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Load cache
+        uses: actions/download-artifact@v3
+        with:
+          name: controller.tar
+
+      - name: Load images
+        run: docker load -i controller.tar
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.8.0'
+
+      - name: Create cluster ${{ matrix.k8s }}
+        uses: helm/kind-action@v1.3.0
+        with:
+          verbosity: "0"
+          wait: "240s"
+          version: v0.15.0
+          node_image: kindest/node:${{ matrix.k8s }}
+          config: test/e2e/kind.yaml
+          cluster_name: kind
+
+      - name: Run e2e tests
+        env:
+          ARCH: amd64
+          KIND_CLUSTER_NAME: kind
+          SKIP_CLUSTER_CREATION: true
+          SKIP_IMAGE_CREATION: true
+          WALLARM_ENABLED: true
+          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
+          IS_CHROOT: true
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=10 kind-e2e-test
