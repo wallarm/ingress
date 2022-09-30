@@ -106,7 +106,7 @@ echo "[dev-env] copying docker images to cluster..."
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} nginx-ingress-controller:e2e
 
 if [ "${IS_CHROOT}" = "true" ]; then
-   docker tag ${REGISTRY}/controller-chroot:${TAG} ${REGISTRY}/ingress-controller:${TAG}
+   docker tag ${REGISTRY}/ingress-controller-chroot:${TAG} ${REGISTRY}/ingress-controller:${TAG}
 fi
 
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/ingress-controller:${TAG}
