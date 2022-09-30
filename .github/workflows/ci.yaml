@@ -36,39 +36,39 @@ jobs:
               - 'charts/ingress-nginx/Chart.yaml'
               - 'charts/ingress-nginx/**/*'
 
-  base:
-    name: Build base
-    runs-on: self-hosted-8cpu
-    needs:
-      - changes
-    # TODO false is set for debug. Revert to true!
-    steps:
-      - name: Checkout
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/checkout@v3
-
-      - name: Setup Docker Buildx
-        if: needs.changes.outputs.base == 'true'
-        uses: docker/setup-buildx-action@v2
-        with:
-          version: latest
-          use: false
-
-      - name: Build base
-        if: needs.changes.outputs.base == 'true'
-        run: |
-          eval $(ssh-agent -s)
-          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
-          make -C images/nginx OUTPUT=--load build
-          docker save -o base.tar $(cat NGINX_BASE)
-
-      - name: Cache image
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/upload-artifact@v3
-        with:
-          retention-days: 1
-          name: base.tar
-          path: base.tar
+#  base:
+#    name: Build base
+#    runs-on: self-hosted-8cpu
+#    needs:
+#      - changes
+#    # TODO false is set for debug. Revert to true!
+#    steps:
+#      - name: Checkout
+#        if: needs.changes.outputs.base == 'true'
+#        uses: actions/checkout@v3
+#
+#      - name: Setup Docker Buildx
+#        if: needs.changes.outputs.base == 'true'
+#        uses: docker/setup-buildx-action@v2
+#        with:
+#          version: latest
+#          use: false
+#
+#      - name: Build base
+#        if: needs.changes.outputs.base == 'true'
+#        run: |
+#          eval $(ssh-agent -s)
+#          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
+#          make -C images/nginx OUTPUT=--load build
+#          docker save -o base.tar $(cat NGINX_BASE)
+#
+#      - name: Cache image
+#        if: needs.changes.outputs.base == 'true'
+#        uses: actions/upload-artifact@v3
+#        with:
+#          retention-days: 1
+#          name: base.tar
+#          path: base.tar
 
   controller:
     name: Build controller
@@ -86,14 +86,14 @@ jobs:
 
       - name: Load cache
         # TODO false is set for debug. Revert to true!
-        if: needs.changes.outputs.base == 'true'
+        if: needs.changes.outputs.base == 'false'
         uses: actions/download-artifact@v3
         with:
           name: base.tar
 
       - name: Load base image
         # TODO false is set for debug. Revert to true!
-        if: needs.changes.outputs.base == 'true'
+        if: needs.changes.outputs.base == 'false'
         run: docker load -i base.tar
 
       - name: Build images
