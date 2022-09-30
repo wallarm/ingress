@@ -43,8 +43,7 @@ jobs:
     needs:
       - changes
     # TODO false is set for debug. Revert to true!
-    if: |
-      (needs.changes.outputs.base-tag == 'true')
+    if: needs.changes.outputs.base-tag == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
