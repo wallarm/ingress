@@ -110,7 +110,7 @@ jobs:
           docker images
           docker save -o controller.tar \
           wallarm/ingress-controller:1.0.0-dev \
-          wallarm/ingress-controller-chroot:1.0.0-dev
+          wallarm/ingress-controller-chroot:1.0.0-dev \
           nginx-ingress-controller:e2e
 
       - name: Cache images
