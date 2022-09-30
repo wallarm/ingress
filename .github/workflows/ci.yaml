@@ -13,7 +13,7 @@ jobs:
     outputs:
       base: ${{ steps.filter.outputs.base }}
       go: ${{ steps.filter.outputs.go }}
-      charts: ${{ steps.filter.outputs.helm}}
+      helm: ${{ steps.filter.outputs.helm}}
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
@@ -54,7 +54,7 @@ jobs:
           version: latest
           use: false
 
-      - name: Build
+      - name: Build base
         if: needs.changes.outputs.base == 'true'
         run: |
           eval $(ssh-agent -s)
@@ -96,11 +96,11 @@ jobs:
         if: needs.changes.outputs.base == 'true'
         run: docker load -i base.tar
 
-      - name: Set up Go 1.19.1
-        id: go
-        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.2.0
-        with:
-          go-version: '1.19.1'
+#      - name: Set up Go 1.19.1
+#        id: go
+#        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.2.0
+#        with:
+#          go-version: '1.19.1'
 
       - name: Build images
         env:
@@ -112,9 +112,12 @@ jobs:
           echo "Building controller images"
           make clean-image build image
           echo "Building E2E image"
-          make -C test/e2e-image image
+          make -C test/e2e-image image image-chroot
           docker images
-          docker save -o controller.tar wallarm/ingress-controller:1.0.0-dev nginx-ingress-controller:e2e
+          docker save -o controller.tar \
+          wallarm/ingress-controller:1.0.0-dev \
+          wallarm/ingress-controller-chroot:1.0.0-dev
+          nginx-ingress-controller:e2e
 
       - name: Cache images
         uses: actions/upload-artifact@v3
@@ -263,7 +266,7 @@ jobs:
           ARCH: amd64
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=7 kind-e2e-test
+          make E2E_NODES=10 kind-e2e-test
 
 
   e2e-wallarm-enabled:
@@ -313,4 +316,4 @@ jobs:
           WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=5 kind-e2e-test
+          make E2E_NODES=10 kind-e2e-test
