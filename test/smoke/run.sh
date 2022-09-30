@@ -122,7 +122,7 @@ controller:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
     digest:
-  imagePullPolicy: Never
+    pullPolicy: Never
   config:
     worker-processes: "1"
     enable-real-ip: true
