@@ -14,63 +14,20 @@ permissions:
 
 jobs:
   k6_test_run:
-    runs-on: custom-runner
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set ownership
+        uses: actions/checkout@v1
+ 
+      - name: Install K6
         run: |
-          # this is to fix GIT not liking owner of the checkout dir
-          chown -R $(id -u):$(id -g) $PWD
-
-      - name: Install Go
-        id: go
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.19.0'
-
-      - name: Install k6
-        env:
-          VERSION: v0.40.0
-        run: |
-          wget -q https://github.com/grafana/k6/releases/download/${VERSION}/k6-${VERSION}-linux-amd64.tar.gz
-          tar -xvf k6-${VERSION}-linux-amd64.tar.gz k6-${VERSION}-linux-amd64/k6
-          chmod +x k6-${VERSION}-linux-amd64/k6
-          sudo mv k6-${VERSION}-linux-amd64/k6 /usr/local/bin/k6
-          k6 version
-
-      - name: Install Helm
-        env:
-          VERSION: v3.9.4
-        run: |  
-          wget -q https://get.helm.sh/helm-${VERSION}-linux-amd64.tar.gz
-          tar -xvf helm-${VERSION}-linux-amd64.tar.gz
-          sudo mv linux-amd64/helm /usr/local/bin/helm
-          helm version
-
-      - name: Install kubectl
-        env:
-          VERSION: v1.25.0
-        run: |
-          wget -q https://dl.k8s.io/release/${VERSION}/bin/linux/amd64/kubectl
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/kubectl
-          kubectl version -o yaml || true
-
-      - name: Install Kind
-        env:
-          VERSION: v0.15.0
-        run: |
-          curl -Lo ./kind https://kind.sigs.k8s.io/dl/${VERSION}/kind-linux-amd64
-          chmod +x ./kind
-          sudo mv ./kind /usr/local/bin/kind
-          kind version
+          wget https://github.com/grafana/k6/releases/download/v0.38.2/k6-v0.38.2-linux-amd64.tar.gz
+          tar -xvf k6-v0.38.2-linux-amd64.tar.gz k6-v0.38.2-linux-amd64/k6
+          mv k6-v0.38.2-linux-amd64/k6 .
+          ./k6
 
       - name: Make dev-env
-        env:
-          DOCKER_OPTS: --user="1000:1000"
         run: |
           mkdir $HOME/.kube
           make dev-env
@@ -78,14 +35,15 @@ jobs:
           if [[ -z ${podName} ]] ; then 
             sleep 5
           fi
-          kubectl wait pod -n ingress-nginx --for condition=Ready $podName --timeout=180s
-          kubectl get all -n ingress-nginx
+          kubectl wait pod -n ingress-nginx --for condition=Ready $podName
+          kubectl get all -A
 
       - name: Deploy workload
         run: |
-          kubectl create deploy k6 --image kennethreitz/httpbin --port 80 --replicas 3
-          kubectl expose deploy k6 --port 80
-          kubectl create ing k6 --class nginx --rule test.ingress-nginx-controller.ga/*=k6:80
+          kubectl create deploy k6 --image kennethreitz/httpbin --port 80 && \
+            kubectl expose deploy k6 --port 80 && \
+            kubectl create ing k6 --class nginx \
+            --rule test.ingress-nginx-controller.ga/*=k6:80
           podName=`kubectl get po | grep -i k6 | awk '{print $1}'`
           if [[ -z ${podName} ]] ; then 
             sleep 5
@@ -93,11 +51,20 @@ jobs:
           kubectl wait pod --for condition=Ready $podName
           kubectl get all,secrets,ing
 
-      - name: Run test
-        run: ./k6 run test/k6/loadtest.js --insecure-skip-tls-verify --out json=results.json
+      - name: Tune OS
+        run : |
+          sudo sysctl -A 2>/dev/null | egrep -i "local_port_range|tw_reuse|tcp_timestamps"
+          sudo sh -c "ulimit"
+          sudo sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+          sudo sysctl -w net.ipv4.tcp_tw_reuse=1
+          sudo sysctl -w net.ipv4.tcp_timestamps=1
+          sudo sh -c "ulimit "
 
-      - name: Upload results
-        uses: actions/upload-artifact@v3
-        with:
-          name: k6-report
-          path: results.json
+      - name: Run smoke test
+        run: |
+          vmstat -at 5 | tee vmstat_report &
+          #./k6 login cloud -t $K6_TOKEN
+          #./k6 run -o cloud ./smoketest.js
+          ./k6 run test/k6/smoketest.js
+          pkill vmstat
+          cat vmstat_report
