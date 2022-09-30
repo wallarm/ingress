@@ -50,7 +50,6 @@ trap cleanup EXIT
 
 E2E_CHECK_LEAKS=${E2E_CHECK_LEAKS:-}
 FOCUS=${FOCUS:-.*}
-IS_CHROOT=${IS_CHROOT:-false}
 WALLARM_ENABLED="${WALLARM_ENABLED:-false}"
 WALLARM_API_TOKEN="${WALLARM_API_TOKEN:-}"
 
@@ -59,7 +58,6 @@ NGINX_BASE_IMAGE=$(cat $BASEDIR/../NGINX_BASE)
 
 export E2E_CHECK_LEAKS
 export FOCUS
-export IS_CHROOT
 export WALLARM_ENABLED
 export WALLARM_API_TOKEN
 
@@ -93,7 +91,6 @@ kubectl run --rm \
   --env="NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE}" \
   --env="WALLARM_ENABLED=${WALLARM_ENABLED}" \
   --env="WALLARM_API_TOKEN=${WALLARM_API_TOKEN}" \
-  --env="IS_CHROOT=${IS_CHROOT}" \
   --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e"}}' \
   e2e --image=nginx-ingress-controller:e2e
 
