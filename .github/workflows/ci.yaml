@@ -258,6 +258,7 @@ jobs:
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
           ARCH: amd64
+          IS_CHROOT: true
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=10 kind-e2e-test
