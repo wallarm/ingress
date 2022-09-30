@@ -96,12 +96,6 @@ jobs:
         if: needs.changes.outputs.base == 'true'
         run: docker load -i base.tar
 
-#      - name: Set up Go 1.19.1
-#        id: go
-#        uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f # v3.2.0
-#        with:
-#          go-version: '1.19.1'
-
       - name: Build images
         env:
           ARCH: amd64
@@ -110,9 +104,9 @@ jobs:
           USER: runner
         run: |
           echo "Building controller images"
-          make clean-image build image
+          make clean-image build image image-chroot
           echo "Building E2E image"
-          make -C test/e2e-image image image-chroot
+          make -C test/e2e-image image
           docker images
           docker save -o controller.tar \
           wallarm/ingress-controller:1.0.0-dev \
@@ -225,7 +219,7 @@ jobs:
 
 
   e2e:
-    name: E2E - Wallarm disabled
+    name: E2E
     runs-on: self-hosted-4cpu
     needs:
       - controller
@@ -270,7 +264,7 @@ jobs:
 
 
   e2e-wallarm-enabled:
-    name: E2E - Wallarm enabled
+    name: E2E - Wallarm
     runs-on: self-hosted-4cpu
     needs:
       - changes
