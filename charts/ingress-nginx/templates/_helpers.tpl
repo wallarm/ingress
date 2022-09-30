@@ -171,10 +171,10 @@ Create the name of the controller service account to use
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmTarantoolPort" -}}3313{{- end -}}
-{{- define "ingress-nginx.wallarmTarantoolName" -}}{{ .Release.Name }}-{{ .Values.controller.name }}-wallarm-tarantool{{- end -}}
-{{- define "ingress-nginx.wallarmTarantoolCronConfig" -}}{{ .Release.Name }}-{{ template "ingress-nginx.wallarmTarantoolName" . }}-cron{{- end -}}
-{{- define "ingress-nginx.wallarmControllerCronConfig" -}}{{ .Release.Name }}-{{ include "ingress-nginx.controller.fullname" . | lower }}-cron{{- end -}}
-{{- define "ingress-nginx.wallarmSecret" -}}{{ .Release.Name }}-{{ .Values.controller.name }}-secret{{- end -}}
+{{- define "ingress-nginx.wallarmTarantoolName" -}}{{ .Values.controller.name }}-wallarm-tarantool{{- end -}}
+{{- define "ingress-nginx.wallarmTarantoolCronConfig" -}}{{ template "ingress-nginx.wallarmTarantoolName" . }}-cron{{- end -}}
+{{- define "ingress-nginx.wallarmControllerCronConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-cron{{- end -}}
+{{- define "ingress-nginx.wallarmSecret" -}}{{ .Values.controller.name }}-secret{{- end -}}
 
 {{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
 - name: addnode
