@@ -22,10 +22,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           filters: |
-            base-tag:
+            base:
               - 'NGINX_BASE'
-            controller-tag:
-              - 'TAG'
             go:
               - '**/*.go'
               - 'go.mod'
@@ -76,7 +74,7 @@ jobs:
       - build-base
     if: |
       always() && 
-      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base-tag == 'true') &&
+      (needs.changes.outputs.go == 'true' || needs.changes.outputs.base == 'true') &&
       (needs.build-base.result == 'success' || needs.build-base.result == 'skipped')
     steps:
       - name: Checkout
