@@ -213,56 +213,6 @@ jobs:
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-e2e-chart-tests
 
-
-
-  helm-upgrade:
-    name: Helm upgrade
-    runs-on: self-hosted-1cpu
-    needs:
-      - controller
-      - changes
-    if: needs.changes.outputs.helm == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: "0"
-
-      - name: Load cache
-        uses: actions/download-artifact@v3
-        with:
-          name: controller.tar
-
-      - name: Load images
-        run: docker load -i controller.tar
-
-      - name: Install helm
-        uses: azure/setup-helm@v3
-        with:
-          version: 'v3.8.0'
-
-      - name: Create cluster
-        uses: helm/kind-action@v1.3.0
-        with:
-          version: v0.15.0
-          cluster_name: kind
-          node_image: kindest/node:v1.24.4
-
-      - name: Run E2E chart tests
-        env:
-          ARCH: amd64
-          KIND_CLUSTER_NAME: kind
-          SKIP_CLUSTER_CREATION: true
-          SKIP_IMAGE_CREATION: true
-          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
-          CT_EXTRA_ARGS: "--upgrade --target-branch main"
-        run: |
-          kind get kubeconfig > $HOME/.kube/kind-config-kind
-          export KUBECONFIG=$HOME/.kube/kind-config-kind
-          git fetch --all
-          make kind-e2e-chart-tests
-
-
   e2e:
     name: E2E
     runs-on: self-hosted-4cpu
