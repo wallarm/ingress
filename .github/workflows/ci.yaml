@@ -264,10 +264,8 @@ jobs:
       - build
     if: needs.changes.outputs.go == 'true'
     strategy:
-      fail-fast: false
       matrix:
         k8s: [ v1.23.10, v1.24.4, v1.25.0 ]
-        chroot: ['false', 'true']
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -317,7 +315,6 @@ jobs:
           SKIP_IMAGE_CREATION: true
           WALLARM_ENABLED: true
           WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
-          IS_CHROOT: ${{ matrix.chroot }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=10 kind-e2e-test
