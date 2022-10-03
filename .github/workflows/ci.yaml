@@ -67,7 +67,7 @@ jobs:
           USER: runner
         run: |
           echo "Building controller images"
-          make clean-image build image image-chroot
+          make clean-image build image
           echo "Building E2E image"
           make -C test/e2e-image image
           docker save -o controller.tar \
