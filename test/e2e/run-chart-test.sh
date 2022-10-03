@@ -100,7 +100,7 @@ kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} wal
 
 echo "[dev-env] copying helper images to cluster..."
 ${DIR}/../../build/load-images.sh
-
+set -x
 echo "[dev-env] running helm chart e2e tests..."
 docker run \
     --rm \

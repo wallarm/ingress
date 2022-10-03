@@ -255,10 +255,11 @@ jobs:
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
           WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
-          CT_EXTRA_ARGS: "--upgrade --target-branch main"
+          #CT_EXTRA_ARGS: "--upgrade --target-branch main"
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
+          export CT_EXTRA_ARGS="--upgrade --target-branch main"
           set -x
           make kind-e2e-chart-tests
 
