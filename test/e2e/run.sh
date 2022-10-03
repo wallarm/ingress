@@ -105,13 +105,17 @@ echo "[dev-env] copying docker images to cluster..."
 
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} nginx-ingress-controller:e2e
 
-if [ "${IS_CHROOT}" = "true" ]; then
-   docker tag ${REGISTRY}/ingress-controller-chroot:${TAG} ${REGISTRY}/ingress-controller:${TAG}
+if [ "${IS_CHROOT}" == "true" ]; then
+  echo "Using chroot image ..."
+  set -x
+  docker tag ${REGISTRY}/ingress-controller-chroot:${TAG} ${REGISTRY}/ingress-controller:${TAG}
+  set +x
+  docker images
 fi
 
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/ingress-controller:${TAG}
 
-if [ "${WALLARM_ENABLED}" = "true" ]; then
+if [ "${WALLARM_ENABLED}" == "true" ]; then
   if [ -z "${WALLARM_API_TOKEN}" ]; then
     echo "WALLARM_API_TOKEN must be set! Exiting ..."
     exit 1

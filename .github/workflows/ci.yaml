@@ -42,6 +42,7 @@ jobs:
   build:
     name: Build images
     runs-on: self-hosted-8cpu
+    if: needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true'
     needs:
       - changes
     steps:
