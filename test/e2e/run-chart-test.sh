@@ -21,12 +21,6 @@ if [ -n "${DEBUG}" ]; then
   KIND_LOG_LEVEL="6"
 fi
 
-HELM_EXTRA_SET_ARGS="\
- --set controller.wallarm.apiHost=${WALLARM_API_HOST:-api.wallarm.com} \
- --set controller.wallarm.token=${WALLARM_API_TOKEN} \
- --set controller.wallarm.enabled=true \
- --set fullnameOverride=wallarm-ingress ${HELM_EXTRA_SET_ARGS}"
-
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -55,9 +49,21 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
 export TAG=1.0.0-dev
 export ARCH=${ARCH:-amd64}
-export REGISTRY=wallarm
 
 BASEDIR=$(dirname "$0")
+
+# Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
+# The changes can be found here: https://github.com/xDmitriev/chart-testing/commit/aa221da0c1fd09c0190e604493f12a4b5e155c13
+CT_IMAGE="quay.io/dmitriev/chart-testing@sha256:c0bd16c255b1c10697675f5a4f77d8844c3f5a598ab64e0d17286aa1a01a019c"
+
+HELM_EXTRA_SET_ARGS="\
+ --set controller.wallarm.apiHost=${WALLARM_API_HOST:-api.wallarm.com} \
+ --set controller.wallarm.token=${WALLARM_API_TOKEN} \
+ --set controller.wallarm.enabled=true \
+ --set controller.image.repository=wallarm/ingress-controller \
+ --set controller.image.tag=1.0.0-dev \
+ --set controller.terminationGracePeriodSeconds=0 \
+ --set fullnameOverride=wallarm-ingress ${HELM_EXTRA_SET_ARGS:-}"
 
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
@@ -90,15 +96,12 @@ fi
 export KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep 'worker' | awk '{printf (NR>1?",":"") $1}')
 
 echo "[dev-env] copying docker images to cluster..."
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/ingress-controller:${TAG}
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} wallarm/ingress-controller:${TAG}
 
 echo "[dev-env] copying helper images to cluster..."
 ${DIR}/../../build/load-images.sh
 
 echo "[dev-env] running helm chart e2e tests..."
-# Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
-# The changes can be found here: https://github.com/xDmitriev/chart-testing/commit/aa221da0c1fd09c0190e604493f12a4b5e155c13
-
 docker run \
     --rm \
     --interactive \
@@ -107,8 +110,9 @@ docker run \
     --volume "${KUBECONFIG}":/root/.kube/config \
     --volume "${DIR}/../../":/workdir \
     --workdir /workdir \
-    quay.io/dmitriev/chart-testing:latest-amd64 ct install \
+    ${CT_IMAGE} ct install \
         --charts charts/ingress-nginx \
         --helm-extra-set-args "${HELM_EXTRA_SET_ARGS}" \
-        --helm-extra-args "--timeout 60s" \
+        --helm-extra-args "--timeout 90s" \
+        ${CT_EXTRA_ARGS:-} \
         --debug
