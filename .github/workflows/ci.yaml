@@ -14,9 +14,7 @@ jobs:
       pull-requests: read
     runs-on: ubuntu-latest
     outputs:
-      #TODO remove before merge!
-      base: 'false'
-      #base: ${{ steps.filter.outputs.base }}
+      base: ${{ steps.filter.outputs.base }}
       go: ${{ steps.filter.outputs.go }}
       helm: ${{ steps.filter.outputs.helm}}
     steps:
@@ -137,8 +135,6 @@ jobs:
 
       - name: Run smoke tests
         env:
-          # TODO remove SMOKE_IMAGE_TAG after testing! It is 'latest' by default
-          SMOKE_IMAGE_TAG: 0.0.9-rc1664274176
           ARCH: amd64
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
