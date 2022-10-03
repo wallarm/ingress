@@ -58,7 +58,6 @@ jobs:
           eval $(ssh-agent -s)
           echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
           make -C images/nginx OUTPUT=--load build
-          docker save -o base.tar $(cat NGINX_BASE)
 
       - name: Build controller's images
         env:
