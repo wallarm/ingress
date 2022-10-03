@@ -264,6 +264,7 @@ jobs:
       - build
     if: needs.changes.outputs.go == 'true'
     strategy:
+      fail-fast: false
       matrix:
         k8s: [ v1.23.10, v1.24.4, v1.25.0 ]
         chroot: ['false', 'true']
