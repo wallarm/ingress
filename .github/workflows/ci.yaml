@@ -58,28 +58,37 @@ jobs:
           eval $(ssh-agent -s)
           echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
           make -C images/nginx OUTPUT=--load build
+          docker save -o base.tar $(cat NGINX_BASE)
 
-      - name: Build controller's images
+      - name: Build controller images
         env:
           ARCH: amd64
           REGISTRY: wallarm
           TAG: 1.0.0-dev
           USER: runner
         run: |
-          echo "Building controller images"
-          make clean-image build image
-          echo "Building E2E image"
-          make -C test/e2e-image image
+          echo "Building controller images ..."
+          make clean-image build imag       
+          echo "Building E2E image ..."
+          make -C test/e2e-image image          
           docker save -o controller.tar \
           wallarm/ingress-controller:1.0.0-dev \
           nginx-ingress-controller:e2e
 
-      - name: Cache images
+      - name: Cache controller images
         uses: actions/upload-artifact@v3
         with:
           retention-days: 1
           name: controller.tar
           path: controller.tar
+
+      - name: Cache base image
+        if: needs.changes.outputs.base == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 1
+          name: base.tar
+          path: base.tar
 
   smoke:
     name: Smoke
@@ -179,6 +188,7 @@ jobs:
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-e2e-chart-tests
 
+
   e2e:
     name: E2E
     runs-on: self-hosted-4cpu
@@ -190,12 +200,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Load cache
+      - name: Load base build cache
+        if: needs.changes.outputs.base == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: base.tar
+
+      - name: Load base image
+        if: needs.changes.outputs.base == 'true'
+        run: docker load -i base.tar
+
+      - name: Load controller build cache
         uses: actions/download-artifact@v3
         with:
           name: controller.tar
 
-      - name: Load images
+      - name: Load controller images
         run: docker load -i controller.tar
 
       - name: Install Helm
@@ -212,6 +232,10 @@ jobs:
           node_image: kindest/node:v1.24.4
           config: test/e2e/kind.yaml
           cluster_name: kind
+
+      - name: Copying base image to cluster
+        if: needs.changes.outputs.base == 'true'
+        run: kind load docker-image --name=kind $(cat NGINX_BASE)
 
       - name: Run e2e tests
         env:
@@ -238,12 +262,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Load cache
+      - name: Load base build cache
+        if: needs.changes.outputs.base == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: base.tar
+
+      - name: Load base image
+        if: needs.changes.outputs.base == 'true'
+        run: docker load -i base.tar
+
+      - name: Load controller build cache
         uses: actions/download-artifact@v3
         with:
           name: controller.tar
 
-      - name: Load images
+      - name: Load controller images
         run: docker load -i controller.tar
 
       - name: Install Helm
@@ -260,6 +294,10 @@ jobs:
           node_image: kindest/node:${{ matrix.k8s }}
           config: test/e2e/kind.yaml
           cluster_name: kind
+
+      - name: Copying base image to cluster
+        if: needs.changes.outputs.base == 'true'
+        run: kind load docker-image --name=kind $(cat NGINX_BASE)
 
       - name: Run e2e tests
         env:
