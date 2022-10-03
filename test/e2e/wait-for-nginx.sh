@@ -52,6 +52,7 @@ if [[ ! -z "$NAMESPACE_OVERLAY" && -d "$DIR/namespace-overlays/$NAMESPACE_OVERLA
     helm install nginx-ingress ${DIR}/charts/ingress-nginx \
         --namespace=$NAMESPACE \
         --values "$DIR/namespace-overlays/$NAMESPACE_OVERLAY/values.yaml" \
+        --set controller.image.chroot="${IS_CHROOT}" \
         --set controller.wallarm.enabled="${WALLARM_ENABLED}" \
         --set controller.wallarm.token="${WALLARM_API_TOKEN}" \
         --set controller.wallarm.fallback="off"
@@ -66,7 +67,7 @@ controller:
     fallback: "off"
   image:
     repository: wallarm/ingress-controller
-    chroot: false
+    chroot: ${IS_CHROOT}
     tag: 1.0.0-dev
     digest:
     digestChroot:
