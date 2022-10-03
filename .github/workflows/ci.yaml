@@ -226,7 +226,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: '0'
 
       - name: Load cache
         uses: actions/download-artifact@v3
@@ -260,7 +260,7 @@ jobs:
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           export CT_EXTRA_ARGS="--upgrade --target-branch main"
-          set -x
+          #git fetch --unshallow
           make kind-e2e-chart-tests
 
 
