@@ -36,62 +36,31 @@ jobs:
               - 'charts/ingress-nginx/Chart.yaml'
               - 'charts/ingress-nginx/**/*'
 
-#  base:
-#    name: Build base
-#    runs-on: self-hosted-8cpu
-#    needs:
-#      - changes
-#    # TODO false is set for debug. Revert to true!
-#    steps:
-#      - name: Checkout
-#        if: needs.changes.outputs.base == 'true'
-#        uses: actions/checkout@v3
-#
-#      - name: Setup Docker Buildx
-#        if: needs.changes.outputs.base == 'true'
-#        uses: docker/setup-buildx-action@v2
-#        with:
-#          version: latest
-#          use: false
-#
-#      - name: Build base
-#        if: needs.changes.outputs.base == 'true'
-#        run: |
-#          eval $(ssh-agent -s)
-#          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
-#          make -C images/nginx OUTPUT=--load build
-#          docker save -o base.tar $(cat NGINX_BASE)
-#
-#      - name: Cache image
-#        if: needs.changes.outputs.base == 'true'
-#        uses: actions/upload-artifact@v3
-#        with:
-#          retention-days: 1
-#          name: base.tar
-#          path: base.tar
-
-  controller:
-    name: Build controller
-    runs-on: self-hosted-4cpu
+  build:
+    name: Build images
+    runs-on: self-hosted-8cpu
     needs:
       - changes
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Load cache
-        # TODO false is set for debug. Revert to true!
-        if: needs.changes.outputs.base == 'false'
-        uses: actions/download-artifact@v3
+      - name: Setup Docker Buildx
+        if: needs.changes.outputs.base == 'true'
+        uses: docker/setup-buildx-action@v2
         with:
-          name: base.tar
+          version: latest
+          use: false
 
-      - name: Load base image
-        # TODO false is set for debug. Revert to true!
-        if: needs.changes.outputs.base == 'false'
-        run: docker load -i base.tar
+      - name: Build base image
+        if: needs.changes.outputs.base == 'true'
+        run: |
+          eval $(ssh-agent -s)
+          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
+          make -C images/nginx OUTPUT=--load build
+          docker save -o base.tar $(cat NGINX_BASE)
 
-      - name: Build images
+      - name: Build controller's images
         env:
           ARCH: amd64
           REGISTRY: wallarm
@@ -102,10 +71,8 @@ jobs:
           make clean-image build image image-chroot
           echo "Building E2E image"
           make -C test/e2e-image image
-          docker images
           docker save -o controller.tar \
           wallarm/ingress-controller:1.0.0-dev \
-          wallarm/ingress-controller-chroot:1.0.0-dev \
           nginx-ingress-controller:e2e
 
       - name: Cache images
@@ -120,7 +87,7 @@ jobs:
     runs-on: self-hosted-1cpu
     continue-on-error: true
     needs:
-      - controller
+      - build
       - changes
     if: needs.changes.outputs.go == 'true'
     strategy:
@@ -174,7 +141,7 @@ jobs:
     name: Helm install
     runs-on: self-hosted-1cpu
     needs:
-      - controller
+      - build
       - changes
     if: needs.changes.outputs.helm == 'true'
     steps:
@@ -217,7 +184,7 @@ jobs:
     name: E2E
     runs-on: self-hosted-4cpu
     needs:
-      - controller
+      - build
       - changes
     if: needs.changes.outputs.go == 'true'
     steps:
@@ -263,7 +230,7 @@ jobs:
     runs-on: self-hosted-4cpu
     needs:
       - changes
-      - controller
+      - build
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
