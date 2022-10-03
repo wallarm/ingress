@@ -210,6 +210,10 @@ Create the name of the controller service account to use
       secretKeyRef:
         key: token
         name: {{ template "ingress-nginx.wallarmSecret" . }}
+  - name: WALLARM_NODE_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
   - name: WALLARM_SYNCNODE_OWNER
     value: www-data
   - name: WALLARM_SYNCNODE_GROUP
