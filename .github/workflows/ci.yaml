@@ -314,3 +314,29 @@ jobs:
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=10 kind-e2e-test
+
+  scan:
+    name: Scan images
+    runs-on: self-hosted-1cpu
+    continue-on-error: true
+    needs:
+      - changes
+      - build
+    if: |
+      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true')
+    steps:
+      - name: Load controller build cache
+        uses: actions/download-artifact@v3
+        with:
+          name: controller.tar
+
+      - name: Load controller images
+        run: docker load -i controller.tar
+
+      - name: Scan controller image
+        uses: anchore/scan-action@v3
+        with:
+          image: "wallarm/ingress-controller:1.0.0-dev"
+          fail-build: true
+          output-format: 'table'
+          severity-cutoff: 'critical'
