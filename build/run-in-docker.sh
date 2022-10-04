@@ -80,13 +80,14 @@ uname -a
 env
 echo "DIND_ENABLED=$DOCKER_IN_DOCKER_ENABLED"
 echo "done..printing env & other vars to stdout"
+
 if [[ "$DOCKER_IN_DOCKER_ENABLED" == "true" ]]; then
   echo "..reached DIND check TRUE block, inside run-in-docker.sh"
   echo "FLAGS=$FLAGS"
   go env
   set -x
   go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
-  find ${HOME} -type f -name ginkgo 2>/dev/null
+  find / -type f -name ginkgo 2>/dev/null
   which ginkgo
   /bin/bash -c "${FLAGS}"
   set +x
