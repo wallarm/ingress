@@ -99,6 +99,7 @@ jobs:
   smoke:
     name: Smoke
     runs-on: self-hosted-1cpu
+    #TODO Set to 'true' since tests are not stable. Remove it when tests will become stable
     continue-on-error: true
     needs:
       - build

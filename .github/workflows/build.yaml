@@ -61,5 +61,5 @@ jobs:
           make -C images/nginx push
 
       - name: Build and push controller images
-        if: needs.changes.outputs.base == 'true'
+        if: needs.changes.outputs.controller == 'true'
         run: make release
