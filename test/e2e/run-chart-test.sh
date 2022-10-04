@@ -16,7 +16,7 @@
 
 KIND_LOG_LEVEL="1"
 
-if ! [ -z $DEBUG ]; then
+if [ -n "${DEBUG}" ]; then
   set -x
   KIND_LOG_LEVEL="6"
 fi
@@ -29,9 +29,10 @@ cleanup() {
   if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
     kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
   fi
-
-  kind delete cluster \
-    --name ${KIND_CLUSTER_NAME}
+  if [[ "${CI:-}" == "true" ]]; then
+    kind delete cluster \
+      --name ${KIND_CLUSTER_NAME}
+  fi
 }
 
 trap cleanup EXIT
@@ -48,21 +49,28 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
 export TAG=1.0.0-dev
 export ARCH=${ARCH:-amd64}
-export REGISTRY=ingress-controller
 
 BASEDIR=$(dirname "$0")
-NGINX_BASE_IMAGE=$(cat $BASEDIR/../../NGINX_BASE)
 
-echo "Running e2e with nginx base image ${NGINX_BASE_IMAGE}"
+# Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
+# The changes can be found here: https://github.com/xDmitriev/chart-testing/commit/aa221da0c1fd09c0190e604493f12a4b5e155c13
+CT_IMAGE="quay.io/dmitriev/chart-testing@sha256:c0bd16c255b1c10697675f5a4f77d8844c3f5a598ab64e0d17286aa1a01a019c"
 
-export NGINX_BASE_IMAGE=$NGINX_BASE_IMAGE
+HELM_EXTRA_SET_ARGS="\
+ --set controller.wallarm.apiHost=${WALLARM_API_HOST:-api.wallarm.com} \
+ --set controller.wallarm.token=${WALLARM_API_TOKEN} \
+ --set controller.wallarm.enabled=true \
+ --set controller.image.repository=wallarm/ingress-controller \
+ --set controller.image.tag=1.0.0-dev \
+ --set controller.terminationGracePeriodSeconds=0 \
+ --set fullnameOverride=wallarm-ingress ${HELM_EXTRA_SET_ARGS:-}"
 
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
 if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] creating Kubernetes cluster with kind"
 
-  export K8S_VERSION=${K8S_VERSION:-v1.21.1@sha256:69860bda5563ac81e3c0057d654b5253219618a22ec3a346306239bba8cfa1a6}
+  export K8S_VERSION=${K8S_VERSION:-v1.24.2@sha256:1f0cee2282f43150b52dc7933183ed96abdcfc8d293f30ec07082495874876f1}
 
   kind create cluster \
     --verbosity=${KIND_LOG_LEVEL} \
@@ -85,19 +93,26 @@ if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
 fi
   
 
-KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | awk '{printf (NR>1?",":"") $1}')
+export KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep 'worker' | awk '{printf (NR>1?",":"") $1}')
+
 echo "[dev-env] copying docker images to cluster..."
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} wallarm/ingress-controller:${TAG}
 
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/controller:${TAG}
-
+echo "[dev-env] copying helper images to cluster..."
+${DIR}/../../build/load-images.sh
+set -x
 echo "[dev-env] running helm chart e2e tests..."
-# Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
-# The changes can be found here: https://github.com/aledbf/chart-testing/commit/41fe0ae0733d0c9a538099fb3cec522e888e3d82
-docker run --rm --interactive --network host \
+docker run \
+    --rm \
+    --interactive \
+    --network host \
     --name ct \
-    --volume $KUBECONFIG:/root/.kube/config \
+    --volume "${KUBECONFIG}":/root/.kube/config \
     --volume "${DIR}/../../":/workdir \
     --workdir /workdir \
-    aledbf/chart-testing:v3.3.1-next ct install \
+    ${CT_IMAGE} ct install \
         --charts charts/ingress-nginx \
-        --helm-extra-args "--timeout 60s"
+        --helm-extra-set-args "${HELM_EXTRA_SET_ARGS}" \
+        --helm-extra-args "--timeout 90s" \
+        ${CT_EXTRA_ARGS:-} \
+        --debug

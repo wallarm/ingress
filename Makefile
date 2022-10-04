@@ -15,6 +15,8 @@
 # Add the following 'help' target to your Makefile
 # And add help text after each target name starting with '\#\#'
 
+-include .env
+
 .DEFAULT_GOAL:=help
 
 .EXPORT_ALL_VARIABLES:
@@ -55,15 +57,9 @@ endif
 
 MAC_OS = $(shell uname -s)
 
-ifeq ($(MAC_OS), Darwin)
-	MAC_DOCKER_FLAGS="--load"
-else
-	MAC_DOCKER_FLAGS=
-endif
-
 REGISTRY ?= wallarm
 
-BASE_IMAGE ?= $(REGISTRY)/ingress-nginx:$(TAG)
+BASE_IMAGE ?= $(shell cat NGINX_BASE)
 
 GOARCH=$(ARCH)
 
@@ -77,7 +73,6 @@ image: clean-image ## Build image for a particular arch.
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
 		$(MAC_DOCKER_FLAGS) \
-		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
 		--build-arg TARGETARCH="$(ARCH)" \
@@ -94,8 +89,6 @@ image-chroot: clean-chroot-image ## Build image for a particular arch.
 	echo "Building docker image ($(ARCH))..."
 	docker build \
 		--no-cache \
-		$(MAC_DOCKER_FLAGS) \
-		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
 		--build-arg TARGETARCH="$(ARCH)" \
@@ -111,7 +104,7 @@ clean-image: ## Removes local image
 
 .PHONY: clean-chroot-image
 clean-chroot-image: ## Removes local image
-	echo "removing old image $(REGISTRY)/controller-chroot:$(TAG)"
+	echo "removing old image $(REGISTRY)/ingress-controller-chroot:$(TAG)"
 	@docker rmi -f $(REGISTRY)/ingress-controller-chroot:$(TAG) || true
 
 
@@ -159,6 +152,14 @@ lua-test: ## Run lua unit tests.
 		BUSTED_ARGS=$(BUSTED_ARGS) \
 		MAC_OS=$(MAC_OS) \
 		test/test-lua.sh
+
+.PHONY: smoke-test
+smoke-test:  ## Run smoke tests (expects access to a working Kubernetes cluster).
+	@test/smoke/run-smoke-suite.sh
+
+.PHONY: kind-smoke-test
+kind-smoke-test:  ## Run smoke tests using kind.
+	@test/smoke/run.sh
 
 .PHONY: e2e-test
 e2e-test:  ## Run e2e tests (expects access to a working Kubernetes cluster).

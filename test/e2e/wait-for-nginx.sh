@@ -32,7 +32,7 @@ function on_exit {
     test $error_code == 0 && return;
 
     echo "Obtaining ingress controller pod logs..."
-    kubectl logs -l app.kubernetes.io/name=ingress-nginx -n $NAMESPACE
+    kubectl logs -l app.kubernetes.io/name=wallarm-ingress -n $NAMESPACE
 }
 trap on_exit EXIT
 
@@ -51,15 +51,23 @@ if [[ ! -z "$NAMESPACE_OVERLAY" && -d "$DIR/namespace-overlays/$NAMESPACE_OVERLA
     echo "Namespace overlay $NAMESPACE_OVERLAY is being used for namespace $NAMESPACE"
     helm install nginx-ingress ${DIR}/charts/ingress-nginx \
         --namespace=$NAMESPACE \
-        --values "$DIR/namespace-overlays/$NAMESPACE_OVERLAY/values.yaml"
+        --values "$DIR/namespace-overlays/$NAMESPACE_OVERLAY/values.yaml" \
+        --set controller.image.chroot="${IS_CHROOT}" \
+        --set controller.wallarm.enabled="${WALLARM_ENABLED}" \
+        --set controller.wallarm.token="${WALLARM_API_TOKEN}" \
+        --set controller.wallarm.fallback="off"
 else
     cat << EOF | helm install nginx-ingress ${DIR}/charts/ingress-nginx --namespace=$NAMESPACE --values -
 # TODO: remove the need to use fullnameOverride
 fullnameOverride: nginx-ingress
 controller:
+  wallarm:
+    enabled: ${WALLARM_ENABLED}
+    token: ${WALLARM_API_TOKEN}
+    fallback: "off"
   image:
-    repository: ingress-controller/controller
-    chroot: true
+    repository: wallarm/ingress-controller
+    chroot: ${IS_CHROOT}
     tag: 1.0.0-dev
     digest:
     digestChroot:

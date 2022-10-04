@@ -199,6 +199,12 @@ Create the name of the controller service account to use
     value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
   - name: WALLARM_API_PORT
     value: {{ .Values.controller.wallarm.apiPort | default "443" | quote }}
+  - name: WALLARM_API_CA_VERIFY
+    {{- if or (.Values.controller.wallarm.apiCaVerify) (eq (.Values.controller.wallarm.apiCaVerify | toString) "<nil>") }}
+    value: "true"
+    {{- else }}
+    value: "false"
+    {{- end }}
   - name: WALLARM_API_USE_SSL
     {{- if or (.Values.controller.wallarm.apiSSL) (eq (.Values.controller.wallarm.apiSSL | toString) "<nil>") }}
     value: "true"
@@ -210,6 +216,10 @@ Create the name of the controller service account to use
       secretKeyRef:
         key: token
         name: {{ template "ingress-nginx.wallarmSecret" . }}
+  - name: WALLARM_NODE_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
   - name: WALLARM_SYNCNODE_OWNER
     value: www-data
   - name: WALLARM_SYNCNODE_GROUP
