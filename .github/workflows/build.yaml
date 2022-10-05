@@ -79,5 +79,6 @@ jobs:
       - name: Build and push controller images
         env:
           ARCH: amd64
+          USER: runner
         if: needs.changes.outputs.controller == 'true'
         run: make release
