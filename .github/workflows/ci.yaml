@@ -102,15 +102,11 @@ jobs:
   smoke:
     name: Smoke
     runs-on: self-hosted-1cpu
-    #TODO Set to 'true' since tests are not stable. Remove it when tests will become stable
-    continue-on-error: true
     needs:
       - build
       - changes
     if: needs.changes.outputs.go == 'true'
     strategy:
-      #TODO Set to 'false' since tests are not stable. Remove it when tests will become stable
-      fail-fast: false
       matrix:
         k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
     steps:
@@ -131,7 +127,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
+        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
         with:
           version: v0.15.0
           cluster_name: kind
@@ -178,7 +174,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
+        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
         with:
           version: v0.15.0
           cluster_name: kind
@@ -232,7 +228,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
+        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
         with:
           verbosity: "0"
           wait: "240s"
@@ -294,7 +290,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster ${{ matrix.k8s }}
-        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
+        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
         with:
           verbosity: "0"
           wait: "240s"
