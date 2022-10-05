@@ -6,6 +6,9 @@ on:
     types: ['opened', 'reopened', 'synchronize']
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   changes:
     name: Changes
@@ -19,9 +22,9 @@ jobs:
       helm: ${{ steps.filter.outputs.helm}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@b2feaf19c27470162a626bd6fa8438ae5b263721 # v2.10.2
         id: filter
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -48,11 +51,11 @@ jobs:
       - changes
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
       - name: Setup Docker Buildx
         if: needs.changes.outputs.base == 'true'
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6 # v2.0.0
         with:
           version: latest
           use: false
@@ -82,7 +85,7 @@ jobs:
           nginx-ingress-controller:e2e
 
       - name: Cache controller images
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
         with:
           retention-days: 1
           name: controller.tar
@@ -90,7 +93,7 @@ jobs:
 
       - name: Cache base image
         if: needs.changes.outputs.base == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
         with:
           retention-days: 1
           name: base.tar
@@ -109,13 +112,13 @@ jobs:
       #TODO Set to 'false' since tests are not stable. Remove it when tests will become stable
       fail-fast: false
       matrix:
-        k8s: [v1.23.10, v1.24.4, v1.25.0]
+        k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
       - name: Load cache
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: controller.tar
 
@@ -123,12 +126,12 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
         with:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@v1.3.0
+        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
         with:
           version: v0.15.0
           cluster_name: kind
@@ -159,10 +162,10 @@ jobs:
     if: needs.changes.outputs.helm == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
       - name: Load cache
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: controller.tar
 
@@ -170,12 +173,12 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
         with:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@v1.3.0
+        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
         with:
           version: v0.15.0
           cluster_name: kind
@@ -203,11 +206,11 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: base.tar
 
@@ -216,7 +219,7 @@ jobs:
         run: docker load -i base.tar
 
       - name: Load controller build cache
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: controller.tar
 
@@ -224,17 +227,17 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
         with:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@v1.3.0
+        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
         with:
           verbosity: "0"
           wait: "240s"
           version: v0.15.0
-          node_image: kindest/node:v1.24.4
+          node_image: kindest/node:v1.24.6
           config: test/e2e/kind.yaml
           cluster_name: kind
 
@@ -262,14 +265,14 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [ v1.23.10, v1.24.4, v1.25.0 ]
+        k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: base.tar
 
@@ -278,7 +281,7 @@ jobs:
         run: docker load -i base.tar
 
       - name: Load controller build cache
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: controller.tar
 
@@ -286,12 +289,12 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
         with:
           version: 'v3.8.0'
 
       - name: Create cluster ${{ matrix.k8s }}
-        uses: helm/kind-action@v1.3.0
+        uses: helm/kind-action@d08cf6ff1575077dee99962540d77ce91c62387d
         with:
           verbosity: "0"
           wait: "240s"
@@ -327,7 +330,7 @@ jobs:
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true')
     steps:
       - name: Load controller build cache
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
         with:
           name: controller.tar
 
@@ -335,7 +338,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Scan controller image
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@d5aa5b6cb9414b0c7771438046ff5bcfa2854ed7
         with:
           image: "wallarm/ingress-controller:1.0.0-dev"
           fail-build: true
