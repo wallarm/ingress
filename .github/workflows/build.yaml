@@ -7,6 +7,7 @@ on:
     paths:
       - 'NGINX_BASE'
       - 'TAG'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        with:
+          ref: 'main'
 
       - uses: dorny/paths-filter@b2feaf19c27470162a626bd6fa8438ae5b263721 # v2.10.2
         id: filter
@@ -45,6 +48,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        with:
+          ref: 'main'
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6 # v2.0.0
@@ -66,5 +71,7 @@ jobs:
           make -C images/nginx push
 
       - name: Build and push controller images
+        env:
+          ARCH: amd64
         if: needs.changes.outputs.controller == 'true'
         run: make release
