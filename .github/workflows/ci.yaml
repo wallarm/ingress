@@ -102,15 +102,11 @@ jobs:
   smoke:
     name: Smoke
     runs-on: self-hosted-1cpu
-    #TODO Set to 'true' since tests are not stable. Remove it when tests will become stable
-    continue-on-error: true
     needs:
       - build
       - changes
     if: needs.changes.outputs.go == 'true'
     strategy:
-      #TODO Set to 'false' since tests are not stable. Remove it when tests will become stable
-      fail-fast: false
       matrix:
         k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
     steps:
