@@ -22,7 +22,7 @@ jobs:
       helm: ${{ steps.filter.outputs.helm}}
     steps:
       - name: Checkout
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
 
       - uses: dorny/paths-filter@b2feaf19c27470162a626bd6fa8438ae5b263721 # v2.10.2
         id: filter
@@ -51,7 +51,7 @@ jobs:
       - changes
     steps:
       - name: Checkout
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
 
       - name: Setup Docker Buildx
         if: needs.changes.outputs.base == 'true'
@@ -111,7 +111,7 @@ jobs:
         k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
     steps:
       - name: Checkout
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
 
       - name: Load cache
         uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
@@ -158,7 +158,7 @@ jobs:
     if: needs.changes.outputs.helm == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
 
       - name: Load cache
         uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
@@ -202,7 +202,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
@@ -264,7 +264,7 @@ jobs:
         k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
     steps:
       - name: Checkout
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
