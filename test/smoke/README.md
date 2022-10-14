@@ -11,21 +11,21 @@ Routines described in the document create local test environment and run smoke t
 
 ## Prerequisites
 ### Software
-The following software should be installed locally: 
+The following software should be installed locally:
 * [Docker](https://docs.docker.com/get-docker/)
 * [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
 
 ### Access to container registry
 Need to have an access (read-only is enough) to `dkr.wallarm.com/tests/smoke-tests` registry.
 It is required to perform `docker login dkr.wallarm.com` using personal access token, before to run tests.
-You should be able to make `docker pull dkr.wallarm.com/tests/smoke-tests`. 
+You should be able to make `docker pull dkr.wallarm.com/tests/smoke-tests`.
 ## Configuration
 Create `.env` file in the root directory of the repository with the following content. All parameters which commented out are optional.
 ```
 # Node base URL
 # NODE_BASE_URL=http://wallarm-ingress-controller.default.svc
 
-# Wallarm API settings. Used for Helm chart deployment and smoke tests 
+# Wallarm API settings. Used for Helm chart deployment and smoke tests
 WALLARM_API_HOST=api.wallarm.com
 WALLARM_API_TOKEN=...
 WALLARM_API_CA_VERIFY=True
@@ -38,7 +38,7 @@ USER_SECRET=...
 # Pytest arguments. Double quotes here must be used here
 # PYTEST_ARGS="--allure-features=Node"
 
-# Number of pytest workers. This variable is optional and set to 10 by default 
+# Number of pytest workers. This variable is optional and set to 10 by default
 # PYTEST_WORKERS=10
 
 # Location of Pytest Docker image
@@ -48,6 +48,8 @@ USER_SECRET=...
 # Just keep it here since it is used in main Makefile if we don't have GO installed locally
 ARCH=amd64
 ```
+
+In the project root there is an example `.env.example`, use `cp .env.example .env` to proceed.
 
 ## Running tests
 * To create test environment and run tests for first time run `make kind-smoke-test`
