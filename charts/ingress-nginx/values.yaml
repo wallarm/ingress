@@ -845,6 +845,8 @@ controller:
         syncMarkers:
           schedule: "* * * * *"
           timeout: 1h
+        weakJwtDetect:
+          schedule: "* * * * *"
       resources: {}
     exportenv:
       resources: {}
