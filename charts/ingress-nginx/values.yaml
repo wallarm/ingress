@@ -23,7 +23,7 @@ controller:
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "4.2.5-1"
+    tag: "4.2.6-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -97,8 +97,8 @@ controller:
       # -- 'hostPort' https port
       https: 443
 
-  # -- Election ID to use for status update
-  electionID: ingress-controller-leader
+  # -- Election ID to use for status update, by default it uses the controller name combined with a suffix of 'leader'
+  electionID: ""
 
   ## This section refers to the creation of the IngressClass resource
   ## IngressClass resources are supported since k8s >= 1.18 and required since k8s >= 1.19
@@ -625,6 +625,8 @@ controller:
       type: ClusterIP
 
     createSecretJob:
+      securityContext:
+        allowPrivilegeEscalation: false
       resources: {}
         # limits:
         #   cpu: 10m
@@ -634,6 +636,8 @@ controller:
         #   memory: 20Mi
 
     patchWebhookJob:
+      securityContext:
+        allowPrivilegeEscalation: false
       resources: {}
 
     patch:

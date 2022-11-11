@@ -108,7 +108,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
+        k8s: [v1.23.13, v1.24.7, v1.25.3]
     steps:
       - name: Checkout
         uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
@@ -233,7 +233,7 @@ jobs:
           verbosity: "0"
           wait: "240s"
           version: v0.15.0
-          node_image: kindest/node:v1.24.6
+          node_image: kindest/node:v1.24.7
           config: test/e2e/kind.yaml
           cluster_name: kind
 
@@ -261,7 +261,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.22.15, v1.23.12, v1.24.6, v1.25.2]
+        k8s: [v1.23.13, v1.24.7, v1.25.3]
     steps:
       - name: Checkout
         uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.0.2
