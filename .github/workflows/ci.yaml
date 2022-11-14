@@ -122,7 +122,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install helm
-        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
+        uses: azure/setup-helm@f382f75448129b3be48f8121b9857be18d815a82
         with:
           version: 'v3.8.0'
 
@@ -169,7 +169,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install helm
-        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
+        uses: azure/setup-helm@f382f75448129b3be48f8121b9857be18d815a82
         with:
           version: 'v3.8.0'
 
@@ -223,7 +223,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install Helm
-        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
+        uses: azure/setup-helm@f382f75448129b3be48f8121b9857be18d815a82
         with:
           version: 'v3.8.0'
 
@@ -285,7 +285,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Install Helm
-        uses: azure/setup-helm@b5b231a831f96336bbfeccc1329990f0005c5bb1
+        uses: azure/setup-helm@f382f75448129b3be48f8121b9857be18d815a82
         with:
           version: 'v3.8.0'
 
