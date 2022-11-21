@@ -35,3 +35,8 @@ data:
     # sync-markers
     {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-markers -l STDOUT
     {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.weakJwtDetect }}
+    # weak-jwt-detect
+    {{ .schedule }} /opt/wallarm/ruby/usr/share/wallarm-common/weak-jwt-detect -l STDOUT
+    {{- end }}

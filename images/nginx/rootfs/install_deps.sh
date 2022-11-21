@@ -10,7 +10,8 @@ apk add openssh-client-default sudo \
  tcl `#sqlite3` \
  cunit-dev `#wacl` \
  re2c bsd-compat-headers `#libdetect` \
- texinfo `#libconfig`
+ texinfo `#libconfig` \
+ valgrind-dev `#gperftools`
 
 ARRAY=(
  "https://github.com/maxmind/libmaxminddb.git;1.6.0"
@@ -28,6 +29,7 @@ ARRAY=(
  "git@gl.wallarm.com:wallarm-node/libs/libwlog.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libtws.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libwyajl.git;$PKGS_BRANCH"
+ "git@gl.wallarm.com:wallarm-node/libs/gperftools.git;$PKGS_BRANCH"
  "git@gl.wallarm.com:wallarm-node/libs/libproton.git;$PKGS_BRANCH"
  "https://github.com/yaml/libyaml.git;0.2.5"
  "git@gl.wallarm.com:wallarm-node/wallarm-nginx.git;$PKGS_BRANCH"
