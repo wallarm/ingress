@@ -763,7 +763,7 @@ controller:
   priorityClassName: ""
 
   wallarm:
-    enabled: true
+    enabled: false
     apiHost: api.wallarm.com
     apiPort: 443
     apiSSL: true
