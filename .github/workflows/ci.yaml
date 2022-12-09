@@ -38,6 +38,7 @@ jobs:
               - 'rootfs/**/*'
               - 'TAG'
               - 'test/e2e/**/*'
+              - 'NGINX_BASE'
             helm:
               - 'charts/ingress-nginx/Chart.yaml'
               - 'charts/ingress-nginx/**/*'
