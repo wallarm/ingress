@@ -64,6 +64,7 @@ RUN apk update \
   /var/lib/nginx/scgi \
   /var/lib/nginx/uwsgi \
   /var/log/audit \
+  /tmp/nginx \
   ); \
   for dir in "${writeDirs[@]}"; do \
   mkdir -p ${dir}; \
@@ -71,5 +72,9 @@ RUN apk update \
   done'
 
 EXPOSE 80 443
+
+# Create symlinks to redirect nginx logs to stdout and stderr docker log collector
+RUN  ln -sf /dev/stdout /var/log/nginx/access.log \
+  && ln -sf /dev/stderr /var/log/nginx/error.log
 
 CMD ["nginx", "-g", "daemon off;"]

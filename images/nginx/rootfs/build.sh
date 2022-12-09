@@ -132,6 +132,9 @@ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
 # Check for recent changes:  https://github.com/microsoft/mimalloc/compare/v1.7.6...master
 export MIMALOC_VERSION=1.7.6
 
+# Check for recent changes: https://github.com/openresty/echo-nginx-module/compare/v0.63...master
+export ECHO_NGINX_VERSION=0.63
+
 export BUILD_PATH=/tmp/build
 
 ARCH=$(uname -m)
@@ -240,6 +243,9 @@ get_src 3a3a03060bf5e3fef52c9a2de02e6035cb557f389453d8f3b0c1d3d570636994 \
 
 get_src 754c3ace499a63e45b77ef4bcab4ee602c2c414f58403bce826b76ffc2f77d0b \
         "https://github.com/msgpack/msgpack-c/archive/cpp-$MSGPACK_VERSION.tar.gz"
+
+get_src 8af374d29592ef95baee53c91959c7b04927f11304c318a94f0ee140760515a4 \
+        "https://github.com/openresty/echo-nginx-module/archive/v$ECHO_NGINX_VERSION.tar.gz"
 
 if [[ ${ARCH} == "s390x" ]]; then
 get_src 7d5f3439c8df56046d0564b5857fd8a30296ab1bd6df0f048aed7afb56a0a4c2 \
@@ -645,6 +651,7 @@ WITH_MODULES=" \
   --add-dynamic-module=$BUILD_PATH/ModSecurity-nginx-$MODSECURITY_VERSION \
   --add-dynamic-module=$BUILD_PATH/ngx_http_geoip2_module-${GEOIP2_VERSION} \
   --add-dynamic-module=$BUILD_PATH/ngx_brotli \
+  --add-dynamic-module=$BUILD_PATH/echo-nginx-module-${ECHO_NGINX_VERSION} \
   --add-dynamic-module=/tmp/pkgs/wallarm-nginx/wallarm/module"
 
 ./configure \
