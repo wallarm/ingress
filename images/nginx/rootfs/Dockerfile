@@ -73,8 +73,6 @@ RUN apk update \
 
 EXPOSE 80 443
 
-USER www-data
-
 # Create symlinks to redirect nginx logs to stdout and stderr docker log collector
 RUN  ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log
