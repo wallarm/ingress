@@ -79,6 +79,4 @@ USER www-data
 RUN  ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-
 CMD ["nginx", "-g", "daemon off;"]
