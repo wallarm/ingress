@@ -222,10 +222,17 @@ Create the name of the controller service account to use
     value: "false"
     {{- end }}
   - name: WALLARM_API_TOKEN
+    {{- if .Values.controller.wallarm.existingSecret.enabled }}
+    valueFrom:
+      secretKeyRef:
+        key: {{ .Values.controller.wallarm.existingSecret.secretKey }}
+        name: {{ .Values.controller.wallarm.existingSecret.secretName }}
+    {{- else if .Values.controller.wallarm.token }}
     valueFrom:
       secretKeyRef:
         key: token
         name: {{ template "ingress-nginx.wallarmSecret" . }}
+    {{- end }} 
   - name: WALLARM_NODE_NAME
     valueFrom:
       fieldRef:
@@ -319,10 +326,17 @@ Create the name of the controller service account to use
     value: "false"
     {{- end }}
   - name: WALLARM_API_TOKEN
+    {{- if .Values.controller.wallarm.existingSecret.enabled }}
+    valueFrom:
+      secretKeyRef:
+        key: {{ .Values.controller.wallarm.existingSecret.secretKey }}
+        name: {{ .Values.controller.wallarm.existingSecret.secretName }}
+    {{- else if .Values.controller.wallarm.token }}
     valueFrom:
       secretKeyRef:
         key: token
         name: {{ template "ingress-nginx.wallarmSecret" . }}
+    {{- end }}
   - name: WALLARM_SYNCNODE_OWNER
     value: www-data
   - name: WALLARM_SYNCNODE_GROUP

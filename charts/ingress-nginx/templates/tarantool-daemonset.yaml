@@ -84,10 +84,17 @@ spec:
             value: "false"
             {{- end }}
           - name: WALLARM_API_TOKEN
+            {{- if .Values.controller.wallarm.existingSecret.enabled }}
+            valueFrom:
+              secretKeyRef:
+                key: {{ .Values.controller.wallarm.existingSecret.secretKey }}
+                name: {{ .Values.controller.wallarm.existingSecret.secretName }}
+            {{- else if .Values.controller.wallarm.token }}
             valueFrom:
               secretKeyRef:
                 key: token
                 name: {{ template "ingress-nginx.wallarmSecret" . }}
+            {{- end }}
           - name: WALLARM_SYNCNODE
             value: "no"
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
