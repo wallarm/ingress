@@ -128,7 +128,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
+        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
         with:
           version: v0.15.0
           cluster_name: kind
@@ -175,7 +175,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
+        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
         with:
           version: v0.15.0
           cluster_name: kind
@@ -229,7 +229,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster
-        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
+        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
         with:
           verbosity: "0"
           wait: "240s"
@@ -291,7 +291,7 @@ jobs:
           version: 'v3.8.0'
 
       - name: Create cluster ${{ matrix.k8s }}
-        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07
+        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
         with:
           verbosity: "0"
           wait: "240s"
