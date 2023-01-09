@@ -115,7 +115,7 @@ jobs:
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
 
       - name: Load cache
-        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           name: controller.tar
 
@@ -162,7 +162,7 @@ jobs:
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
 
       - name: Load cache
-        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           name: controller.tar
 
@@ -207,7 +207,7 @@ jobs:
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           name: base.tar
 
@@ -216,7 +216,7 @@ jobs:
         run: docker load -i base.tar
 
       - name: Load controller build cache
-        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           name: controller.tar
 
@@ -269,7 +269,7 @@ jobs:
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           name: base.tar
 
@@ -278,7 +278,7 @@ jobs:
         run: docker load -i base.tar
 
       - name: Load controller build cache
-        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           name: controller.tar
 
@@ -327,7 +327,7 @@ jobs:
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true')
     steps:
       - name: Load controller build cache
-        uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
           name: controller.tar
 
