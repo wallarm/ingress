@@ -22,7 +22,7 @@ jobs:
       helm: ${{ steps.filter.outputs.helm}}
     steps:
       - name: Checkout
-        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.10.2
         id: filter
@@ -52,7 +52,7 @@ jobs:
       - changes
     steps:
       - name: Checkout
-        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
       - name: Setup Docker Buildx
         if: needs.changes.outputs.base == 'true'
@@ -112,7 +112,7 @@ jobs:
         k8s: [v1.23.13, v1.24.7, v1.25.3]
     steps:
       - name: Checkout
-        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
       - name: Load cache
         uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
@@ -159,7 +159,7 @@ jobs:
     if: needs.changes.outputs.helm == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
       - name: Load cache
         uses: actions/download-artifact@9782bd6a9848b53b110e712e20e42d89988822b7
@@ -203,7 +203,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
@@ -265,7 +265,7 @@ jobs:
         k8s: [v1.23.13, v1.24.7, v1.25.3]
     steps:
       - name: Checkout
-        uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v3.0.2
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
