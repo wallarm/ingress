@@ -186,6 +186,33 @@ Create the name of the controller service account to use
 {{- define "ingress-nginx.wallarmControllerCronConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-cron{{- end -}}
 {{- define "ingress-nginx.wallarmSecret" -}}{{ .Values.controller.name }}-secret{{- end -}}
 
+{{- define "wallarm.credentials" -}}
+- name: WALLARM_API_HOST
+  value: {{ .Values.controller.wallarm.apiHost | quote }}
+- name: WALLARM_API_PORT
+  value: {{ .Values.controller.wallarm.apiPort | toString | quote }}
+{{- if hasKey .Values.controller.wallarm "apiSSL" }}
+- name: WALLARM_API_USE_SSL
+  value: {{ .Values.controller.wallarm.apiSSL | toString | quote }}
+{{- end }}
+{{- if hasKey .Values.controller.wallarm "apiCaVerify" }}
+- name: WALLARM_API_CA_VERIFY
+  value: {{ .Values.controller.wallarm.apiCaVerify | toString | quote }}
+{{- end }}
+- name: WALLARM_API_TOKEN
+  valueFrom:
+    secretKeyRef:
+      {{- $existingSecret := index .Values.controller.wallarm "existingSecret" | default dict }}
+      {{- if $existingSecret.enabled }}
+      key: {{ $existingSecret.secretKey }}
+      name: {{ $existingSecret.secretName }}
+      {{- else }}
+      key: token
+      name: {{ template "ingress-nginx.wallarmSecret" . }}
+      {{- end }}
+{{- end -}}
+
+
 {{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
 - name: addnode
 {{- if .Values.controller.wallarm.addnode.image }}
@@ -205,27 +232,7 @@ Create the name of the controller service account to use
 {{ print  "- /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT" | indent 2}}
 {{- end}}
   env:
-  - name: WALLARM_API_HOST
-    value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
-  - name: WALLARM_API_PORT
-    value: {{ .Values.controller.wallarm.apiPort | default "443" | quote }}
-  - name: WALLARM_API_CA_VERIFY
-    {{- if or (.Values.controller.wallarm.apiCaVerify) (eq (.Values.controller.wallarm.apiCaVerify | toString) "<nil>") }}
-    value: "true"
-    {{- else }}
-    value: "false"
-    {{- end }}
-  - name: WALLARM_API_USE_SSL
-    {{- if or (.Values.controller.wallarm.apiSSL) (eq (.Values.controller.wallarm.apiSSL | toString) "<nil>") }}
-    value: "true"
-    {{- else }}
-    value: "false"
-    {{- end }}
-  - name: WALLARM_API_TOKEN
-    valueFrom:
-      secretKeyRef:
-        key: token
-        name: {{ template "ingress-nginx.wallarmSecret" . }}
+  {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
     valueFrom:
       fieldRef:
@@ -308,21 +315,7 @@ Create the name of the controller service account to use
   command: ["/bin/dumb-init", "--"]
   args: ["/opt/wallarm/ruby/usr/share/wallarm-common/syncnode", "-p", "-r", "120", "-l", "STDOUT", "-L", "DEBUG"]
   env:
-  - name: WALLARM_API_HOST
-    value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
-  - name: WALLARM_API_PORT
-    value: {{ .Values.controller.wallarm.apiPort | default "443" | quote }}
-  - name: WALLARM_API_USE_SSL
-    {{- if or (.Values.controller.wallarm.apiSSL) (eq (.Values.controller.wallarm.apiSSL | toString) "<nil>") }}
-    value: "true"
-    {{- else }}
-    value: "false"
-    {{- end }}
-  - name: WALLARM_API_TOKEN
-    valueFrom:
-      secretKeyRef:
-        key: token
-        name: {{ template "ingress-nginx.wallarmSecret" . }}
+  {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_SYNCNODE_OWNER
     value: www-data
   - name: WALLARM_SYNCNODE_GROUP

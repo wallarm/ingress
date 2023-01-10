@@ -768,6 +768,10 @@ controller:
     apiPort: 443
     apiSSL: true
     token: ""
+    existingSecret:
+      enabled: false
+      secretKey: token
+      secretName: wallarm-api-token
     fallback: "on"
     tarantool:
       kind: Deployment
