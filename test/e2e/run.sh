@@ -38,6 +38,8 @@ cleanup() {
 
 trap cleanup EXIT
 
+[[ "${CI:-}" == "true" ]] && unset KUBERNETES_SERVICE_HOST
+
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-nginx-dev}
 
 if ! command -v kind --version &> /dev/null; then
@@ -67,7 +69,6 @@ export WALLARM_ENABLED="${WALLARM_ENABLED:-false}"
 export WALLARM_API_TOKEN="${WALLARM_API_TOKEN:-}"
 
 export IS_CHROOT="${IS_CHROOT:-false}"
-
 
 if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] creating Kubernetes cluster with kind"
