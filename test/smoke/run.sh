@@ -52,6 +52,8 @@ cleanup() {
 
 trap cleanup EXIT ERR
 
+[[ "${CI:-}" == "true" ]] && unset KUBERNETES_SERVICE_HOST
+
 declare -a mandatory
 mandatory=(
   WALLARM_API_TOKEN

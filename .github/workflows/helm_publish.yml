@@ -6,17 +6,30 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted-1cpu
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-      -
-        name: Extract tag name
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: |
+            kv-gitlab-ci/data/github/shared/github_token token | GITHUB_TOKEN ;
+            kv-gitlab-ci/data/github/shared/news-api-creds secret | NEWS_API_CREDS ;
+
+      - name: Checkout
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+
+      - name: Extract tag name
         run: echo "X_TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\+.*$//g')" >> $GITHUB_ENV
-      -
-        name: Publish Helm charts
+
+      - name: Publish Helm charts
         uses: stefanprodan/helm-gh-pages@master
         with:
-          token: ${{ secrets.HELM_PUBLISH_TOKEN }}
+          token: ${{ steps.secrets.outputs.GITHUB_TOKEN }}
           charts_dir: ./charts
           charts_url: https://charts.wallarm.com
           linting: off
@@ -26,12 +39,12 @@ jobs:
           index_dir: .
           app_version: "${{ env.X_TAG }}"
           chart_version: "${{ env.X_TAG }}"
-      -
-        name: Call Wallarm News API
+
+      - name: Call Wallarm News API
         run: |
           curl \
           --data '{"component_type": "wallarm-ingress-controller", "version": "${{ env.X_TAG }}"}' \
-          --header "Authorization: Basic ${{ secrets.NEWS_API_CREDS }}" \
+          --header "Authorization: Basic ${{ steps.secrets.outputs.NEWS_API_CREDS }}" \
           --header "Content-Type: application/json" \
           --request POST \
           --retry 5 \
