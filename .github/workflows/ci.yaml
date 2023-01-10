@@ -51,6 +51,16 @@ jobs:
     needs:
       - changes
     steps:
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: kv-gitlab-ci/data/github/shared/node-repo-key key | NODE_REPO_KEY
+
       - name: Checkout
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
@@ -65,7 +75,7 @@ jobs:
         if: needs.changes.outputs.base == 'true'
         run: |
           eval $(ssh-agent -s)
-          echo "${{ secrets.GITLAB_DEPLOY_KEY }}" | tr -d '\r' | ssh-add -
+          echo "${{ steps.secrets.outputs.NODE_REPO_KEY }}" | tr -d '\r' | ssh-add -
           make -C images/nginx OUTPUT=--load build
           docker save -o base.tar $(cat NGINX_BASE)
 
@@ -92,14 +102,6 @@ jobs:
           name: controller.tar
           path: controller.tar
 
-      - name: Cache base image
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
-        with:
-          retention-days: 1
-          name: base.tar
-          path: base.tar
-
   smoke:
     name: Smoke
     runs-on: self-hosted-1cpu
@@ -111,6 +113,21 @@ jobs:
       matrix:
         k8s: [v1.23.13, v1.24.7, v1.25.3]
     steps:
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: |
+            kv-gitlab-ci/data/github/ingress api_token ;
+            kv-gitlab-ci/data/github/ingress user_secret ;
+            kv-gitlab-ci/data/github/ingress user_uuid ;
+            kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
+            kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
+
       - name: Checkout
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
@@ -140,12 +157,12 @@ jobs:
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
-          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
-          USER_UUID: ${{ secrets.WALLARM_API_USER_UUID }}
-          USER_SECRET: ${{ secrets.WALLARM_API_USER_SECRET }}
+          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
+          USER_UUID: ${{ steps.secrets.outputs.user_uuid }}
+          USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
           CLIENT_ID: 4
         run: |
-          echo ${{ secrets.GITLAB_TOKEN_SECRET }} | docker login -u ${{ secrets.GITLAB_TOKEN_NAME }} --password-stdin dkr.wallarm.com
+          echo ${{ steps.secrets.outputs.token_secret }} | docker login -u ${{ steps.secrets.outputs.token_name }} --password-stdin dkr.wallarm.com
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-smoke-test
@@ -158,6 +175,16 @@ jobs:
       - changes
     if: needs.changes.outputs.helm == 'true'
     steps:
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: kv-gitlab-ci/data/github/ingress api_token
+
       - name: Checkout
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
@@ -187,7 +214,7 @@ jobs:
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
-          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
+          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
@@ -264,6 +291,16 @@ jobs:
       matrix:
         k8s: [v1.23.13, v1.24.7, v1.25.3]
     steps:
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: kv-gitlab-ci/data/github/ingress api_token
+
       - name: Checkout
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
 
@@ -311,7 +348,7 @@ jobs:
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
           WALLARM_ENABLED: true
-          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
+          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=10 kind-e2e-test
