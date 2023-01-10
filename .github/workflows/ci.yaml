@@ -167,13 +167,16 @@ jobs:
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-smoke-test
 
-  helm-install:
-    name: Helm install
+  chart-testing:
+    name: Chart testing
     runs-on: self-hosted-1cpu
     needs:
       - build
       - changes
     if: needs.changes.outputs.helm == 'true'
+    strategy:
+      matrix:
+        method: [ "install", "upgrade" ]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@v2
@@ -187,6 +190,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.0.2
+        with:
+          fetch-depth: 0
 
       - name: Load cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
@@ -208,18 +213,18 @@ jobs:
           cluster_name: kind
           node_image: kindest/node:v1.24.4
 
-      - name: Run E2E chart tests
+      - name: Run chart testing ${{ matrix.method }}
         env:
           ARCH: amd64
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
+          CT_MODE: ${{ matrix.method }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-e2e-chart-tests
-
 
   e2e:
     name: E2E
