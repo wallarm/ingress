@@ -42,6 +42,8 @@ jobs:
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.controller == 'true')
     needs:
       - changes
+    outputs:
+      matrix: ${{ steps.items.outputs.matrix }}
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@v2
@@ -84,3 +86,104 @@ jobs:
           USER: runner
         if: needs.changes.outputs.controller == 'true'
         run: make release
+
+      - name: Prepare list of images to sign
+        id: items
+        run: |
+          cat <<EOF > matrix.json
+          {
+            "include": [
+              {
+                "item": "base",
+                "image": "$(cat NGINX_BASE)"
+              },
+              {
+                "item": "controller",
+                "image": "wallarm/ingress-controller:$(cat TAG)"
+              },
+              {
+                "item": "controller-chroot",
+                "image": "wallarm/ingress-controller-chroot:$(cat TAG)"
+              }
+            ]
+          }
+          EOF
+          
+          if [ ! ${{ needs.changes.outputs.controller }} = true ]; then
+            cat <<< $(jq 'del(.include[] | select (.item =="controller" or .item =="controller-chroot"))' matrix.json) > matrix.json
+          fi
+          
+          if [ ! ${{ needs.changes.outputs.base }} = true ]; then
+            cat <<< $(jq 'del(.include[] | select (.item =="base"))' matrix.json) > matrix.json
+          fi
+          
+          cat matrix.json
+          echo "matrix=$(cat matrix.json | jq -c '.')" >> $GITHUB_OUTPUT
+
+  sign:
+    name: Sign images
+    runs-on: self-hosted-1cpu
+    needs:
+      - changes
+      - build
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.build.outputs.matrix) }}
+    steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@main
+
+      - name: Install Syft
+        run: |
+          set -e
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo sh -s -- -b /usr/local/bin
+          syft --version
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@v2
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: |
+            kv-gitlab-ci/data/node/build/cosign password | COSIGN_PASSWORD ;
+            kv-gitlab-ci/data/node/build/cosign private_key | COSIGN_PRIVATE_KEY ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds user | DOCKERHUB_USER ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
+
+      - name: Docker login
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        with:
+          username: ${{ steps.secrets.outputs.DOCKERHUB_USER }}
+          password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
+
+      - name: Sign image ${{ matrix.image }}
+        id: sign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ steps.secrets.outputs.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ steps.secrets.outputs.COSIGN_PASSWORD }}
+        run: |
+          IMAGE_NAME="${{ matrix.image }}"
+          docker pull -q ${IMAGE_NAME}
+          
+          IMAGE_TAG=$(echo ${IMAGE_NAME} | awk -F':' '{print $2}')
+          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${IMAGE_NAME})
+          IMAGE_URI=$(echo $IMAGE_DIGEST | sed -e 's/\@sha256:/:sha256-/')
+          SBOM_SPDX="${{ matrix.item }}_${IMAGE_TAG}_spdx.json"
+          
+          syft -o spdx-json ${IMAGE_NAME} > ${SBOM_SPDX}
+          cosign attach sbom --sbom ${SBOM_SPDX} ${IMAGE_DIGEST}
+          cosign sign --key env://COSIGN_PRIVATE_KEY "${IMAGE_URI}.sbom"
+          cosign sign --key env://COSIGN_PRIVATE_KEY ${IMAGE_DIGEST}
+          
+          echo "sbom=${SBOM_SPDX}" >> $GITHUB_OUTPUT
+          
+      - name: Upload SBOM
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        with:
+          retention-days: 30s
+          name: ${{ steps.sign.outputs.sbom }}
+          path: ${{ steps.sign.outputs.sbom }}
+
