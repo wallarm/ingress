@@ -817,9 +817,9 @@ controller:
         # nodePort: ""
 
     ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following values:
-    ## addnode, exportenv, synccloud, collectd, cron. Otherwise HPA will not work properly.
-    ## Important note: at the time addnode.resources, exportenv.resources and cron.resources are shared between
-    ## 2 pods: wallarm-ingress-controller and wallarm-ingress-controller-tarantool pod.
+    ## addnode, cron, synccloud, collectd. Otherwise, HPA will not work properly.
+    ## Note: addnode.resources, and cron.resources are shared between 2 pods:
+    ## wallarm-ingress-controller and wallarm-ingress-controller-tarantool.
     ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
     addnode:
       resources: {}
@@ -851,8 +851,6 @@ controller:
           timeout: 1h
         weakJwtDetect:
           schedule: "* * * * *"
-      resources: {}
-    exportenv:
       resources: {}
     synccloud:
       wallarm_syncnode_interval_sec: 120

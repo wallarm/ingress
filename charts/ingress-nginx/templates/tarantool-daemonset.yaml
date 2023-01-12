@@ -31,7 +31,6 @@ spec:
       {{- end }}
       initContainers:
 {{ include "ingress-nginx.wallarmInitContainer.addNode" . | indent 8 }}
-{{ include "ingress-nginx.wallarmInitContainer.exportEnv" . | indent 8 }}
       containers:
 {{ include "ingress-nginx.wallarmCronContainer" . | indent 8 }}
         - name: tarantool

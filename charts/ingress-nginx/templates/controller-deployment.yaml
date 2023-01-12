@@ -213,7 +213,6 @@ spec:
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
         {{ include "ingress-nginx.wallarmInitContainer.addNode" . | nindent 8 }}
-        {{ include "ingress-nginx.wallarmInitContainer.exportEnv" . | nindent 8 }}
       {{- end }}
     {{- if .Values.controller.hostNetwork }}
       hostNetwork: {{ .Values.controller.hostNetwork }}
