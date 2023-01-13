@@ -72,21 +72,7 @@ spec:
           command: ["/bin/dumb-init", "--"]
           args: ["/opt/wallarm/ruby/usr/share/wallarm-common/syncnode", "-p", "-r", "120", "-l", "STDOUT", "-L", "DEBUG"]
           env:
-          - name: WALLARM_API_HOST
-            value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
-          - name: WALLARM_API_PORT
-            value: {{ .Values.controller.wallarm.apiPort | default "443" | quote }}
-          - name: WALLARM_API_USE_SSL
-            {{- if or (.Values.controller.wallarm.apiSSL) (eq (.Values.controller.wallarm.apiSSL | toString) "<nil>") }}
-            value: "true"
-            {{- else }}
-            value: "false"
-            {{- end }}
-          - name: WALLARM_API_TOKEN
-            valueFrom:
-              secretKeyRef:
-                key: token
-                name: {{ template "ingress-nginx.wallarmSecret" . }}
+          {{- include "wallarm.credentials" . | nindent 10 }}
           - name: WALLARM_SYNCNODE
             value: "no"
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
