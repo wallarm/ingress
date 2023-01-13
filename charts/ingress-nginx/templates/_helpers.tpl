@@ -226,11 +226,11 @@ Create the name of the controller service account to use
   command:
   - sh
   - -c
-{{- if eq .Values.controller.wallarm.fallback "on"}}
-{{ print  "- /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT || true" | indent 2}}
-{{- else }}
-{{ print  "- /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT && /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT" | indent 2}}
-{{- end}}
+  - >
+    /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time &&
+    /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT &&
+    /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
+    timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -249,28 +249,6 @@ Create the name of the controller service account to use
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.addnode.resources | indent 4 }}
-{{- end -}}
-
-{{- define "ingress-nginx.wallarmInitContainer.exportEnv" -}}
-- name: exportenv
-{{- if .Values.controller.wallarm.exportenv.image }}
-  {{- with .Values.controller.wallarm.exportenv.image }}
-  image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
-{{- end }}
-  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["sh", "-c", "timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true"]
-  env:
-  - name: WALLARM_INGRESS_CONTROLLER_VERSION
-    value: {{ .Chart.Version | quote }}
-  volumeMounts:
-  - mountPath: /etc/wallarm
-    name: wallarm
-  securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
-  resources:
-{{ toYaml .Values.controller.wallarm.exportenv.resources | indent 4 }}
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmCronContainer" -}}
