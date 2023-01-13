@@ -102,6 +102,14 @@ jobs:
           name: controller.tar
           path: controller.tar
 
+      - name: Cache base image
+        if: needs.changes.outputs.base == 'true'
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        with:
+          retention-days: 1
+          name: base.tar
+          path: base.tar
+
   smoke:
     name: Smoke
     runs-on: self-hosted-1cpu

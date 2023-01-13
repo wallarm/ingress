@@ -49,4 +49,4 @@ jobs:
           --request POST \
           --retry 5 \
           --silent \
-          https://api.wallarm.com/v1/versions
+          https://api.wallarm.com/v1/versions || true
