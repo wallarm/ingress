@@ -20,6 +20,7 @@ spec:
       {{- include "ingress-nginx.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: {{ template "ingress-nginx.wallarmTarantoolName" . }}
   replicas: {{ .Values.controller.wallarm.tarantool.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   template:
     metadata:
       labels:
@@ -30,6 +31,7 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.controller.wallarm.imagePullSecrets | indent 8 }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.controller.wallarm.tarantool.terminationGracePeriodSeconds }}
       initContainers:
 {{ include "ingress-nginx.wallarmInitContainer.addNode" . | indent 8 }}
       containers:
@@ -73,21 +75,7 @@ spec:
           command: ["/bin/dumb-init", "--"]
           args: ["/opt/wallarm/ruby/usr/share/wallarm-common/syncnode", "-p", "-r", "120", "-l", "STDOUT", "-L", "DEBUG"]
           env:
-          - name: WALLARM_API_HOST
-            value: {{ .Values.controller.wallarm.apiHost | default "api.wallarm.com" }}
-          - name: WALLARM_API_PORT
-            value: {{ .Values.controller.wallarm.apiPort | default "443" | quote }}
-          - name: WALLARM_API_USE_SSL
-            {{- if or (.Values.controller.wallarm.apiSSL) (eq (.Values.controller.wallarm.apiSSL | toString) "<nil>") }}
-            value: "true"
-            {{- else }}
-            value: "false"
-            {{- end }}
-          - name: WALLARM_API_TOKEN
-            valueFrom:
-              secretKeyRef:
-                key: token
-                name: {{ template "ingress-nginx.wallarmSecret" . }}
+          {{- include "wallarm.credentials" . | nindent 10 }}
           - name: WALLARM_SYNCNODE
             value: "no"
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
@@ -138,6 +126,9 @@ spec:
     {{- if .Values.controller.wallarm.tarantool.affinity }}
       affinity:
 {{ toYaml .Values.controller.wallarm.tarantool.affinity | indent 8 }}
+    {{- end }}
+    {{- if .Values.controller.wallarm.tarantool.topologySpreadConstraints }}
+      topologySpreadConstraints: {{ toYaml .Values.controller.wallarm.tarantool.topologySpreadConstraints | nindent 8 }}
     {{- end }}
       volumes:
         - name: wallarm

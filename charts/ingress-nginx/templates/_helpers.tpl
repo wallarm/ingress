@@ -241,6 +241,8 @@ Create the name of the controller service account to use
     value: www-data
   - name: WALLARM_SYNCNODE_GROUP
     value: www-data
+  - name: WALLARM_INGRESS_CONTROLLER_VERSION
+    value: {{ .Chart.Version | quote }}
   volumeMounts:
   - mountPath: /etc/wallarm
     name: wallarm

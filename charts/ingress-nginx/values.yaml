@@ -786,6 +786,13 @@ controller:
         successThreshold: 1
         timeoutSeconds: 1
       resources: {}
+      terminationGracePeriodSeconds: 30
+      ## Configuration for Tarantool pod assigment
+      affinity: {}
+      tolerations: []
+      topologySpreadConstraints: []
+      nodeSelector:
+        kubernetes.io/os: linux
     heartbeat:
       resources: {}
     wallarm-appstructure:
