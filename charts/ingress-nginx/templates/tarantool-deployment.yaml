@@ -20,6 +20,7 @@ spec:
       {{- include "ingress-nginx.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: {{ template "ingress-nginx.wallarmTarantoolName" . }}
   replicas: {{ .Values.controller.wallarm.tarantool.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   template:
     metadata:
       labels:
@@ -30,6 +31,7 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.controller.wallarm.imagePullSecrets | indent 8 }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.controller.wallarm.tarantool.terminationGracePeriodSeconds }}
       initContainers:
 {{ include "ingress-nginx.wallarmInitContainer.addNode" . | indent 8 }}
       containers:
@@ -124,6 +126,9 @@ spec:
     {{- if .Values.controller.wallarm.tarantool.affinity }}
       affinity:
 {{ toYaml .Values.controller.wallarm.tarantool.affinity | indent 8 }}
+    {{- end }}
+    {{- if .Values.controller.wallarm.tarantool.topologySpreadConstraints }}
+      topologySpreadConstraints: {{ toYaml .Values.controller.wallarm.tarantool.topologySpreadConstraints | nindent 8 }}
     {{- end }}
       volumes:
         - name: wallarm
