@@ -46,7 +46,7 @@ jobs:
       matrix: ${{ steps.items.outputs.matrix }}
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@v2
+        uses: hashicorp/vault-action@8fa61e909919a3f94952e9e07ace6b5a1114440b # v2.4.3
         id: secrets
         with:
           exportEnv: false
@@ -131,7 +131,7 @@ jobs:
       matrix: ${{ fromJson(needs.build.outputs.matrix) }}
     steps:
       - name: Install Cosign
-        uses: sigstore/cosign-installer@main
+        uses: sigstore/cosign-installer@4079ad3567a89f68395480299c77e40170430341 # main
 
       - name: Install Syft
         run: |
@@ -140,7 +140,7 @@ jobs:
           syft --version
 
       - name: Import secrets
-        uses: hashicorp/vault-action@v2
+        uses: hashicorp/vault-action@8fa61e909919a3f94952e9e07ace6b5a1114440b # v2.4.3
         id: secrets
         with:
           exportEnv: false
