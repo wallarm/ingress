@@ -12,7 +12,7 @@ jobs:
     runs-on: self-hosted-1cpu
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@8fa61e909919a3f94952e9e07ace6b5a1114440b # v2.4.3
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
         id: secrets
         with:
           exportEnv: false
