@@ -21,3 +21,5 @@ controller:
           memory: 20Mi
     patch:
       enabled: true
+  wallarm:
+    apiHost: api.wallarm.com

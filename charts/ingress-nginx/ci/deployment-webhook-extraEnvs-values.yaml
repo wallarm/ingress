@@ -10,3 +10,5 @@ controller:
         value: test
     patch:
       enabled: true
+  wallarm:
+    apiHost: api.wallarm.com

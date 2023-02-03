@@ -5,3 +5,5 @@ controller:
     enabled: true
     default: true
     controllerValue: "k8s.io/custom-nginx"
+  wallarm:
+    apiHost: api.wallarm.com

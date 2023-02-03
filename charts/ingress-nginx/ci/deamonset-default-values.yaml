@@ -8,3 +8,5 @@ controller:
     enabled: false
   service:
     type: ClusterIP
+  wallarm:
+    apiHost: api.wallarm.com

@@ -7,3 +7,5 @@ controller:
     enabled: false
   service:
     type: NodePort
+  wallarm:
+    apiHost: api.wallarm.com

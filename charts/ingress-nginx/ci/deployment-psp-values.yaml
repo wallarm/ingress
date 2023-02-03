@@ -5,6 +5,8 @@ controller:
     digest: null
   service:
     type: ClusterIP
+  wallarm:
+    apiHost: api.wallarm.com
 
 podSecurityPolicy:
   enabled: true

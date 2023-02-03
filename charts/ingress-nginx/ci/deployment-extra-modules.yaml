@@ -8,3 +8,5 @@ controller:
   extraModules:
     - name: opentelemetry
       image: busybox
+  wallarm:
+    apiHost: api.wallarm.com

@@ -1,4 +1,6 @@
 controller:
+  wallarm:
+    apiHost: api.wallarm.com
   autoscaling:
     enabled: true
     behavior:
