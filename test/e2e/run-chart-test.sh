@@ -62,12 +62,12 @@ else
 fi
 
 HELM_EXTRA_SET_ARGS="\
- --set controller.wallarm.apiHost=${WALLARM_API_HOST:-api.wallarm.com} \
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
  --set controller.wallarm.enabled=true \
  --set controller.image.repository=wallarm/ingress-controller \
  --set controller.image.tag=1.0.0-dev \
  --set controller.terminationGracePeriodSeconds=0 \
+ --set controller.wallarm.tarantool.terminationGracePeriodSeconds=0 \
  --set fullnameOverride=wallarm-ingress ${HELM_EXTRA_SET_ARGS:-}"
 
 SECRET_NAME="wallarm-api-token"
@@ -82,8 +82,8 @@ if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
 
   kind create cluster \
     --verbosity=${KIND_LOG_LEVEL} \
-    --name ${KIND_CLUSTER_NAME} \
-    --config ${DIR}/kind.yaml \
+    --name "${KIND_CLUSTER_NAME}" \
+    --config "${CURDIR}/test/e2e/kind.yaml" \
     --retain \
     --image "kindest/node:${K8S_VERSION}"
 
@@ -97,7 +97,7 @@ if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
     go get github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
   fi
   echo "[dev-env] building image"
-  make -C ${DIR}/../../ clean-image build image
+  make -C "${CURDIR}" clean-image build image
 fi
   
 

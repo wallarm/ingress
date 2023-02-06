@@ -12,3 +12,5 @@ controller:
     X-Forwarded-Proto: https
   service:
     type: ClusterIP
+  wallarm:
+    apiHost: api.wallarm.com

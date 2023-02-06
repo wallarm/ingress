@@ -119,7 +119,6 @@ controller:
     token: ${WALLARM_API_TOKEN}
     apiHost: ${WALLARM_API_HOST}
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
-    fallback: "off"
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}

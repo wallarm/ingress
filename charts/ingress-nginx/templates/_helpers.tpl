@@ -212,6 +212,19 @@ Create the name of the controller service account to use
       {{- end }}
 {{- end -}}
 
+{{- define "wallarm.syncNodeArgs" -}}
+- /opt/wallarm/ruby/usr/share/wallarm-common/syncnode
+- -p
+- -r
+- "120"
+- -l
+- STDOUT
+- -L
+- DEBUG
+{{- if eq .Values.controller.wallarm.fallback "on" }}
+- -f
+{{- end }}
+{{- end -}}
 
 {{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
 - name: addnode
@@ -293,7 +306,8 @@ Create the name of the controller service account to use
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command: ["/bin/dumb-init", "--"]
-  args: ["/opt/wallarm/ruby/usr/share/wallarm-common/syncnode", "-p", "-r", "120", "-l", "STDOUT", "-L", "DEBUG"]
+  args:
+  {{- include "wallarm.syncNodeArgs" . | nindent 2 }}
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_SYNCNODE_OWNER

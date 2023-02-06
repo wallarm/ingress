@@ -4,12 +4,9 @@ controller:
     tag: 1.0.0-dev
     digest: null
   admissionWebhooks:
-    enabled: false
-  addHeaders:
-    X-Frame-Options: deny
-  proxySetHeaders:
-    X-Forwarded-Proto: https
+    enabled: true
   service:
     type: ClusterIP
   wallarm:
-    apiHost: api.wallarm.com
+    # Intentionally put wrong URL to check
+    apiHost: wrong_url.api.wallarm.com
