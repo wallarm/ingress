@@ -30,3 +30,8 @@ data:
     # sync-ip-lists-source
     {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
     {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncNode }}
+    # sync-node
+    {{ .schedule }} /opt/wallarm/ruby/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
+    {{- end }}

@@ -212,20 +212,6 @@ Create the name of the controller service account to use
       {{- end }}
 {{- end -}}
 
-{{- define "wallarm.syncNodeArgs" -}}
-- /opt/wallarm/ruby/usr/share/wallarm-common/syncnode
-- -p
-- -r
-- "120"
-- -l
-- STDOUT
-- -L
-- DEBUG
-{{- if eq .Values.controller.wallarm.fallback "on" }}
-- -f
-{{- end }}
-{{- end -}}
-
 {{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
 - name: addnode
 {{- if .Values.controller.wallarm.addnode.image }}
@@ -279,6 +265,11 @@ Create the name of the controller service account to use
   command: ["/bin/dumb-init", "--"]
   args: ["/bin/supercronic", "-json", "/opt/cron/crontab"]
   env:
+  {{- include "wallarm.credentials" . | nindent 2 }}
+  - name: WALLARM_NODE_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
   volumeMounts:
@@ -293,35 +284,6 @@ Create the name of the controller service account to use
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.cron.resources | indent 4 }}
-{{- end -}}
-
-{{- define "ingress-nginx.wallarmSyncnodeContainer" -}}
-- name: synccloud
-{{- if .Values.controller.wallarm.synccloud.image }}
-  {{- with .Values.controller.wallarm.synccloud.image }}
-  image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
-{{- end }}
-  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["/bin/dumb-init", "--"]
-  args:
-  {{- include "wallarm.syncNodeArgs" . | nindent 2 }}
-  env:
-  {{- include "wallarm.credentials" . | nindent 2 }}
-  - name: WALLARM_SYNCNODE_OWNER
-    value: www-data
-  - name: WALLARM_SYNCNODE_GROUP
-    value: www-data
-  - name: WALLARM_SYNCNODE_INTERVAL
-    value: "{{ .Values.controller.wallarm.synccloud.wallarm_syncnode_interval_sec }}"
-  volumeMounts:
-  - mountPath: /etc/wallarm
-    name: wallarm
-  securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
-  resources:
-{{ toYaml .Values.controller.wallarm.synccloud.resources | indent 4 }}
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmCollectdContainer" -}}
