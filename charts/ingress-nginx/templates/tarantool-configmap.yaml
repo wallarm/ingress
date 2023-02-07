@@ -40,3 +40,8 @@ data:
     # weak-jwt-detect
     {{ .schedule }} /opt/wallarm/ruby/usr/share/wallarm-common/weak-jwt-detect -l STDOUT
     {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncNode }}
+    # sync-node
+    {{ .schedule }} /opt/wallarm/ruby/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
+    {{- end }}

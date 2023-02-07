@@ -63,28 +63,6 @@ spec:
               protocol: TCP
           resources:
 {{ toYaml .Values.controller.wallarm.tarantool.resources | indent 12 }}
-        - name: heartbeat
-{{- if .Values.controller.wallarm.heartbeat.image }}
-  {{- with .Values.controller.wallarm.heartbeat.image }}
-          image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-          image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
-{{- end }}
-          imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          command: ["/bin/dumb-init", "--"]
-          args:
-          {{- include "wallarm.syncNodeArgs" . | nindent 10 }}
-          env:
-          {{- include "wallarm.credentials" . | nindent 10 }}
-          - name: WALLARM_SYNCNODE
-            value: "no"
-          securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
-          volumeMounts:
-          - mountPath: /etc/wallarm
-            name: wallarm
-          resources:
-{{ toYaml .Values.controller.wallarm.heartbeat.resources | indent 12 }}
         - name: wallarm-appstructure
 {{- if (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}
   {{- with (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}

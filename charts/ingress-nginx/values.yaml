@@ -793,8 +793,6 @@ controller:
       topologySpreadConstraints: []
       nodeSelector:
         kubernetes.io/os: linux
-    heartbeat:
-      resources: {}
     wallarm-appstructure:
       resources: {}
     wallarm-antibot:
@@ -823,8 +821,8 @@ controller:
         # externalTrafficPolicy: ""
         # nodePort: ""
 
-    ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following values:
-    ## addnode, cron, synccloud, collectd. Otherwise, HPA will not work properly.
+    ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following variables:
+    ## addnode, cron, and collectd. Otherwise, HPA will not work properly.
     ## Note: addnode.resources, and cron.resources are shared between 2 pods:
     ## wallarm-ingress-controller and wallarm-ingress-controller-tarantool.
     ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
@@ -856,11 +854,10 @@ controller:
         syncMarkers:
           schedule: "* * * * *"
           timeout: 1h
+        syncNode:
+          schedule: "*/2 * * * *"
         weakJwtDetect:
           schedule: "* * * * *"
-      resources: {}
-    synccloud:
-      wallarm_syncnode_interval_sec: 120
       resources: {}
     collectd:
       resources: {}
