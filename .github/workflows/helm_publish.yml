@@ -59,8 +59,8 @@ jobs:
         id: secrets
         with:
           exportEnv: true
-          url: ${{ vars.VAULT_URL }}
-          role: ${{ vars.VAULT_ROLE }}
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
           method: kubernetes
           secrets: |
             kv-gitlab-ci/data/github/shared/versions-repo-creds token_secret | GITLAB_TOKEN ;
@@ -71,7 +71,7 @@ jobs:
       - name: Update package version
         env:
           COMPONENT_NAME: wallarm-ingress-controller
-          COMPONENT_VERSION: ${{ needs.release.outputs.chart_version}}
+          COMPONENT_VERSION: ${{ needs.release.outputs.chart_version }}
         run: |
           PR_BRANCH="update/${COMPONENT_NAME}/${COMPONENT_VERSION}"
           COMMIT_MESSAGE="Bump ${COMPONENT_NAME} version to ${COMPONENT_VERSION}"
@@ -104,9 +104,11 @@ jobs:
           glab mr approve \
             ${PR_BRANCH} \
             --repo https://${GITLAB_HOST}/${GITLAB_REPO}
-
+          
           echo "Merging ..."
           glab mr merge \
+            ${PR_BRANCH} \
             --yes \
             --remove-source-branch \
+            --when-pipeline-succeeds=false \
             --repo https://${GITLAB_HOST}/${GITLAB_REPO}
