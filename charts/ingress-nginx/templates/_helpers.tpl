@@ -262,7 +262,7 @@ Create the name of the controller service account to use
   image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["/bin/dumb-init", "--"]
+  command: ["/bin/dumb-init", "--rewrite", "15:9", "--"]
   args: ["/bin/supercronic", "-json", "/opt/cron/crontab"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
