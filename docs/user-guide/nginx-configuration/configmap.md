@@ -62,7 +62,7 @@ The following table shows a configuration option's name, type, and the default v
 |[hsts-max-age](#hsts-max-age)|string|"15724800"|
 |[hsts-preload](#hsts-preload)|bool|"false"|
 |[keep-alive](#keep-alive)|int|75|
-|[keep-alive-requests](#keep-alive-requests)|int|100|
+|[keep-alive-requests](#keep-alive-requests)|int|1000|
 |[large-client-header-buffers](#large-client-header-buffers)|string|"4 8k"|
 |[log-format-escape-none](#log-format-escape-none)|bool|"false"|
 |[log-format-escape-json](#log-format-escape-json)|bool|"false"|
@@ -103,7 +103,9 @@ The following table shows a configuration option's name, type, and the default v
 |[brotli-min-length](#brotli-min-length)|int|20|
 |[brotli-types](#brotli-types)|string|"application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component"|
 |[use-http2](#use-http2)|bool|"true"|
+|[gzip-disable](#gzip-disable)|string|""|
 |[gzip-level](#gzip-level)|int|1|
+|[gzip-min-length](#gzip-min-length)|int|256|
 |[gzip-types](#gzip-types)|string|"application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/javascript text/plain text/x-component"|
 |[worker-processes](#worker-processes)|string|`<Number of CPUs>`|
 |[worker-cpu-affinity](#worker-cpu-affinity)|string|""|
@@ -176,6 +178,7 @@ The following table shows a configuration option's name, type, and the default v
 |[proxy-request-buffering](#proxy-request-buffering)|string|"on"|
 |[ssl-redirect](#ssl-redirect)|bool|"true"|
 |[force-ssl-redirect](#force-ssl-redirect)|bool|"false"|
+|[denylist-source-range](#denylist-source-range)|[]string|[]string{}|
 |[whitelist-source-range](#whitelist-source-range)|[]string|[]string{}|
 |[skip-access-log-urls](#skip-access-log-urls)|[]string|[]string{}|
 |[limit-rate](#limit-rate)|int|0|
@@ -692,7 +695,8 @@ _**default:**_ false
 ## enable-brotli
 
 Enables or disables compression of HTTP responses using the ["brotli" module](https://github.com/google/ngx_brotli).
-The default mime type list to compress is: `application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component`. _**default:**_ is disabled
+The default mime type list to compress is: `application/xml+rss application/atom+xml application/javascript application/x-javascript application/json application/rss+xml application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/svg+xml image/x-icon text/css text/plain text/x-component`. 
+_**default:**_ false
 
 > __Note:__ Brotli does not works in Safari < 11. For more information see [https://caniuse.com/#feat=brotli](https://caniuse.com/#feat=brotli)
 
@@ -712,6 +716,10 @@ _**default:**_ `application/xml+rss application/atom+xml application/javascript 
 ## use-http2
 
 Enables or disables [HTTP/2](https://nginx.org/en/docs/http/ngx_http_v2_module.html) support in secure connections.
+
+## gzip-disable
+
+Disables [gzipping](http://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_disable) of responses for requests with "User-Agent" header fields matching any of the specified regular expressions.
 
 ## gzip-level
 
@@ -1096,6 +1104,11 @@ _**default:**_ "true"
 Sets the global value of redirects (308) to HTTPS if the server has a default TLS certificate (defined in extra-args).
 _**default:**_ "false"
 
+## denylist-source-range
+
+Sets the default denylisted IPs for each `server` block. This can be overwritten by an annotation on an Ingress rule.
+See [ngx_http_access_module](https://nginx.org/en/docs/http/ngx_http_access_module.html).
+
 ## whitelist-source-range
 
 Sets the default whitelisted IPs for each `server` block. This can be overwritten by an annotation on an Ingress rule.
@@ -1221,7 +1234,7 @@ _**default:**_ ""
 ## global-auth-snippet
 
 Sets a custom snippet to use with external authentication. Applied to all the locations.
-Similar to the Ingress rule annotation `nginx.ingress.kubernetes.io/auth-request-redirect`.
+Similar to the Ingress rule annotation `nginx.ingress.kubernetes.io/auth-snippet`.
 _**default:**_ ""
 
 ## global-auth-cache-key

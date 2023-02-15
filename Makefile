@@ -143,6 +143,7 @@ test:  ## Run go unit tests.
 		COMMIT_SHA=$(COMMIT_SHA) \
 		REPO_INFO=$(REPO_INFO) \
 		TAG=$(TAG) \
+		GOFLAGS="-buildvcs=false" \
 		test/test.sh
 
 .PHONY: lua-test
@@ -162,11 +163,11 @@ kind-smoke-test:  ## Run smoke tests using kind.
 
 .PHONY: e2e-test
 e2e-test:  ## Run e2e tests (expects access to a working Kubernetes cluster).
-	@build/run-e2e-suite.sh
+	@test/e2e/run-e2e-suite.sh
 
 .PHONY: kind-e2e-test
 kind-e2e-test:  ## Run e2e tests using kind.
-	@test/e2e/run.sh
+	@test/e2e/run-kind-e2e.sh
 
 .PHONY: kind-e2e-chart-tests
 kind-e2e-chart-tests: ## Run helm chart e2e tests
@@ -210,7 +211,6 @@ dev-env-stop: ## Deletes local Kubernetes cluster created by kind.
 live-docs: ## Build and launch a local copy of the documentation website in http://localhost:8000
 	@docker build ${PLATFORM_FLAG} ${PLATFORM} \
                   		--no-cache \
-                  		$(MAC_DOCKER_FLAGS) \
                   		 -t ingress-nginx-docs .github/actions/mkdocs
 	@docker run ${PLATFORM_FLAG} ${PLATFORM} --rm -it \
 		-p 8000:8000 \
@@ -250,6 +250,7 @@ release: ensure-buildx clean
 
 	docker buildx build \
 		--no-cache \
+		$(MAC_DOCKER_FLAGS) \
 		--push \
 		--pull \
 		--progress plain \
@@ -262,6 +263,7 @@ release: ensure-buildx clean
 
 	docker buildx build \
 		--no-cache \
+		$(MAC_DOCKER_FLAGS) \
 		--push \
 		--pull \
 		--progress plain \
