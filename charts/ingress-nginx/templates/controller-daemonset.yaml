@@ -197,6 +197,12 @@ spec:
           - name: {{ .Name }}
             image: {{ .Image }}
             command: ['sh', '-c', '/usr/local/bin/init_module.sh']
+            {{- if (or $.Values.controller.containerSecurityContext .containerSecurityContext) }}
+            securityContext: {{ .containerSecurityContext | default $.Values.controller.containerSecurityContext | toYaml | nindent 14 }}
+            {{- end }}
+            volumeMounts:
+              - name: modules
+                mountPath: /modules_mount
         {{- end }}
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
@@ -248,6 +254,13 @@ spec:
         - name: webhook-cert
           secret:
             secretName: {{ include "ingress-nginx.fullname" . }}-admission
+        {{- if .Values.controller.admissionWebhooks.certManager.enabled }}
+            items:
+              - key: tls.crt
+                path: cert
+              - key: tls.key
+                path: key
+        {{- end }}
       {{- end }}
       {{- if .Values.controller.extraVolumes }}
         {{ toYaml .Values.controller.extraVolumes | nindent 8 }}

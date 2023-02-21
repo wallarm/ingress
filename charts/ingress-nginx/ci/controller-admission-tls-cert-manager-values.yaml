@@ -1,0 +1,8 @@
+controller:
+  admissionWebhooks:
+    certManager:
+      enabled: true
+  service:
+    type: ClusterIP
+  wallarm:
+    apiHost: api.wallarm.com
