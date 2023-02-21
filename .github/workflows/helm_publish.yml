@@ -105,6 +105,10 @@ jobs:
             ${PR_BRANCH} \
             --repo https://${GITLAB_HOST}/${GITLAB_REPO}
           
+          # Sometimes merging is failed without delay
+          echo "Sleep ..."
+          sleep 20
+          
           echo "Merging ..."
           glab mr merge \
             ${PR_BRANCH} \

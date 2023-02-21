@@ -111,12 +111,18 @@ if [ "${SKIP_E2E_IMAGE_CREATION}" = "false" ]; then
 fi
 
 # Preload images used in e2e tests
-export KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{printf (NR>1?",":"") $1}')
+KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{printf (NR>1?",":"") $1}')
+export KIND_WORKERS
 
 echo "[dev-env] copying docker images to cluster..."
 
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} nginx-ingress-controller:e2e
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes=${KIND_WORKERS} ${REGISTRY}/ingress-controller:${TAG}
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" nginx-ingress-controller:e2e
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" ${REGISTRY}/ingress-controller:${TAG}
+
+if docker image inspect "${NGINX_BASE_IMAGE}" &> /dev/null; then
+  echo "[dev-env] copying base image ${NGINX_BASE_IMAGE} to cluster..."
+  kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" "${NGINX_BASE_IMAGE}"
+fi
 
 if [ "${WALLARM_ENABLED}" == "true" ]; then
   if [ -z "${WALLARM_API_TOKEN}" ]; then

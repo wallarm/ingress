@@ -119,7 +119,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.23.13, v1.24.7, v1.25.3]
+        k8s: [v1.23.13, v1.24.7, v1.25.3, v1.26.0]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
@@ -147,17 +147,8 @@ jobs:
       - name: Load images
         run: docker load -i controller.tar
 
-      - name: Install helm
-        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78
-        with:
-          version: 'v3.8.0'
-
       - name: Create cluster
-        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
-        with:
-          version: v0.15.0
-          cluster_name: kind
-          node_image: kindest/node:${{ matrix.k8s }}
+        run: kind create cluster --image=kindest/node:${{ matrix.k8s }}
 
       - name: Run smoke tests
         env:
@@ -177,14 +168,15 @@ jobs:
 
   chart-testing:
     name: Chart testing
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-2cpu
     needs:
       - build
       - changes
     if: needs.changes.outputs.helm == 'true'
     strategy:
       matrix:
-        method: [ "install", "upgrade" ]
+        # "upgrade" is disabled, there is an issue with this mode if values.yaml changed https://github.com/helm/chart-testing/issues/525
+        method: [ "install" ]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
@@ -209,17 +201,8 @@ jobs:
       - name: Load images
         run: docker load -i controller.tar
 
-      - name: Install helm
-        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78
-        with:
-          version: 'v3.8.0'
-
       - name: Create cluster
-        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
-        with:
-          version: v0.15.0
-          cluster_name: kind
-          node_image: kindest/node:v1.24.4
+        run: kind create cluster --image=kindest/node:v1.24.4 --config test/e2e/kind.yaml
 
       - name: Run chart testing ${{ matrix.method }}
         env:
@@ -263,30 +246,15 @@ jobs:
       - name: Load controller images
         run: docker load -i controller.tar
 
-      - name: Install Helm
-        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78
-        with:
-          version: 'v3.8.0'
-
       - name: Create cluster
-        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
-        with:
-          verbosity: "0"
-          wait: "240s"
-          version: v0.15.0
-          node_image: kindest/node:v1.24.7
-          config: test/e2e/kind.yaml
-          cluster_name: kind
-
-      - name: Copying base image to cluster
-        if: needs.changes.outputs.base == 'true'
-        run: kind load docker-image --name=kind $(cat NGINX_BASE)
+        run: kind create cluster --image=kindest/node:v1.24.7 --config test/e2e/kind.yaml
 
       - name: Run e2e tests
         env:
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
-          SKIP_IMAGE_CREATION: true
+          SKIP_INGRESS_IMAGE_CREATION: true
+          SKIP_E2E_IMAGE_CREATION: true
           ARCH: amd64
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
@@ -302,7 +270,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.23.13, v1.24.7, v1.25.3]
+        k8s: [v1.23.13, v1.24.7, v1.25.3, v1.26.0]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
@@ -335,31 +303,16 @@ jobs:
       - name: Load controller images
         run: docker load -i controller.tar
 
-      - name: Install Helm
-        uses: azure/setup-helm@5119fcb9089d432beecbf79bb2c7915207344b78
-        with:
-          version: 'v3.8.0'
-
       - name: Create cluster ${{ matrix.k8s }}
-        uses: helm/kind-action@d8ccf8fb623ce1bb360ae2f45f323d9d5c5e9f00
-        with:
-          verbosity: "0"
-          wait: "240s"
-          version: v0.15.0
-          node_image: kindest/node:${{ matrix.k8s }}
-          config: test/e2e/kind.yaml
-          cluster_name: kind
-
-      - name: Copying base image to cluster
-        if: needs.changes.outputs.base == 'true'
-        run: kind load docker-image --name=kind $(cat NGINX_BASE)
+        run: kind create cluster --image=kindest/node:${{ matrix.k8s }} --config test/e2e/kind.yaml
 
       - name: Run e2e tests
         env:
           ARCH: amd64
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
-          SKIP_IMAGE_CREATION: true
+          SKIP_INGRESS_IMAGE_CREATION: true
+          SKIP_E2E_IMAGE_CREATION: true
           WALLARM_ENABLED: true
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
         run: |

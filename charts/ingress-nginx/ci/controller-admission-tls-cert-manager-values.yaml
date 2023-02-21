@@ -4,3 +4,5 @@ controller:
       enabled: true
   service:
     type: ClusterIP
+  wallarm:
+    apiHost: api.wallarm.com
