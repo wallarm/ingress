@@ -166,8 +166,8 @@ jobs:
           
           syft -o spdx-json ${IMAGE_NAME} > ${SBOM_SPDX}
           cosign attach sbom --sbom ${SBOM_SPDX} ${IMAGE_DIGEST}
-          cosign sign --key env://COSIGN_PRIVATE_KEY "${IMAGE_URI}.sbom"
-          cosign sign --key env://COSIGN_PRIVATE_KEY ${IMAGE_DIGEST}
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${IMAGE_URI}.sbom"
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY ${IMAGE_DIGEST}
           
           echo "sbom=${SBOM_SPDX}" >> $GITHUB_OUTPUT
           
