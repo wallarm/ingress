@@ -12,3 +12,5 @@ controller:
     type: ClusterIP
   wallarm:
     apiHost: api.wallarm.com
+    metrics:
+      enabled: true
