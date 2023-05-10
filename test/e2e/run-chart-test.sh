@@ -65,7 +65,7 @@ export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] creating Kubernetes cluster with kind"
 
-  export K8S_VERSION=${K8S_VERSION:-v1.25.2@sha256:1f0cee2282f43150b52dc7933183ed96abdcfc8d293f30ec07082495874876f1}
+  export K8S_VERSION=${K8S_VERSION:-v1.26.3@sha256:61b92f38dff6ccc29969e7aa154d34e38b89443af1a2c14e6cfbd2df6419c66f}
 
   # delete the cluster if it exists
   if kind get clusters | grep "${KIND_CLUSTER_NAME}"; then
@@ -102,9 +102,16 @@ echo "[dev-env] copying helper images to cluster..."
 "${CURDIR}"/build/load-images.sh
 
 if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
+  curl -fsSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.11.1/cmctl-linux-amd64.tar.gz
+  tar xzf cmctl.tar.gz
+  chmod +x cmctl
+ ./cmctl help
   echo "[dev-env] apply cert-manager ..."
-  kubectl apply --wait -f https://github.com/cert-manager/cert-manager/releases/download/v1.10.0/cert-manager.yaml
-  kubectl wait pod -n cert-manager --for=condition=Ready --all --timeout=60s
+  kubectl apply --wait -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+  kubectl wait --timeout=30s --for=condition=available deployment/cert-manager -n cert-manager
+  kubectl get validatingwebhookconfigurations cert-manager-webhook -ojson | jq '.webhooks[].clientConfig'
+  kubectl get endpoints -n cert-manager cert-manager-webhook
+  ./cmctl check api --wait=2m
 fi
 
 echo "[dev-env] running helm chart e2e tests..."

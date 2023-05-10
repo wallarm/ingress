@@ -6,6 +6,7 @@ on:
     types: ['opened', 'reopened', 'synchronize']
   workflow_dispatch:
 
+
 permissions:
   contents: read
 
@@ -119,7 +120,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.23.13, v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3,v1.27.1]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
@@ -191,6 +192,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
         with:
+          go-version: '1.20'
+          check-latest: true
           fetch-depth: 0
 
       - name: Load cache
@@ -202,7 +205,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Create cluster
-        run: kind create cluster --image=kindest/node:v1.24.4 --config test/e2e/kind.yaml
+        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
 
       - name: Run chart testing ${{ matrix.method }}
         env:
@@ -247,7 +250,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Create cluster
-        run: kind create cluster --image=kindest/node:v1.24.7 --config test/e2e/kind.yaml
+        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
 
       - name: Run e2e tests
         env:
@@ -270,7 +273,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
