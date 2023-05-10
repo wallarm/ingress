@@ -23,7 +23,6 @@ jobs:
           method: kubernetes
           secrets: |
             kv-gitlab-ci/data/github/shared/github_token token | GITHUB_TOKEN ;
-            kv-gitlab-ci/data/github/shared/news-api-creds secret | NEWS_API_CREDS ;
 
       - name: Checkout
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab

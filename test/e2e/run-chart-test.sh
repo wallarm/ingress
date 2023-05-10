@@ -108,10 +108,13 @@ if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
  ./cmctl help
   echo "[dev-env] apply cert-manager ..."
   kubectl apply --wait -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+  echo "[dev-env] waiting for cert-manager components available ..."
   kubectl wait --timeout=30s --for=condition=available deployment/cert-manager -n cert-manager
+  echo "[dev-env] getting validation webhook config ..."
   kubectl get validatingwebhookconfigurations cert-manager-webhook -ojson | jq '.webhooks[].clientConfig'
+  echo "[dev-env] getting cert-manager endpoints ..."
   kubectl get endpoints -n cert-manager cert-manager-webhook
-  ./cmctl check api --wait=2m
+  ./cmctl check api -n cert-manager --wait=2m
 fi
 
 echo "[dev-env] running helm chart e2e tests..."

@@ -55,6 +55,8 @@ POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut 
 NODE_UUID=$(kubectl logs "${POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
 echo "UUID: ${NODE_UUID}"
 
+#TODO env vars UI_LOGIN, UI_PASSWORD and WALLARM_UI_HOST must be removed when QA team fix the issue with unrelated params
+
 echo "Deploying pytest pod ..."
 kubectl run pytest \
   --env="NODE_BASE_URL=${NODE_BASE_URL}" \
@@ -65,6 +67,9 @@ kubectl run pytest \
   --env="USER_UUID=${USER_UUID}" \
   --env="USER_SECRET=${USER_SECRET}" \
   --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
+  --env="UI_LOGIN=_" \
+  --env="UI_PASSWORD=_" \
+  --env="WALLARM_UI_HOST=_" \
   --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
   --image-pull-policy=Never \
   --pod-running-timeout=1m0s \
