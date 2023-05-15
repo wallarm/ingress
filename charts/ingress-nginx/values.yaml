@@ -23,7 +23,7 @@ controller:
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "4.6.1-1"
+    tag: "4.6.2-1"
     pullPolicy: IfNotPresent
     # www-data -> uid 101
     runAsUser: 101
@@ -393,7 +393,6 @@ controller:
     #   - type: Pods
     #     value: 2
     #     periodSeconds: 60
-
   # -- Enable mimalloc as a drop-in replacement for malloc.
   ## ref: https://github.com/microsoft/mimalloc
   ##
@@ -480,6 +479,16 @@ controller:
       ## providers supporting it
       ## Ref: https://kubernetes.io/docs/tutorials/services/source-ip/#source-ip-for-services-with-typeloadbalancer
       # externalTrafficPolicy: ""
+
+      # -- Custom port mapping for internal service
+      ports: {}
+      #  http: 80
+      #  https: 443
+
+      # -- Custom target port mapping for internal service
+      targetPorts: {}
+      #  http: http
+      #  https: https
   # shareProcessNamespace enables process namespace sharing within the pod.
   # This can be used for example to signal log rotation using `kill -USR1` from a sidecar.
   shareProcessNamespace: false

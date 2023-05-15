@@ -22,7 +22,9 @@ INIT_BUILDX=$(DIR)/../../hack/init-buildx.sh
 
 # 0.0.0 shouldn't clobber any released builds
 TAG ?= $(shell cat $(DIR)/../../NGINX_BASE | cut -d : -f 2)
+
 REGISTRY ?= wallarm
+
 IMAGE = $(REGISTRY)/ingress-nginx
 
 # required to enable buildx

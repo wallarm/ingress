@@ -6,6 +6,7 @@ on:
     types: ['opened', 'reopened', 'synchronize']
   workflow_dispatch:
 
+
 permissions:
   contents: read
 
@@ -45,7 +46,7 @@ jobs:
 
   build:
     name: Build images
-    runs-on: self-hosted-8cpu
+    runs-on: self-hosted-4cpu
     if: |
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true')
     needs:
@@ -119,7 +120,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.23.13, v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3,v1.27.1]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
@@ -202,7 +203,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Create cluster
-        run: kind create cluster --image=kindest/node:v1.24.4 --config test/e2e/kind.yaml
+        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
 
       - name: Run chart testing ${{ matrix.method }}
         env:
@@ -219,7 +220,7 @@ jobs:
 
   e2e:
     name: E2E
-    runs-on: self-hosted-2cpu
+    runs-on: self-hosted-4cpu
     needs:
       - build
       - changes
@@ -247,7 +248,7 @@ jobs:
         run: docker load -i controller.tar
 
       - name: Create cluster
-        run: kind create cluster --image=kindest/node:v1.24.7 --config test/e2e/kind.yaml
+        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
 
       - name: Run e2e tests
         env:
@@ -258,7 +259,7 @@ jobs:
           ARCH: amd64
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=10 kind-e2e-test
+          make kind-e2e-test
 
 
   e2e-wallarm:
@@ -270,7 +271,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.24.7, v1.25.3, v1.26.0]
+        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
@@ -317,7 +318,7 @@ jobs:
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=10 kind-e2e-test
+          make E2E_NODES=5 kind-e2e-test
 
   scan:
     name: Scan images

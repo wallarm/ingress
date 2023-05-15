@@ -17,7 +17,7 @@ COPY . /
 
 RUN --mount=type=ssh apk update \
   && apk upgrade \
-  && apk add -U bash \
+  && apk add -U bash --no-cache \
   && /build.sh
 
 # Use a multi-stage build

@@ -431,10 +431,6 @@ func (l1 *Location) Equal(l2 *Location) bool {
 		return false
 	}
 
-	if !(&l1.InfluxDB).Equal(&l2.InfluxDB) {
-		return false
-	}
-
 	if !(&l1.Wallarm).Equal(&l2.Wallarm) {
 		return false
 	}
