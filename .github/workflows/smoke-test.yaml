@@ -1,0 +1,66 @@
+name: Smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag of pytest docker image
+        type: string
+        default: latest
+        required: false
+  schedule:
+    - cron: '00 7,10 * * 1-5'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke
+    runs-on: self-hosted-1cpu
+    needs:
+      - build
+      - changes
+    if: needs.changes.outputs.go == 'true'
+    strategy:
+      matrix:
+        k8s: [ v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1 ]
+    steps:
+      - name: Import secrets
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: |
+            kv-gitlab-ci/data/github/ingress api_token ;
+            kv-gitlab-ci/data/github/ingress user_secret ;
+            kv-gitlab-ci/data/github/ingress user_uuid ;
+            kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
+            kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
+
+      - name: Checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
+
+      - name: Create cluster
+        run: kind create cluster --image=kindest/node:${{ matrix.k8s }}
+
+      - name: Run smoke tests
+        env:
+          ARCH: amd64
+          KIND_CLUSTER_NAME: kind
+          SKIP_CLUSTER_CREATION: true
+          SKIP_IMAGE_CREATION: true
+          SKIP_IMAGE_LOADING: true
+          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
+          USER_UUID: ${{ steps.secrets.outputs.user_uuid }}
+          USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
+          SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
+          SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
+          CLIENT_ID: 4
+        run: |
+          kind get kubeconfig > $HOME/.kube/kind-config-kind
+          export KUBECONFIG=$HOME/.kube/kind-config-kind
+          make TAG=$(cat TAG) kind-smoke-test

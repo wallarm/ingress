@@ -11,6 +11,11 @@ set -o pipefail
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
+
+# Variables required for pulling Docker image with smoke tests
+SMOKE_REGISTRY_NAME="${SMOKE_REGISTRY_NAME:-dkr.wallarm.com}"
+SMOKE_IMAGE_PULL_SECRET_NAME="pytest-registry-creds"
+
 SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
@@ -28,6 +33,8 @@ mandatory=(
   CLIENT_ID
   USER_UUID
   USER_SECRET
+  SMOKE_REGISTRY_TOKEN
+  SMOKE_REGISTRY_SECRET
 )
 
 missing=false
@@ -50,12 +57,19 @@ else
   EXEC_ARGS="--tty"
 fi
 
+if ! kubectl get secret "${SMOKE_IMAGE_PULL_SECRET_NAME}" &> /dev/null; then
+  echo "Creating secret with pytest registry credentials ..."
+  kubectl create secret docker-registry ${SMOKE_IMAGE_PULL_SECRET_NAME} \
+    --docker-server="${SMOKE_REGISTRY_NAME}" \
+    --docker-username="${SMOKE_REGISTRY_TOKEN}" \
+    --docker-password="${SMOKE_REGISTRY_SECRET}" \
+    --docker-email=docker-pull@unexists.unexists
+fi
+
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
 NODE_UUID=$(kubectl logs "${POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
 echo "UUID: ${NODE_UUID}"
-
-#TODO env vars UI_LOGIN, UI_PASSWORD and WALLARM_UI_HOST must be removed when QA team fix the issue with unrelated params
 
 echo "Deploying pytest pod ..."
 kubectl run pytest \
@@ -67,14 +81,11 @@ kubectl run pytest \
   --env="USER_UUID=${USER_UUID}" \
   --env="USER_SECRET=${USER_SECRET}" \
   --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
-  --env="UI_LOGIN=_" \
-  --env="UI_PASSWORD=_" \
-  --env="WALLARM_UI_HOST=_" \
   --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
-  --image-pull-policy=Never \
+  --image-pull-policy=IfNotPresent \
   --pod-running-timeout=1m0s \
   --restart=Never \
-  --overrides='{ "apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0}}' \
+  --overrides='{"apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0, "imagePullSecrets": [{"name": "'"${SMOKE_IMAGE_PULL_SECRET_NAME}"'"}]}}' \
   --command -- sleep infinity
 
 kubectl wait --for=condition=Ready pods --all --timeout=60s
