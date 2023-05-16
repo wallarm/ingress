@@ -9,7 +9,7 @@ on:
         default: latest
         required: false
   schedule:
-    - cron: '00 7,10 * * 1-5'
+    - cron: '15 9,12 * * 1-5'
 
 permissions:
   contents: read
@@ -18,10 +18,6 @@ jobs:
   smoke:
     name: Smoke
     runs-on: self-hosted-1cpu
-    needs:
-      - build
-      - changes
-    if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
         k8s: [ v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1 ]
@@ -61,6 +57,11 @@ jobs:
           SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
           CLIENT_ID: 4
         run: |
+          set -x
+          if [ ${{ github.event_name }} == 'workflow_dispatch ];
+          then
+            export SMOKE_IMAGE_TAG="${{ github.event.inputs.tag }}"
+          fi
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make TAG=$(cat TAG) kind-smoke-test
