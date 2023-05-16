@@ -33,7 +33,7 @@ export WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 export SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
-K8S_VERSION=${K8S_VERSION:-v1.25.2}
+K8S_VERSION=${K8S_VERSION:-v1.25.8}
 
 set -o errexit
 set -o nounset
@@ -100,17 +100,23 @@ if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   make -C "${DIR}"/../../ clean-image build image
 fi
 
-echo "[test-env] copying ${REGISTRY}/ingress-controller:${TAG} image to cluster..."
-kind load docker-image --name="${KIND_CLUSTER_NAME}" "${REGISTRY}/ingress-controller:${TAG}"
+# If this variable is set to 'true' we use public images instead local build.
+if [ "${SKIP_IMAGE_LOADING:-false}" = "false" ]; then
+  echo "[test-env] copying ${REGISTRY}/ingress-controller:${TAG} image to cluster..."
+  kind load docker-image --name="${KIND_CLUSTER_NAME}" "${REGISTRY}/ingress-controller:${TAG}"
 
-echo "[test-env] copying helper images to cluster..."
-${DIR}/../../build/load-images.sh
+  echo "[test-env] copying helper images to cluster..."
+  ${DIR}/../../build/load-images.sh
 
-echo "[test-env] copying test image to cluster ..."
-docker pull --quiet "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
-kind load docker-image --name="${KIND_CLUSTER_NAME}" "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
+  IMAGE_PULL_POLICY="Never"
+else
+  IMAGE_PULL_POLICY="IfNotPresent"
+  TAG=$(cat "${CURDIR}/TAG")
+  export TAG
+fi
 
-echo "[test-env] installing Helm chart ..."
+
+echo "[test-env] installing Helm chart using TAG=${TAG} ..."
 cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-nginx" --wait --values -
 fullnameOverride: wallarm-ingress
 controller:
@@ -122,8 +128,7 @@ controller:
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
-    digest:
-    pullPolicy: Never
+    pullPolicy: ${IMAGE_PULL_POLICY}
   config:
     worker-processes: "1"
     enable-real-ip: true
@@ -146,7 +151,7 @@ controller:
       http: 30000
 EOF
 
-kubectl wait --for=condition=Ready pods --all --timeout=100s
+kubectl wait --for=condition=Ready pods --all --timeout=120s
 
 echo "[test-env] deploying test workload ..."
 kubectl apply -f "${DIR}"/workload.yaml
