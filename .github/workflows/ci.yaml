@@ -120,7 +120,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     strategy:
       matrix:
-        k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3,v1.27.1]
+        k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
@@ -160,9 +160,10 @@ jobs:
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
           USER_UUID: ${{ steps.secrets.outputs.user_uuid }}
           USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
+          SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
+          SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
           CLIENT_ID: 4
         run: |
-          echo ${{ steps.secrets.outputs.token_secret }} | docker login -u ${{ steps.secrets.outputs.token_name }} --password-stdin dkr.wallarm.com
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-smoke-test
