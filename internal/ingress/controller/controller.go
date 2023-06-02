@@ -257,6 +257,54 @@ func (n *NGINXController) syncIngress(interface{}) error {
 	return nil
 }
 
+// GetWarnings returns a list of warnings an Ingress gets when being created.
+// The warnings are going to be used in an admission webhook, and they represent
+// a list of messages that users need to be aware (like deprecation notices)
+// when creating a new ingress object
+func (n *NGINXController) CheckWarning(ing *networking.Ingress) ([]string, error) {
+	warnings := make([]string, 0)
+
+	var deprecatedAnnotations = sets.NewString()
+	deprecatedAnnotations.Insert(
+		"enable-influxdb",
+		"influxdb-measurement",
+		"influxdb-port",
+		"influxdb-host",
+		"influxdb-server-name",
+		"secure-verify-ca-secret",
+		"fastcgi-params-configmap",
+		"fastcgi-index",
+	)
+
+	// Skip checks if the ingress is marked as deleted
+	if !ing.DeletionTimestamp.IsZero() {
+		return warnings, nil
+	}
+
+	anns := ing.GetAnnotations()
+	for k := range anns {
+		trimmedkey := strings.TrimPrefix(k, parser.AnnotationsPrefix+"/")
+		if deprecatedAnnotations.Has(trimmedkey) {
+			warnings = append(warnings, fmt.Sprintf("annotation %s is deprecated", k))
+		}
+	}
+
+	// Add each validation as a single warning
+	// rikatz: I know this is somehow a duplicated code from CheckIngress, but my goal was to deliver fast warning on this behavior. We
+	// can and should, tho, simplify this in the near future
+	if err := inspector.ValidatePathType(ing); err != nil {
+		if errs, is := err.(interface{ Unwrap() []error }); is {
+			for _, errW := range errs.Unwrap() {
+				warnings = append(warnings, errW.Error())
+			}
+		} else {
+			warnings = append(warnings, err.Error())
+		}
+	}
+
+	return warnings, nil
+}
+
 // CheckIngress returns an error in case the provided ingress, when added
 // to the current configuration, generates an invalid configuration
 func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
@@ -271,11 +319,13 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
 	if !ing.DeletionTimestamp.IsZero() {
 		return nil
 	}
+
 	if n.cfg.DeepInspector {
 		if err := inspector.DeepInspect(ing); err != nil {
 			return fmt.Errorf("invalid object: %w", err)
 		}
 	}
+
 	// Do not attempt to validate an ingress that's not meant to be controlled by the current instance of the controller.
 	if ingressClass, err := n.store.GetIngressClass(ing, n.cfg.IngressClassConfiguration); ingressClass == "" {
 		klog.Warningf("ignoring ingress %v in %v based on annotation %v: %v", ing.Name, ing.ObjectMeta.Namespace, ingressClass, err)
@@ -293,6 +343,13 @@ func (n *NGINXController) CheckIngress(ing *networking.Ingress) error {
 	startRender := time.Now().UnixNano() / 1000000
 	cfg := n.store.GetBackendConfiguration()
 	cfg.Resolver = n.resolver
+
+	// Adds the pathType Validation
+	if cfg.StrictValidatePathType {
+		if err := inspector.ValidatePathType(ing); err != nil {
+			return fmt.Errorf("ingress contains invalid paths: %w", err)
+		}
+	}
 
 	var arrayBadWords []string
 
