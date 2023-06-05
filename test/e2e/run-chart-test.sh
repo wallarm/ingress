@@ -98,9 +98,6 @@ export KIND_WORKERS
 echo "[dev-env] copying docker images to cluster..."
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" wallarm/ingress-controller:${TAG}
 
-echo "[dev-env] copying helper images to cluster..."
-"${CURDIR}"/build/load-images.sh
-
 if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
   curl -fsSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.11.1/cmctl-linux-amd64.tar.gz
   tar xzf cmctl.tar.gz

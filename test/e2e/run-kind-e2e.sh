@@ -129,9 +129,6 @@ if [ "${WALLARM_ENABLED}" == "true" ]; then
     echo "WALLARM_API_TOKEN must be set! Exiting ..."
     exit 1
   fi
-
-  echo "[dev-env] copying helper images to cluster..."
-  ${DIR}/../../build/load-images.sh
 fi
 
 echo "[dev-env] running e2e tests..."

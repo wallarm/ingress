@@ -27,23 +27,22 @@ spec:
         {{- include "ingress-nginx.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: {{ template "ingress-nginx.wallarmTarantoolName" . }}
     spec:
-      {{- if .Values.controller.wallarm.imagePullSecrets }}
-      imagePullSecrets:
-{{ toYaml .Values.controller.wallarm.imagePullSecrets | indent 8 }}
-      {{- end }}
+    {{- if .Values.controller.wallarm.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.controller.wallarm.imagePullSecrets | nindent 8 }}
+    {{- end }}
       terminationGracePeriodSeconds: {{ .Values.controller.wallarm.tarantool.terminationGracePeriodSeconds }}
       initContainers:
-{{ include "ingress-nginx.wallarmInitContainer.addNode" . | indent 8 }}
+        {{ include "ingress-nginx.wallarmInitContainer.addNode" . | nindent 8 }}
       containers:
-{{ include "ingress-nginx.wallarmCronContainer" . | indent 8 }}
+        {{ include "ingress-nginx.wallarmCronContainer" . | nindent 8 }}
         - name: tarantool
-{{- if .Values.controller.wallarm.tarantool.image }}
-  {{- with .Values.controller.wallarm.tarantool.image }}
+        {{- if .Values.controller.wallarm.tarantool.image }}
+          {{- with .Values.controller.wallarm.tarantool.image }}
           image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-          image: "wallarm/ingress-tarantool:{{ .Values.controller.image.tag }}"
-{{- end }}
+          {{- end }}
+        {{- else }}
+          image: "wallarm/ingress-tarantool:{{ .Values.controller.wallarm.helpers.tag }}"
+        {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           env:
             - name: SLAB_ALLOC_ARENA
@@ -61,50 +60,50 @@ spec:
             - name: tarantool
               containerPort: {{ template "ingress-nginx.wallarmTarantoolPort" . }}
               protocol: TCP
-          resources:
-{{ toYaml .Values.controller.wallarm.tarantool.resources | indent 12 }}
+        {{- if .Values.controller.wallarm.tarantool.resources }}
+          resources: {{ toYaml .Values.controller.wallarm.tarantool.resources | nindent 12 }}
+        {{- end }}
         - name: wallarm-appstructure
-{{- if (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}
-  {{- with (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}
+        {{- if (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}
+          {{- with (index .Values "controller" "wallarm" "wallarm-appstructure" "image") }}
           image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-          image: "wallarm/ingress-python:{{ .Values.controller.image.tag }}"
-{{- end }}
+          {{- end }}
+        {{- else }}
+          image: "wallarm/ingress-python:{{ .Values.controller.wallarm.helpers.tag }}"
+        {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /etc/wallarm
             name: wallarm
-          resources:
-{{ toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "resources") | indent 12 }}
+        {{- if index .Values "controller" "wallarm" "wallarm-appstructure" "resources" }}
+          resources: {{ toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "resources") | nindent 12 }}
+        {{- end }}
         - name: wallarm-antibot
-{{- if (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
-  {{- with (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
+        {{- if (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
+          {{- with (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
           image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-          image: "wallarm/ingress-python:{{ .Values.controller.image.tag }}"
-{{- end }}
+          {{- end }}
+        {{- else }}
+          image: "wallarm/ingress-python:{{ .Values.controller.wallarm.helpers.tag }}"
+        {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           command: ["/opt/wallarm/python/usr/bin/antibotapiextractor"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /etc/wallarm
             name: wallarm
-          resources:
-{{ toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "resources") | indent 12 }}
+        {{- if index .Values "controller" "wallarm" "wallarm-antibot" "resources" }}
+          resources: {{ toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "resources") | nindent 12 }}
+        {{- end }}
     {{- if .Values.controller.wallarm.tarantool.nodeSelector }}
-      nodeSelector:
-{{ toYaml .Values.controller.wallarm.tarantool.nodeSelector | indent 8 }}
+      nodeSelector: {{ toYaml .Values.controller.wallarm.tarantool.nodeSelector | nindent 8 }}
     {{- end }}
     {{- if .Values.controller.wallarm.tarantool.tolerations }}
-      tolerations:
-{{ toYaml .Values.controller.wallarm.tarantool.tolerations | indent 8 }}
+      tolerations: {{ toYaml .Values.controller.wallarm.tarantool.tolerations | nindent 8 }}
     {{- end }}
     {{- if .Values.controller.wallarm.tarantool.affinity }}
-      affinity:
-{{ toYaml .Values.controller.wallarm.tarantool.affinity | indent 8 }}
+      affinity: {{ toYaml .Values.controller.wallarm.tarantool.affinity | nindent 8 }}
     {{- end }}
     {{- if .Values.controller.wallarm.tarantool.topologySpreadConstraints }}
       topologySpreadConstraints: {{ toYaml .Values.controller.wallarm.tarantool.topologySpreadConstraints | nindent 8 }}
@@ -117,5 +116,6 @@ spec:
         - name: wallarm-cron
           configMap:
             name: {{ template "ingress-nginx.wallarmTarantoolCronConfig" . }}
+        {{- include "ingress-nginx.wallarmTokenVolume" . | nindent 8 }}
 {{- end }}
 {{- end }}
