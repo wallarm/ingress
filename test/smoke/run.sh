@@ -104,13 +104,7 @@ fi
 if [ "${SKIP_IMAGE_LOADING:-false}" = "false" ]; then
   echo "[test-env] copying ${REGISTRY}/ingress-controller:${TAG} image to cluster..."
   kind load docker-image --name="${KIND_CLUSTER_NAME}" "${REGISTRY}/ingress-controller:${TAG}"
-
-  echo "[test-env] copying helper images to cluster..."
-  ${DIR}/../../build/load-images.sh
-
-  IMAGE_PULL_POLICY="Never"
 else
-  IMAGE_PULL_POLICY="IfNotPresent"
   TAG=$(cat "${CURDIR}/TAG")
   export TAG
 fi
@@ -128,7 +122,6 @@ controller:
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
-    pullPolicy: ${IMAGE_PULL_POLICY}
   config:
     worker-processes: "1"
     enable-real-ip: true
