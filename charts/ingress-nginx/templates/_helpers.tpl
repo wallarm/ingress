@@ -199,17 +199,8 @@ Create the name of the controller service account to use
 - name: WALLARM_API_CA_VERIFY
   value: {{ .Values.controller.wallarm.apiCaVerify | toString | quote }}
 {{- end }}
-- name: WALLARM_API_TOKEN
-  valueFrom:
-    secretKeyRef:
-      {{- $existingSecret := index .Values.controller.wallarm "existingSecret" | default dict }}
-      {{- if $existingSecret.enabled }}
-      key: {{ $existingSecret.secretKey }}
-      name: {{ $existingSecret.secretName }}
-      {{- else }}
-      key: token
-      name: {{ template "ingress-nginx.wallarmSecret" . }}
-      {{- end }}
+- name: WALLARM_API_TOKEN_PATH
+  value: "/secrets/wallarm/token"
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
@@ -247,6 +238,10 @@ Create the name of the controller service account to use
     name: wallarm
   - mountPath: /var/lib/wallarm-acl
     name: wallarm-acl
+  - mountPath: /secrets/wallarm/token
+    name: wallarm-token
+    subPath: token
+    readOnly: true
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.addnode.resources | indent 4 }}
@@ -281,9 +276,22 @@ Create the name of the controller service account to use
     name: wallarm-cron
     subPath: crontab
     readOnly: true
+  - mountPath: /secrets/wallarm/token
+    name: wallarm-token
+    subPath: token
+    readOnly: true
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.cron.resources | indent 4 }}
+{{- end -}}
+
+{{- define "ingress-nginx.wallarmTokenVolume" -}}
+- name: wallarm-token
+  secret:
+    secretName: {{ ternary .Values.controller.wallarm.existingSecret.secretName (include "ingress-nginx.wallarmSecret" .) .Values.controller.wallarm.existingSecret.enabled }}
+    items:
+      - key: {{ ternary .Values.controller.wallarm.existingSecret.secretKey "token" .Values.controller.wallarm.existingSecret.enabled }}
+        path: token
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmCollectdContainer" -}}
