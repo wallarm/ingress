@@ -219,7 +219,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+  image: "wallarm/ingress-ruby:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command:
@@ -259,7 +259,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.image.tag }}"
+  image: "wallarm/ingress-ruby:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command: ["/bin/dumb-init", "--rewrite", "15:9", "--"]
@@ -293,7 +293,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-collectd:{{ .Values.controller.image.tag }}"
+  image: "wallarm/ingress-collectd:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   volumeMounts:
