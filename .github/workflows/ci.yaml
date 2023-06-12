@@ -23,7 +23,7 @@ jobs:
       helm: ${{ steps.filter.outputs.helm}}
     steps:
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
 
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.10.2
         id: filter
@@ -63,7 +63,7 @@ jobs:
           secrets: kv-gitlab-ci/data/github/shared/node-repo-key key | NODE_REPO_KEY
 
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
 
       - name: Setup Docker Buildx
         if: needs.changes.outputs.base == 'true'
@@ -138,7 +138,7 @@ jobs:
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
 
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
 
       - name: Load cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
@@ -191,7 +191,7 @@ jobs:
           secrets: kv-gitlab-ci/data/github/ingress api_token
 
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
         with:
           fetch-depth: 0
 
@@ -228,7 +228,7 @@ jobs:
     if: needs.changes.outputs.go == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
@@ -285,7 +285,7 @@ jobs:
           secrets: kv-gitlab-ci/data/github/ingress api_token
 
       - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.0.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
 
       - name: Load base build cache
         if: needs.changes.outputs.base == 'true'
