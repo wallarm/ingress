@@ -117,7 +117,8 @@ jobs:
     needs:
       - build
       - changes
-    if: needs.changes.outputs.go == 'true'
+    if: |
+      (needs.changes.outputs.helm == 'true' || needs.changes.outputs.go == 'true')
     strategy:
       matrix:
         k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1]

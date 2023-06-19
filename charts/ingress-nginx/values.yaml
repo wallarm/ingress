@@ -735,6 +735,7 @@ controller:
     token: ""
     ## Existing secret feature allows to pull Wallarm API token from existing Kubernetes secret
     ## https://docs.wallarm.com/admin-en/configure-kubernetes-en/#controllerwallarmexistingsecret
+    ##
     existingSecret:
       ## Enable or disable the feature: 'true' or 'false'.
       ## If the feature is enabled, the 'controller.wallarm.token' value will be ignored.
@@ -750,7 +751,7 @@ controller:
     helpers:
       ## The common image tag for wallarm helper containers
       ##
-      tag: "4.6.3-1"
+      tag: "4.6.4-1"
     tarantool:
       kind: Deployment
       service:
