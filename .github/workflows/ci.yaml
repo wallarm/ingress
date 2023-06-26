@@ -53,7 +53,7 @@ jobs:
       - changes
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@bb61006b6d1c5679dffb813f9f5c2466a7ddfdb0 # v2.6.0
+        uses: hashicorp/vault-action@357cb9c034fd0638a02e0d4140aa5e37f1a10d38 # v2.7.0
         id: secrets
         with:
           exportEnv: false
@@ -124,7 +124,7 @@ jobs:
         k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1]
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@bb61006b6d1c5679dffb813f9f5c2466a7ddfdb0 # v2.6.0
+        uses: hashicorp/vault-action@357cb9c034fd0638a02e0d4140aa5e37f1a10d38 # v2.7.0
         id: secrets
         with:
           exportEnv: false
@@ -182,7 +182,7 @@ jobs:
         method: [ "install" ]
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@bb61006b6d1c5679dffb813f9f5c2466a7ddfdb0 # v2.6.0
+        uses: hashicorp/vault-action@357cb9c034fd0638a02e0d4140aa5e37f1a10d38 # v2.7.0
         id: secrets
         with:
           exportEnv: false
@@ -276,7 +276,7 @@ jobs:
         k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1]
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@bb61006b6d1c5679dffb813f9f5c2466a7ddfdb0 # v2.6.0
+        uses: hashicorp/vault-action@357cb9c034fd0638a02e0d4140aa5e37f1a10d38 # v2.7.0
         id: secrets
         with:
           exportEnv: false
