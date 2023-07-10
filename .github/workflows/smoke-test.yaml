@@ -24,7 +24,7 @@ jobs:
         k8s: [ v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1 ]
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@357cb9c034fd0638a02e0d4140aa5e37f1a10d38 # v2.7.0
+        uses: hashicorp/vault-action@65d7a12a8098b0aa7fcfdf22ad850c051f8b3ccb # v2.7.2
         id: secrets
         with:
           exportEnv: false

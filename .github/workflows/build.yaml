@@ -46,7 +46,7 @@ jobs:
       matrix: ${{ steps.items.outputs.matrix }}
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@357cb9c034fd0638a02e0d4140aa5e37f1a10d38 # v2.7.0
+        uses: hashicorp/vault-action@65d7a12a8098b0aa7fcfdf22ad850c051f8b3ccb # v2.7.2
         id: secrets
         with:
           exportEnv: false
@@ -131,7 +131,7 @@ jobs:
       matrix: ${{ fromJson(needs.build.outputs.matrix) }}
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@357cb9c034fd0638a02e0d4140aa5e37f1a10d38 # v2.7.0
+        uses: hashicorp/vault-action@65d7a12a8098b0aa7fcfdf22ad850c051f8b3ccb # v2.7.2
         id: secrets
         with:
           exportEnv: false
