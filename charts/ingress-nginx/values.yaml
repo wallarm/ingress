@@ -255,7 +255,7 @@ controller:
   ##
   terminationGracePeriodSeconds: 300
   # -- Node labels for controller pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector:
     kubernetes.io/os: linux
@@ -366,6 +366,9 @@ controller:
     maxReplicas: 11
     pollingInterval: 30
     cooldownPeriod: 300
+    # fallback:
+    #   failureThreshold: 3
+    #   replicas: 11
     restoreToOriginalReplicaCount: false
     scaledObject:
       annotations: {}
@@ -415,12 +418,14 @@ controller:
     # clusterIP: ""
 
     # -- List of IP addresses at which the controller services are available
-    ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+    ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
     ##
     externalIPs: []
     # -- Used by cloud providers to connect the resulting `LoadBalancer` to a pre-existing static IP according to https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
     loadBalancerIP: ""
     loadBalancerSourceRanges: []
+    # -- Used by cloud providers to select a load balancer implementation other than the cloud provider default. https://kubernetes.io/docs/concepts/services-networking/service/#load-balancer-class
+    loadBalancerClass: ""
     enableHttp: true
     enableHttps: true
     ## Set external traffic policy to: "Local" to preserve source IP on providers supporting it.
@@ -471,8 +476,8 @@ controller:
       enabled: false
       # -- Annotations are mandatory for the load balancer to come up. Varies with the cloud service.
       annotations: {}
-      # loadBalancerIP: ""
-
+      # -- Used by cloud providers to connect the resulting internal LoadBalancer to a pre-existing static IP. Make sure to add to the service the needed annotation to specify the subnet which the static IP belongs to. For instance, `networking.gke.io/internal-load-balancer-subnet` for GCP and `service.beta.kubernetes.io/aws-load-balancer-subnets` for AWS.
+      loadBalancerIP: ""
       # -- Restrict access For LoadBalancer service. Defaults to 0.0.0.0/0.
       loadBalancerSourceRanges: []
       ## Set external traffic policy to: "Local" to preserve source IP on
@@ -650,7 +655,7 @@ controller:
       # clusterIP: ""
 
       # -- List of IP addresses at which the stats-exporter service is available
-      ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+      ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
       ##
       externalIPs: []
       # loadBalancerIP: ""
@@ -918,7 +923,7 @@ defaultBackend:
   #  key: value
 
   # -- Node labels for default backend pod assignment
-  ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+  ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector:
     kubernetes.io/os: linux
@@ -957,7 +962,7 @@ defaultBackend:
     # clusterIP: ""
 
     # -- List of IP addresses at which the default backend service is available
-    ## Ref: https://kubernetes.io/docs/user-guide/services/#external-ips
+    ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
     ##
     externalIPs: []
     # loadBalancerIP: ""

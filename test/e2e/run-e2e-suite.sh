@@ -51,7 +51,7 @@ fi
 
 BASEDIR=$(dirname "$0")
 NGINX_BASE_IMAGE=$(cat $BASEDIR/../../NGINX_BASE)
-
+HTTPBUN_IMAGE=$(cat $BASEDIR/HTTPBUN_IMAGE)
 
 echo -e "${BGREEN}Granting permissions to ingress-nginx e2e service account...${NC}"
 kubectl create serviceaccount ingress-nginx-e2e || true
@@ -82,6 +82,7 @@ kubectl run --rm \
   --env="NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE}" \
   --env="WALLARM_ENABLED=${WALLARM_ENABLED:-false}" \
   --env="WALLARM_API_TOKEN=${WALLARM_API_TOKEN:-}" \
+  --env="HTTPBUN_IMAGE=${HTTPBUN_IMAGE}" \
   --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e"}}' \
   e2e --image=nginx-ingress-controller:e2e
 
