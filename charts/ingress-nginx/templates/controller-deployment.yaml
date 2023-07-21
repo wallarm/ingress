@@ -207,7 +207,7 @@ spec:
       {{- end }}
       {{- if .Values.controller.opentelemetry.enabled}}
           {{ $otelContainerSecurityContext := $.Values.controller.opentelemetry.containerSecurityContext | default $.Values.controller.containerSecurityContext }}
-          {{- include "extraModules" (dict "name" "opentelemetry" "image" .Values.controller.opentelemetry.image "containerSecurityContext" $otelContainerSecurityContext) | nindent 8}}
+          {{- include "extraModules" (dict "name" "opentelemetry" "image" .Values.controller.opentelemetry.image "containerSecurityContext" $otelContainerSecurityContext "distroless" false) | nindent 8}}
       {{- end}}
       {{- if .Values.controller.wallarm.enabled }}
           {{ include "ingress-nginx.wallarmInitContainer.addNode" . | nindent 8 }}
