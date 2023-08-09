@@ -46,7 +46,7 @@ jobs:
 
   build:
     name: Build images
-    runs-on: self-hosted-4cpu
+    runs-on: self-hosted-8cpu
     if: |
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true')
     needs:
@@ -113,13 +113,14 @@ jobs:
 
   smoke:
     name: Smoke
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-2cpu
     needs:
       - build
       - changes
     if: |
       (needs.changes.outputs.helm == 'true' || needs.changes.outputs.go == 'true')
     strategy:
+      fail-fast: false
       matrix:
         k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1]
     steps:
