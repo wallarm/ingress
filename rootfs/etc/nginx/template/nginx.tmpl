@@ -81,6 +81,12 @@ http {
     wallarm_process_time_limit_block {{ $cfg.WallarmProcessTimeLimitBlock }};
     wallarm_request_memory_limit {{ $cfg.WallarmRequestMemoryLimit }};
     wallarm_general_ruleset_memory_limit {{ $cfg.WallarmWorkerRlimitVmem }};
+    wallarm_acl_export_enable {{ $cfg.WallarmAclExportEnable }};
+    wallarm_acl_export_shm_size {{ $cfg.WallarmAclExportShmSize }};
+    wallarm_acl_export_sample_limit {{ $cfg.WallarmAclExportSampleLimit }};
+    wallarm_acl_export_sample_group_lifetime {{ $cfg.WallarmAclExportSampleGroupLifetime }};
+    wallarm_acl_export_stats_bucket_interval {{ $cfg.WallarmAclExportStatsBucketInterval }};
+    wallarm_acl_export_stats_bucket_lifetime {{ $cfg.WallarmAclExportStatsBucketLifetime }};
     wallarm_fallback {{ $cfg.WallarmFallback}};
     {{ end }}
 
