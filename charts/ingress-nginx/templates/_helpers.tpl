@@ -217,7 +217,7 @@ Create the name of the controller service account to use
   - sh
   - -c
   - >
-    /opt/wallarm/ruby/usr/share/wallarm-common/synccloud --one-time &&
+    /opt/wallarm/ruby/usr/share/wallarm-common/register-node --no-sync --no-sync-acl --no-export-env &&
     /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT &&
     /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
     timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true
@@ -233,6 +233,10 @@ Create the name of the controller service account to use
     value: www-data
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
+{{- if .Values.controller.wallarm.nodeGroup }}
+  - name: WALLARM_LABELS
+    value: "group={{ .Values.controller.wallarm.nodeGroup }}"
+{{- end }}
   volumeMounts:
   - mountPath: /etc/wallarm
     name: wallarm
