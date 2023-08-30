@@ -28,6 +28,24 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
+function get_logs_and_fail() {
+    get_logs
+    exit 1
+}
+
+function get_logs() {
+    echo "###### Init container logs ######"
+    kubectl logs -l "app.kubernetes.io/component=controller" -c addnode --tail=-1
+    echo "###### Controller container logs ######"
+    kubectl logs -l "app.kubernetes.io/component=controller" -c controller --tail=-1
+    echo "###### Cron container logs ######"
+    kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
+    echo "###### List directory /etc/wallarm"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /etc/wallarm && cat /etc/wallarm/node.yaml"
+    echo "###### List directory /var/lib/nginx/wallarm"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/nginx/wallarm && ls -lah /var/lib/nginx/wallarm/shm"
+}
+
 declare -a mandatory
 mandatory=(
   CLIENT_ID
@@ -68,7 +86,7 @@ fi
 
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
-NODE_UUID=$(kubectl logs "${POD}" -c addnode | grep 'Registered new instance' | awk -F 'instance ' '{print $2}')
+NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /etc/wallarm/node.yaml | grep uuid | awk '{print $2}')
 echo "UUID: ${NODE_UUID}"
 
 echo "Deploying pytest pod ..."
@@ -90,5 +108,9 @@ kubectl run pytest \
 
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
+echo "Getting logs ..."
+get_logs
+
 echo "Run smoke tests ..."
+trap get_logs_and_fail ERR
 kubectl exec pytest ${EXEC_ARGS} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
