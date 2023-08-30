@@ -837,6 +837,9 @@ controller:
           schedule: "*/2 * * * *"
         weakJwtDetect:
           schedule: "* * * * *"
+        exportBlockedStat:
+          schedule: "* * * * *"
+          timeout: 24h
       resources: {}
     collectd:
       resources: {}

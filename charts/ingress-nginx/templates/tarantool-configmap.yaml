@@ -45,3 +45,8 @@ data:
     # sync-node
     {{ .schedule }} /opt/wallarm/ruby/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
     {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.exportBlockedStat }}
+    # export-blocked-stats
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-blocked-stats -l STDOUT -L DEBUG
+    {{- end }}
