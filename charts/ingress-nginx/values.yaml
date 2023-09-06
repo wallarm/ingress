@@ -760,7 +760,7 @@ controller:
     helpers:
       ## The common image tag for wallarm helper containers
       ##
-      tag: "4.6.5-1"
+      tag: "4.8.0-1"
     tarantool:
       kind: Deployment
       service:
