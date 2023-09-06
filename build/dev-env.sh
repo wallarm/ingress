@@ -58,9 +58,11 @@ if [[ ${KUBE_CLIENT_VERSION} -lt 24 ]]; then
   exit 1
 fi
 
-echo "[dev-env] building image"
-make build image
-docker tag "${REGISTRY}/ingress-controller:${TAG}" "${DEV_IMAGE}"
+if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
+  echo "[dev-env] building image"
+  make build image
+  docker tag "${REGISTRY}/ingress-controller:${TAG}" "${DEV_IMAGE}"
+fi
 
 export K8S_VERSION=${K8S_VERSION:-v1.26.3@sha256:61b92f38dff6ccc29969e7aa154d34e38b89443af1a2c14e6cfbd2df6419c66f}
 
@@ -85,6 +87,10 @@ controller:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
     digest:
+  wallarm:
+    enabled: true
+    apiHost: ${WALLARM_API_HOST}
+    token: ${WALLARM_API_TOKEN}
   config:
     worker-processes: "1"
   podLabels:
