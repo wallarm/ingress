@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+\+upstream*'
+      - '[0-9]+.[0-9]+.[0-9]+-rc*'
 
 permissions:
   contents: read
@@ -12,6 +13,7 @@ jobs:
     runs-on: self-hosted-1cpu
     outputs:
       chart_version: ${{ steps.extract_tag.outputs.tag }}
+      release_type: ${{ steps.check_release.outputs.type }}
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@cb841f2c86fb6d07cff94fda240828c1abc5ba43 # v2.7.3
@@ -30,11 +32,22 @@ jobs:
       - name: Extract tag name
         id: extract_tag
         run: |
-          X_TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\+.*$//g')
+          X_TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/[+-].*$//g')
           echo "X_TAG=${X_TAG}" >> $GITHUB_ENV
           echo "tag=${X_TAG}" >> $GITHUB_OUTPUT
 
-      - name: Publish Helm charts
+      - name: Check release type
+        id: check_release
+        run: |
+          TYPE="production"
+          if [[ ${GITHUB_REF#refs/*/} =~ "rc" ]]; then
+            TYPE="release-candidate"
+          fi
+          echo "Release type: ${TYPE}"
+          echo "type=${TYPE}" >> $GITHUB_OUTPUT
+
+      - name: Publish Helm charts (Prod)
+        if: steps.check_release.outputs.type == 'production'
         uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # master
         with:
           token: ${{ steps.secrets.outputs.GITHUB_TOKEN }}
@@ -43,13 +56,33 @@ jobs:
           linting: off
           repository: helm-charts
           branch: main
-          target_dir: wallarm-ingress
+          target_dir: "wallarm-ingress"
+          index_dir: .
+          app_version: "${{ env.X_TAG }}"
+          chart_version: "${{ env.X_TAG }}"
+
+      - name: Update chart name for RC versions
+        if: steps.check_release.outputs.type == 'release-candidate'
+        run: yq -y -i '.name = "wallarm-ingress-rc"' ./charts/ingress-nginx/Chart.yaml
+
+      - name: Publish Helm charts (RC)
+        if: steps.check_release.outputs.type == 'release-candidate'
+        uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # master
+        with:
+          token: ${{ steps.secrets.outputs.GITHUB_TOKEN }}
+          charts_dir: ./charts
+          charts_url: https://charts.wallarm.com
+          linting: off
+          repository: helm-charts
+          branch: main
+          target_dir: "wallarm-ingress-rc"
           index_dir: .
           app_version: "${{ env.X_TAG }}"
           chart_version: "${{ env.X_TAG }}"
 
   update_version:
     name: Update package version
+    if: needs.release.outputs.release_type == 'production'
     runs-on: self-hosted-1cpu
     needs: release
     steps:
