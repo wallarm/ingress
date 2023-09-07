@@ -41,9 +41,11 @@ function get_logs() {
     echo "###### Cron container logs ######"
     kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
     echo "###### List directory /etc/wallarm"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /etc/wallarm && cat /etc/wallarm/node.yaml"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /etc/wallarm && cat /etc/wallarm/node.yaml" || true
     echo "###### List directory /var/lib/nginx/wallarm"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/nginx/wallarm && ls -lah /var/lib/nginx/wallarm/shm"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/nginx/wallarm && ls -lah /var/lib/nginx/wallarm/shm" || true
+    echo "###### List directory /var/lib/wallarm-acl"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/wallarm-acl" || true
 }
 
 declare -a mandatory
