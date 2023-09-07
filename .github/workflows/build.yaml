@@ -21,9 +21,10 @@ jobs:
     outputs:
       base: ${{ steps.filter.outputs.base }}
       controller: ${{ steps.filter.outputs.controller }}
+      runner: ${{ steps.runner.outputs.type }}
     steps:
       - name: Checkout
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.0.2
 
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.10.2
         id: filter
@@ -35,9 +36,19 @@ jobs:
             controller:
               - 'TAG'
 
+      - name: Prepare runner type
+        id: runner
+        run: |
+          RUNNER="self-hosted-4cpu"
+          if [ ${{ steps.filter.outputs.base }} == 'true' ]; then
+            RUNNER="self-hosted-32cpu"
+          fi
+          echo "Runner: ${RUNNER}"
+          echo "type=${RUNNER}" >> $GITHUB_OUTPUT
+
   build:
     name: Build and push images
-    runs-on: self-hosted-8cpu
+    runs-on: ${{ needs.changes.outputs.runner }}
     if: |
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.controller == 'true')
     needs:
@@ -59,7 +70,7 @@ jobs:
             kv-gitlab-ci/data/github/shared/node-repo-key key | NODE_REPO_KEY ;
 
       - name: Checkout
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.0.2
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.0.2
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.0.0
