@@ -108,7 +108,7 @@ jobs:
           nginx-ingress-controller:e2e
 
       - name: Cache controller images
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
         with:
           retention-days: 1
           name: controller.tar
@@ -116,7 +116,7 @@ jobs:
 
       - name: Cache base image
         if: needs.changes.outputs.base == 'true'
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
         with:
           retention-days: 1
           name: base.tar
