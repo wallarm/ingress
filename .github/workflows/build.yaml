@@ -86,6 +86,8 @@ jobs:
 
       - name: Build and push base image
         if: needs.changes.outputs.base == 'true'
+        env:
+          PLATFORMS: linux/amd64,linux/arm64
         run: |
           eval $(ssh-agent -s)
           echo "${{ steps.secrets.outputs.NODE_REPO_KEY }}" | tr -d '\r' | ssh-add -
@@ -93,7 +95,8 @@ jobs:
 
       - name: Build and push controller images
         env:
-          ARCH: amd64
+          PLATFORMS: amd64,arm64
+          BUILDX_PLATFORMS: linux/amd64,linux/arm64
           USER: runner
         if: needs.changes.outputs.controller == 'true'
         run: make release

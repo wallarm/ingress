@@ -56,7 +56,7 @@ jobs:
           echo "type=${RUNNER}" >> $GITHUB_OUTPUT
 
   build:
-    name: Build images
+    name: Build images for amd64
     runs-on: ${{ needs.changes.outputs.runner }}
     if: |
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true')
@@ -121,6 +121,44 @@ jobs:
           retention-days: 1
           name: base.tar
           path: base.tar
+
+  build-arm64:
+    name: Build images for amd64
+    runs-on: ${{ needs.changes.outputs.runner }}
+    if: |
+      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true')
+    needs:
+      - changes
+    steps:
+      - name: Import secrets
+        uses: hashicorp/vault-action@cb841f2c86fb6d07cff94fda240828c1abc5ba43 # v2.7.3
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          secrets: kv-gitlab-ci/data/github/shared/node-repo-key key | NODE_REPO_KEY
+
+      - name: Checkout
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.0.2
+
+      - name: Setup Docker Buildx
+        if: needs.changes.outputs.base == 'true'
+        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.0.0
+        with:
+          version: latest
+          use: false
+
+      - name: Build base image
+        if: needs.changes.outputs.base == 'true'
+        env:
+          PLATFORMS: linux/arm64
+        run: |
+          eval $(ssh-agent -s)
+          echo "${{ steps.secrets.outputs.NODE_REPO_KEY }}" | tr -d '\r' | ssh-add -
+          make -C images/nginx OUTPUT=--load build
+          docker save -o base-arm64.tar $(cat NGINX_BASE)
 
   smoke:
     name: Smoke
