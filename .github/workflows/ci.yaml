@@ -123,7 +123,7 @@ jobs:
           path: base.tar
 
   build-arm64:
-    name: Build images for amd64
+    name: Build images for arm64
     runs-on: ${{ needs.changes.outputs.runner }}
     if: |
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true')
