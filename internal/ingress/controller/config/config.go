@@ -823,9 +823,9 @@ type Configuration struct {
 	WallarmAclExportEnable              string `json:"wallarm-acl-export-enable"`
 	WallarmAclExportShmSize             string `json:"wallarm-acl-export-shm-size"`
 	WallarmAclExportSampleLimit         int    `json:"wallarm-acl-export-sample-limit"`
-	WallarmAclExportSampleGroupLifetime string `json:"wallarm-acl-export-sample-group-lifetime"`
-	WallarmAclExportStatsBucketInterval string `json:"wallarm-acl-export-stats-bucket-interval"`
-	WallarmAclExportStatsBucketLifetime string `json:"wallarm-acl-export-stats-bucket-lifetime"`
+	WallarmAclExportSampleGroupLifetime int    `json:"wallarm-acl-export-sample-group-lifetime"`
+	WallarmAclExportStatsBucketInterval int    `json:"wallarm-acl-export-stats-bucket-interval"`
+	WallarmAclExportStatsBucketLifetime int    `json:"wallarm-acl-export-stats-bucket-lifetime"`
 
 	// Checksum contains a checksum of the configmap configuration
 	Checksum string `json:"-"`
@@ -1080,9 +1080,9 @@ func NewDefault() Configuration {
 		WallarmAclExportEnable:                 "on",
 		WallarmAclExportShmSize:                "64M",
 		WallarmAclExportSampleLimit:            10,
-		WallarmAclExportSampleGroupLifetime:    "1h",
-		WallarmAclExportStatsBucketInterval:    "1m",
-		WallarmAclExportStatsBucketLifetime:    "30m",
+		WallarmAclExportSampleGroupLifetime:    3600,
+		WallarmAclExportStatsBucketInterval:    60,
+		WallarmAclExportStatsBucketLifetime:    1800,
 		GlobalExternalAuth:                     defGlobalExternalAuth,
 		ProxySSLLocationOnly:                   false,
 		DefaultType:                            "text/html",
