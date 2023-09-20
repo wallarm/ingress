@@ -217,8 +217,7 @@ Create the name of the controller service account to use
   - sh
   - -c
   - >
-    /opt/wallarm/ruby/usr/share/wallarm-common/register-node --force --batch --no-sync --no-export-env &&
-    /opt/wallarm/ruby/usr/share/wallarm-common/syncnode -l STDOUT {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
+    /opt/wallarm/ruby/usr/share/wallarm-common/register-node --force --batch --no-export-env {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
     timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
