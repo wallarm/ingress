@@ -44,8 +44,8 @@ function get_logs() {
     kubectl exec "${POD}" -c controller -- sh -c "ls -lah /etc/wallarm && cat /etc/wallarm/node.yaml" || true
     echo "###### List directory /var/lib/nginx/wallarm"
     kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/nginx/wallarm && ls -lah /var/lib/nginx/wallarm/shm" || true
-    echo "###### List directory /var/lib/wallarm-acl"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/wallarm-acl" || true
+    echo "###### List directory /opt/wallarm/var/lib/wallarm-acl"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /opt/wallarm/var/lib/wallarm-acl" || true
 }
 
 declare -a mandatory

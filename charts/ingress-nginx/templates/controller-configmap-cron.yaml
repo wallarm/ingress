@@ -13,25 +13,25 @@ data:
   crontab: |
     {{- with .Values.controller.wallarm.cron.jobs.exportEnvironment }}
     # export-environment
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.syncIpLists }}
     # sync-ip-lists
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists -l STDOUT
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.exportMetrics }}
     # export-metrics
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/export-metrics -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-metrics -l STDOUT
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.syncIpListsSource }}
     # sync-ip-lists-source
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/ruby/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.syncNode }}
     # sync-node
-    {{ .schedule }} /opt/wallarm/ruby/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
+    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
     {{- end }}

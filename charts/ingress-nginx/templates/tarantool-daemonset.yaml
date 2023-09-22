@@ -40,9 +40,10 @@ spec:
           image: "{{ .repository }}:{{ .tag }}"
           {{- end }}
         {{- else }}
-          image: "wallarm/ingress-tarantool:{{ .Values.controller.wallarm.helpers.tag }}"
+          image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+          args: ["/opt/wallarm/usr/bin/tarantool", "/opt/wallarm/usr/local/share/wallarm-tarantool/init.lua"]
           env:
             - name: SLAB_ALLOC_ARENA
               value: "{{ .Values.controller.wallarm.tarantool.arena }}"
@@ -68,9 +69,10 @@ spec:
           image: "{{ .repository }}:{{ .tag }}"
           {{- end }}
         {{- else }}
-          image: "wallarm/ingress-python:{{ .Values.controller.wallarm.helpers.tag }}"
+          image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+          args: ["/opt/wallarm/usr/bin/python3.8", "/opt/wallarm/usr/local/bin/wallarm-appstructure-client"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /etc/wallarm
@@ -84,10 +86,10 @@ spec:
           image: "{{ .repository }}:{{ .tag }}"
           {{- end }}
         {{- else }}
-          image: "wallarm/ingress-python:{{ .Values.controller.wallarm.helpers.tag }}"
+          image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          command: ["/opt/wallarm/python/usr/bin/antibotapiextractor"]
+          args: ["/opt/wallarm/usr/bin/antibotapiextractor"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /etc/wallarm

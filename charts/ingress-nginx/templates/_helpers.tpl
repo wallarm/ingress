@@ -66,7 +66,7 @@ Get specific paths
 {{- if .Values.controller.image.chroot -}}
 {{- printf "/chroot/var/lib/wallarm-acl" -}}
 {{- else -}}
-{{- printf "/var/lib/wallarm-acl" -}}
+{{- printf "/opt/wallarm/var/lib/wallarm-acl" -}}
 {{- end }}
 {{- end -}}
 
@@ -210,15 +210,10 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command:
-  - sh
-  - -c
-  - >
-    /opt/wallarm/ruby/usr/share/wallarm-common/register-node --force --batch --no-export-env {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
-    timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true
+  args: ["/opt/wallarm/usr/share/wallarm-common/register-node", "--force", "--config", "/etc/wallarm/node.yaml", "--batch", "--no-export-env" {{- if eq .Values.controller.wallarm.fallback "on" }}, "||", "true" {{- end }}, ";", "timeout", "10m", "/opt/wallarm/usr/share/wallarm-common/export-environment", "-l", "STDOUT", "||", "true"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -238,7 +233,7 @@ Create the name of the controller service account to use
   volumeMounts:
   - mountPath: /etc/wallarm
     name: wallarm
-  - mountPath: /var/lib/wallarm-acl
+  - mountPath: /opt/wallarm/var/lib/wallarm-acl
     name: wallarm-acl
   - mountPath: /secrets/wallarm/token
     name: wallarm-token
@@ -256,11 +251,11 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["/bin/dumb-init", "--rewrite", "15:9", "--"]
-  args: ["/bin/supercronic", "-json", "/opt/cron/crontab"]
+  command: ["/usr/local/bin/dumb-init", "--rewrite", "15:9", "--"]
+  args: ["/usr/local/bin/supercronic", "-json", "/opt/cron/crontab"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -272,7 +267,7 @@ Create the name of the controller service account to use
   volumeMounts:
   - mountPath: /etc/wallarm
     name: wallarm
-  - mountPath: /var/lib/wallarm-acl
+  - mountPath: /opt/wallarm/var/lib/wallarm-acl
     name: wallarm-acl
   - mountPath: /opt/cron/crontab
     name: wallarm-cron
@@ -303,9 +298,10 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-collectd:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+  args: ["/opt/wallarm/lib64/ld-linux-x86-64.so.2", "--preload", "/opt/wallarm/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/libpython3.8.so", "/opt/wallarm/usr/sbin/collectd", "-f", "-C", "/opt/wallarm/etc/collectd/wallarm-collectd.conf"]
   volumeMounts:
     - name: wallarm
       mountPath: /etc/wallarm
