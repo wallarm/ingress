@@ -58,7 +58,7 @@ Get specific paths
 {{- if .Values.controller.image.chroot -}}
 {{- printf "/chroot/etc/wallarm" -}}
 {{- else -}}
-{{- printf "/opt/wallarm/etc/wallarm" -}}
+{{- printf "/etc/wallarm" -}}
 {{- end }}
 {{- end -}}
 
@@ -66,7 +66,7 @@ Get specific paths
 {{- if .Values.controller.image.chroot -}}
 {{- printf "/chroot/var/lib/wallarm-acl" -}}
 {{- else -}}
-{{- printf "/opt/wallarm/var/lib/wallarm-acl" -}}
+{{- printf "/var/lib/wallarm-acl" -}}
 {{- end }}
 {{- end -}}
 
@@ -213,7 +213,7 @@ Create the name of the controller service account to use
   image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["/opt/wallarm/usr/share/wallarm-common/register-node", "--force", "--config", "/etc/wallarm/node.yaml", "--batch", "--no-export-env" {{- if eq .Values.controller.wallarm.fallback "on" }}, "||", "true" {{- end }}, ";", "timeout", "10m", "/opt/wallarm/usr/share/wallarm-common/export-environment", "-l", "STDOUT", "||", "true"]
+  args: ["/opt/wallarm/usr/share/wallarm-common/register-node", "--force", "--batch", "--no-export-env" {{- if eq .Values.controller.wallarm.fallback "on" }}, "||", "true" {{- end }}, ";", "timeout", "10m", "/opt/wallarm/usr/share/wallarm-common/export-environment", "-l", "STDOUT", "||", "true"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -254,8 +254,7 @@ Create the name of the controller service account to use
   image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["/usr/local/bin/dumb-init", "--rewrite", "15:9", "--"]
-  args: ["/usr/local/bin/supercronic", "-json", "/opt/cron/crontab"]
+  args: ["/usr/local/bin/dumb-init", "--rewrite", "15:9", "--", "/usr/local/bin/supercronic", "-json", "/opt/cron/crontab"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
