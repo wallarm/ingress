@@ -75,7 +75,7 @@ spec:
           args: ["/opt/wallarm/usr/bin/python3.8", "/opt/wallarm/usr/local/bin/wallarm-appstructure-client"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
-          - mountPath: /etc/wallarm
+          - mountPath: /opt/wallarm/etc/wallarm
             name: wallarm
         {{- if index .Values "controller" "wallarm" "wallarm-appstructure" "resources" }}
           resources: {{ toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "resources") | nindent 12 }}
@@ -92,7 +92,7 @@ spec:
           args: ["/opt/wallarm/usr/bin/antibotapiextractor"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
-          - mountPath: /etc/wallarm
+          - mountPath: /opt/wallarm/etc/wallarm
             name: wallarm
         {{- if index .Values "controller" "wallarm" "wallarm-antibot" "resources" }}
           resources: {{ toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "resources") | nindent 12 }}

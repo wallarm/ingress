@@ -58,7 +58,7 @@ Get specific paths
 {{- if .Values.controller.image.chroot -}}
 {{- printf "/chroot/etc/wallarm" -}}
 {{- else -}}
-{{- printf "/etc/wallarm" -}}
+{{- printf "/opt/wallarm/etc/wallarm" -}}
 {{- end }}
 {{- end -}}
 
@@ -231,7 +231,7 @@ Create the name of the controller service account to use
     value: "group={{ .Values.controller.wallarm.nodeGroup }}"
 {{- end }}
   volumeMounts:
-  - mountPath: /etc/wallarm
+  - mountPath: /opt/wallarm/etc/wallarm
     name: wallarm
   - mountPath: /opt/wallarm/var/lib/wallarm-acl
     name: wallarm-acl
@@ -265,7 +265,7 @@ Create the name of the controller service account to use
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
   volumeMounts:
-  - mountPath: /etc/wallarm
+  - mountPath: /opt/wallarm/etc/wallarm
     name: wallarm
   - mountPath: /opt/wallarm/var/lib/wallarm-acl
     name: wallarm-acl
@@ -304,7 +304,7 @@ Create the name of the controller service account to use
   args: ["/opt/wallarm/lib64/ld-linux-x86-64.so.2", "--preload", "/opt/wallarm/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/libpython3.8.so", "/opt/wallarm/usr/sbin/collectd", "-f", "-C", "/opt/wallarm/etc/collectd/wallarm-collectd.conf"]
   volumeMounts:
     - name: wallarm
-      mountPath: /etc/wallarm
+      mountPath: /opt/wallarm/etc/wallarm
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.collectd.resources | indent 4 }}
