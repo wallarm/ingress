@@ -44,7 +44,7 @@ spec:
           image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          args: ["/opt/wallarm/usr/bin/tarantool", "/opt/wallarm/usr/local/share/wallarm-tarantool/init.lua"]
+          args: ["tarantool"]
           env:
             - name: SLAB_ALLOC_ARENA
               value: "{{ .Values.controller.wallarm.tarantool.arena }}"
@@ -73,7 +73,7 @@ spec:
           image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          args: ["/opt/wallarm/usr/bin/python3.8", "/opt/wallarm/usr/local/bin/wallarm-appstructure-client"]
+          args: ["appstructure"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /opt/wallarm/etc/wallarm
@@ -90,7 +90,7 @@ spec:
           image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          args: ["/opt/wallarm/usr/bin/antibotapiextractor"]
+          args: ["antibot"]
           securityContext: {{ include "controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /opt/wallarm/etc/wallarm

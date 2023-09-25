@@ -213,7 +213,7 @@ Create the name of the controller service account to use
   image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["/opt/wallarm/usr/share/wallarm-common/register-node", "--force", "--batch", "--no-export-env" {{- if eq .Values.controller.wallarm.fallback "on" }}, "||", "true" {{- end }}, ";", "timeout", "10m", "/opt/wallarm/usr/share/wallarm-common/export-environment", "-l", "STDOUT", "||", "true"]
+  args: [ "register" {{- if eq .Values.controller.wallarm.fallback "on" }}, "fallback"{{- end }} ]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -254,7 +254,7 @@ Create the name of the controller service account to use
   image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["/usr/local/bin/dumb-init", "--rewrite", "15:9", "--", "/usr/local/bin/supercronic", "-json", "/opt/cron/crontab"]
+  args: ["cron"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -300,7 +300,7 @@ Create the name of the controller service account to use
   image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["/opt/wallarm/lib64/ld-linux-x86-64.so.2", "--preload", "/opt/wallarm/usr/lib/python3.8/config-3.8-x86_64-linux-gnu/libpython3.8.so", "/opt/wallarm/usr/sbin/collectd", "-f", "-C", "/opt/wallarm/etc/collectd/wallarm-collectd.conf"]
+  args: ["collectd"]
   volumeMounts:
     - name: wallarm
       mountPath: /opt/wallarm/etc/wallarm
