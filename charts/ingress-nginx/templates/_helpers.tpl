@@ -210,15 +210,15 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "wallarm/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args:
   - sh
   - -c
   - >
-    /opt/wallarm/ruby/usr/share/wallarm-common/register-node --force --batch --no-export-env {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
-    timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true
+    /opt/wallarm/usr/share/wallarm-common/register-node --force --batch --no-export-env {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
+    timeout 10m /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT || true
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -256,7 +256,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "wallarm/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args: ["cron"]
@@ -302,7 +302,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "dkr.wallarm.com/wallarm-node/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "wallarm/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args: ["collectd"]
