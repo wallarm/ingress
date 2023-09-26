@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - 'main'
-      - 'stable/4.6'
+      - 'stable/**'
     paths:
       - 'NGINX_BASE'
       - 'TAG'

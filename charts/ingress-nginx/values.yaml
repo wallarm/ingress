@@ -738,6 +738,10 @@ controller:
     apiPort: 443
     apiSSL: true
     token: ""
+    ## The name of Node group, required if API token is used to register the Node
+    ## https://docs.wallarm.com/user-guides/nodes/nodes/#api-and-node-tokens-for-node-creation
+    ##
+    nodeGroup: "defaultIngressGroup"
     ## Existing secret feature allows to pull Wallarm API token from existing Kubernetes secret
     ## https://docs.wallarm.com/admin-en/configure-kubernetes-en/#controllerwallarmexistingsecret
     ##
@@ -806,6 +810,9 @@ controller:
     ## wallarm-ingress-controller and wallarm-ingress-controller-tarantool.
     ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
     addnode:
+      image:
+        repository: wallarm/ingress-ruby
+        tag: 4.8.0-1
       resources: {}
     cron:
       jobs:
