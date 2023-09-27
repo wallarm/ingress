@@ -213,10 +213,10 @@ Create the name of the controller service account to use
   image: "wallarm/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+  command: ["sh", "-c"]
   args:
-  - sh
-  - -c
   - >
+    source /etc/profile.d/30-env-vars.sh &&
     /opt/wallarm/usr/share/wallarm-common/register-node --force --batch --no-export-env {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
     timeout 10m /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT || true
   env:
