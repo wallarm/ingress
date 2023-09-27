@@ -109,9 +109,6 @@ else
   export TAG
 fi
 
-# temp for helpers
-kind load docker-image --name="${KIND_CLUSTER_NAME}" dkr.wallarm.com/wallarm-node/node-helpers:4.8.0-rc
-
 echo "[test-env] installing Helm chart using TAG=${TAG} ..."
 cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-nginx" --wait --values -
 fullnameOverride: wallarm-ingress
