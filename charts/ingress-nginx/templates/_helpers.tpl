@@ -210,7 +210,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   command: ["sh", "-c"]
@@ -256,7 +256,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args: ["cron"]
@@ -302,7 +302,7 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/node-helpers:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args: ["collectd"]
