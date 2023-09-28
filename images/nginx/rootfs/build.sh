@@ -478,10 +478,12 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 make
 make install
 
+# TODO: temporary fix for broken brotli https://github.com/google/ngx_brotli/issues/156
 # Get Brotli source and deps
 cd "$BUILD_PATH"
-git clone --depth=1 https://github.com/google/ngx_brotli.git
+git clone --depth=100 https://github.com/google/ngx_brotli.git
 cd ngx_brotli
+git reset --hard 63ca02abdcf79c9e788d2eedcc388d2335902e52
 git submodule init
 git submodule update
 

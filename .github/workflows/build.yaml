@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'stable/**'
     paths:
       - 'NGINX_BASE'
       - 'TAG'
@@ -30,6 +31,7 @@ jobs:
         id: filter
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ github.ref }}
           filters: |
             base:
               - 'NGINX_BASE'
@@ -86,6 +88,8 @@ jobs:
 
       - name: Build and push base image
         if: needs.changes.outputs.base == 'true'
+        env:
+          PLATFORMS: linux/amd64,linux/arm64
         run: |
           eval $(ssh-agent -s)
           echo "${{ steps.secrets.outputs.NODE_REPO_KEY }}" | tr -d '\r' | ssh-add -
@@ -94,6 +98,8 @@ jobs:
       - name: Build and push controller images
         env:
           ARCH: amd64
+          PLATFORMS: amd64 arm64
+          BUILDX_PLATFORMS: linux/amd64,linux/arm64
           USER: runner
         if: needs.changes.outputs.controller == 'true'
         run: make release
@@ -178,7 +184,7 @@ jobs:
           syft -o spdx-json ${IMAGE_NAME} > ${SBOM_SPDX}
           cosign attach sbom --sbom ${SBOM_SPDX} ${IMAGE_DIGEST}
           cosign sign --yes --key env://COSIGN_PRIVATE_KEY "${IMAGE_URI}.sbom"
-          cosign sign --yes --key env://COSIGN_PRIVATE_KEY ${IMAGE_DIGEST}
+          cosign sign --recursive --yes --key env://COSIGN_PRIVATE_KEY ${IMAGE_DIGEST}
           
           echo "sbom=${SBOM_SPDX}" >> $GITHUB_OUTPUT
           
