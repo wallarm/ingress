@@ -86,15 +86,6 @@ jobs:
           username: ${{ steps.secrets.outputs.DOCKERHUB_USER }}
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
 
-      - name: Build and push base image
-        if: needs.changes.outputs.base == 'true'
-        env:
-          PLATFORMS: linux/amd64,linux/arm64
-        run: |
-          eval $(ssh-agent -s)
-          echo "${{ steps.secrets.outputs.NODE_REPO_KEY }}" | tr -d '\r' | ssh-add -
-          make -C images/nginx push
-
       - name: Build and push controller images
         env:
           ARCH: amd64

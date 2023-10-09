@@ -83,14 +83,6 @@ jobs:
           version: latest
           use: false
 
-      - name: Build base image
-        if: needs.changes.outputs.base == 'true'
-        run: |
-          eval $(ssh-agent -s)
-          echo "${{ steps.secrets.outputs.NODE_REPO_KEY }}" | tr -d '\r' | ssh-add -
-          make -C images/nginx OUTPUT=--load build
-          docker save -o base.tar $(cat NGINX_BASE)
-
       - name: Build controller images
         env:
           ARCH: amd64
@@ -113,14 +105,6 @@ jobs:
           retention-days: 1
           name: controller.tar
           path: controller.tar
-
-      - name: Cache base image
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
-        with:
-          retention-days: 1
-          name: base.tar
-          path: base.tar
 
   smoke:
     name: Smoke
@@ -243,16 +227,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.0.2
 
-      - name: Load base build cache
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
-        with:
-          name: base.tar
-
-      - name: Load base image
-        if: needs.changes.outputs.base == 'true'
-        run: docker load -i base.tar
-
       - name: Load controller build cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
@@ -299,16 +273,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v3.0.2
-
-      - name: Load base build cache
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
-        with:
-          name: base.tar
-
-      - name: Load base image
-        if: needs.changes.outputs.base == 'true'
-        run: docker load -i base.tar
 
       - name: Load controller build cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
