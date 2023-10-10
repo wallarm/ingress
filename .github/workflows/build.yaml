@@ -102,10 +102,6 @@ jobs:
           {
             "include": [
               {
-                "item": "base",
-                "image": "$(cat NGINX_BASE)"
-              },
-              {
                 "item": "controller",
                 "image": "wallarm/ingress-controller:$(cat TAG)"
               },
@@ -116,14 +112,6 @@ jobs:
             ]
           }
           EOF
-          
-          if [ ! ${{ needs.changes.outputs.controller }} = true ]; then
-            cat <<< $(jq 'del(.include[] | select (.item =="controller" or .item =="controller-chroot"))' matrix.json) > matrix.json
-          fi
-          
-          if [ ! ${{ needs.changes.outputs.base }} = true ]; then
-            cat <<< $(jq 'del(.include[] | select (.item =="base"))' matrix.json) > matrix.json
-          fi
           
           cat matrix.json
           echo "matrix=$(cat matrix.json | jq -c '.')" >> $GITHUB_OUTPUT
