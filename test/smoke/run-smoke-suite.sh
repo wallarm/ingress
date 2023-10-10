@@ -24,7 +24,7 @@ WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
 NODE_BASE_URL="${NODE_BASE_URL:-http://wallarm-ingress-controller.default.svc}"
 PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node}" | xargs)
-PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
+PYTEST_WORKERS="${PYTEST_WORKERS:-20}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 

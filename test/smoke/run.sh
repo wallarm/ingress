@@ -125,6 +125,7 @@ controller:
   config:
     worker-processes: "1"
     enable-real-ip: true
+    allow-snippet-annotations: true
     forwarded-for-header: X-Real-IP
     proxy-real-ip-cidr: 0.0.0.0/0
   readinessProbe:

@@ -22,6 +22,25 @@ data:
         location / {
           return 200;
         }
+        # Some mocks for test_api_abuse_prevention.py
+        location /.git {
+            if ($http_custom_id) {
+                return 400;
+            }
+            return 200;
+        }
+        location /admin {
+            if ($http_custom_id) {
+                return 401;
+            }
+            return 200;
+        }
+        location /api/v2 {
+            if ($http_custom_id) {
+                return 502;
+            }
+            return 200;
+        }
       }
     }
 ---
@@ -70,7 +89,7 @@ kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/wallarm-mode: block
-  name: workload
+  name: wallarm-workload
 spec:
   ingressClassName: nginx
   rules:
@@ -82,4 +101,46 @@ spec:
                 port:
                   number: 80
             path: /
+            pathType: Prefix
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/wallarm-mode: block
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite ^/wallarm-application(/.*)$ $1 break;
+      wallarm_application $http_custom_id;
+  name: wallarm-api-abuse
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: workload
+                port:
+                  number: 80
+            path: /wallarm-application
+            pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/wallarm-mode: monitoring
+  name: wallarm-mode-monitoring
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: workload
+                port:
+                  number: 80
+            path: /wallarm-mode/monitoring
             pathType: Prefix

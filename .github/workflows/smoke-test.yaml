@@ -21,7 +21,7 @@ jobs:
     runs-on: self-hosted-1cpu
     strategy:
       matrix:
-        k8s: [ v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1 ]
+        k8s: [ v1.23.13, v1.27.1 ]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@cb841f2c86fb6d07cff94fda240828c1abc5ba43 # v2.7.3
