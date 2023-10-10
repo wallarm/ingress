@@ -56,25 +56,25 @@ Get specific paths
 */}}
 {{- define "wallarm.path" -}}
 {{- if .Values.controller.image.chroot -}}
-{{- printf "/chroot/etc/wallarm" -}}
+{{- printf "/chroot/opt/wallarm/etc/wallarm" -}}
 {{- else -}}
-{{- printf "/etc/wallarm" -}}
+{{- printf "/opt/wallarm/etc/wallarm" -}}
 {{- end }}
 {{- end -}}
 
 {{- define "wallarm-acl.path" -}}
 {{- if .Values.controller.image.chroot -}}
-{{- printf "/chroot/var/lib/wallarm-acl" -}}
+{{- printf "/chroot/opt/wallarm/var/lib/wallarm-acl" -}}
 {{- else -}}
-{{- printf "/var/lib/wallarm-acl" -}}
+{{- printf "/opt/wallarm/var/lib/wallarm-acl" -}}
 {{- end }}
 {{- end -}}
 
 {{- define "wallarm-cache.path" -}}
 {{- if .Values.controller.image.chroot -}}
-{{- printf "/chroot/var/lib/nginx/wallarm" -}}
+{{- printf "/chroot/opt/wallarm/var/lib/nginx/wallarm" -}}
 {{- else -}}
-{{- printf "/var/lib/nginx/wallarm" -}}
+{{- printf "/opt/wallarm/var/lib/nginx/wallarm" -}}
 {{- end }}
 {{- end -}}
 
@@ -231,9 +231,9 @@ Create the name of the controller service account to use
     value: "group={{ .Values.controller.wallarm.nodeGroup }}"
 {{- end }}
   volumeMounts:
-  - mountPath: /opt/wallarm/etc/wallarm
+  - mountPath: {{ include "wallarm.path" . }}
     name: wallarm
-  - mountPath: /opt/wallarm/var/lib/wallarm-acl
+  - mountPath: {{ include "wallarm-acl.path" . }}
     name: wallarm-acl
   - mountPath: /secrets/wallarm/token
     name: wallarm-token
@@ -264,9 +264,9 @@ Create the name of the controller service account to use
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
   volumeMounts:
-  - mountPath: /opt/wallarm/etc/wallarm
+  - mountPath: {{ include "wallarm.path" . }}
     name: wallarm
-  - mountPath: /opt/wallarm/var/lib/wallarm-acl
+  - mountPath: {{ include "wallarm-acl.path" . }}
     name: wallarm-acl
   - mountPath: /opt/cron/crontab
     name: wallarm-cron
@@ -303,7 +303,7 @@ Create the name of the controller service account to use
   args: ["collectd"]
   volumeMounts:
     - name: wallarm
-      mountPath: /opt/wallarm/etc/wallarm
+      mountPath: {{ include "wallarm.path" . }}
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.collectd.resources | indent 4 }}

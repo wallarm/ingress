@@ -40,12 +40,12 @@ function get_logs() {
     kubectl logs -l "app.kubernetes.io/component=controller" -c controller --tail=-1
     echo "###### Cron container logs ######"
     kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
-    echo "###### List directory /etc/wallarm"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /etc/wallarm && cat /etc/wallarm/node.yaml" || true
+    echo "###### List directory /opt/wallarm/etc/wallarm"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/etc/wallarm && cat /opt/wallarm/etc/wallarm/node.yaml" || true
     echo "###### List directory /var/lib/nginx/wallarm"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/nginx/wallarm && ls -lah /var/lib/nginx/wallarm/shm" || true
+    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/nginx/wallarm && ls -laht /opt/wallarm/var/lib/nginx/wallarm/shm" || true
     echo "###### List directory /opt/wallarm/var/lib/wallarm-acl"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/wallarm-acl" || true
+    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/wallarm-acl" || true
 }
 
 declare -a mandatory
@@ -88,7 +88,7 @@ fi
 
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
-NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /etc/wallarm/node.yaml | grep uuid | awk '{print $2}')
+NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/node.yaml | grep uuid | awk '{print $2}')
 echo "UUID: ${NODE_UUID}"
 
 echo "Deploying pytest pod ..."
@@ -103,7 +103,7 @@ kubectl run pytest \
   --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
   --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
   --image-pull-policy=IfNotPresent \
-  --pod-running-timeout=1m0s \
+  --pod-running-timeout=3m0s \
   --restart=Never \
   --overrides='{"apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0, "imagePullSecrets": [{"name": "'"${SMOKE_IMAGE_PULL_SECRET_NAME}"'"}]}}' \
   --command -- sleep infinity
@@ -115,4 +115,4 @@ get_logs
 
 echo "Run smoke tests ..."
 trap get_logs_and_fail ERR
-kubectl exec pytest ${EXEC_ARGS} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
+kubectl exec pytest ${EXEC_ARGS} -- pytest -n "${PYTEST_WORKERS}" "${PYTEST_ARGS}"
