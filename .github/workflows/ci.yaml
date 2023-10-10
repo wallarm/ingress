@@ -21,6 +21,7 @@ jobs:
       base: ${{ steps.filter.outputs.base }}
       go: ${{ steps.filter.outputs.go }}
       helm: ${{ steps.filter.outputs.helm }}
+      smoke: ${{ steps.filter.outputs.smoke }}
       runner: ${{ steps.runner.outputs.type }}
     steps:
       - name: Checkout
@@ -44,6 +45,8 @@ jobs:
             helm:
               - 'charts/ingress-nginx/Chart.yaml'
               - 'charts/ingress-nginx/**/*'
+            smoke:
+              - 'test/smoke/*'
 
       - name: Prepare runner type
         id: runner
@@ -59,7 +62,7 @@ jobs:
     name: Build images
     runs-on: ${{ needs.changes.outputs.runner }}
     if: |
-      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true')
+      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true' || needs.changes.outputs.smoke == 'true')
     needs:
       - changes
     steps:
@@ -129,11 +132,11 @@ jobs:
       - build
       - changes
     if: |
-      (needs.changes.outputs.helm == 'true' || needs.changes.outputs.go == 'true')
+      (needs.changes.outputs.helm == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.smoke == 'true')
     strategy:
       fail-fast: false
       matrix:
-        k8s: [v1.23.13, v1.24.12, v1.25.8, v1.26.3, v1.27.1]
+        k8s: [v1.23.13, v1.27.1]
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@cb841f2c86fb6d07cff94fda240828c1abc5ba43 # v2.7.3
