@@ -210,15 +210,15 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command:
-  - sh
-  - -c
+  command: ["sh", "-c"]
+  args:
   - >
-    /opt/wallarm/ruby/usr/share/wallarm-common/register-node --force --batch --no-export-env {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
-    timeout 10m /opt/wallarm/ruby/usr/share/wallarm-common/export-environment -l STDOUT || true
+    source /etc/profile.d/30-env-vars.sh &&
+    /opt/wallarm/usr/share/wallarm-common/register-node --force --batch --no-export-env {{- if eq .Values.controller.wallarm.fallback "on" }} || true {{- end }};
+    timeout 10m /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT || true
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -236,9 +236,9 @@ Create the name of the controller service account to use
     value: "group={{ .Values.controller.wallarm.nodeGroup }}"
 {{- end }}
   volumeMounts:
-  - mountPath: /etc/wallarm
+  - mountPath: /opt/wallarm/etc/wallarm
     name: wallarm
-  - mountPath: /var/lib/wallarm-acl
+  - mountPath: /opt/wallarm/var/lib/wallarm-acl
     name: wallarm-acl
   - mountPath: /secrets/wallarm/token
     name: wallarm-token
@@ -256,11 +256,10 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-ruby:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  command: ["/bin/dumb-init", "--rewrite", "15:9", "--"]
-  args: ["/bin/supercronic", "-json", "/opt/cron/crontab"]
+  args: ["cron"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -270,9 +269,9 @@ Create the name of the controller service account to use
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
   volumeMounts:
-  - mountPath: /etc/wallarm
+  - mountPath: /opt/wallarm/etc/wallarm
     name: wallarm
-  - mountPath: /var/lib/wallarm-acl
+  - mountPath: /opt/wallarm/var/lib/wallarm-acl
     name: wallarm-acl
   - mountPath: /opt/cron/crontab
     name: wallarm-cron
@@ -303,12 +302,13 @@ Create the name of the controller service account to use
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
-  image: "wallarm/ingress-collectd:{{ .Values.controller.wallarm.helpers.tag }}"
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+  args: ["collectd"]
   volumeMounts:
     - name: wallarm
-      mountPath: /etc/wallarm
+      mountPath: /opt/wallarm/etc/wallarm
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.collectd.resources | indent 4 }}

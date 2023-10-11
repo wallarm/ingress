@@ -758,9 +758,10 @@ controller:
       secretName: wallarm-api-token
     fallback: "on"
     helpers:
-      ## The common image tag for wallarm helper containers
+      ## The image name and tag for the helper image
       ##
-      tag: "4.6.6-1"
+      image: docker.io/wallarm/node-helpers
+      tag: "4.6.14-rc3"
     tarantool:
       kind: Deployment
       service:
@@ -810,9 +811,6 @@ controller:
     ## wallarm-ingress-controller and wallarm-ingress-controller-tarantool.
     ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
     addnode:
-      image:
-        repository: wallarm/ingress-ruby
-        tag: 4.8.0-1
       resources: {}
     cron:
       jobs:
