@@ -761,7 +761,7 @@ controller:
       ## The image name and tag for the helper image
       ##
       image: docker.io/wallarm/node-helpers
-      tag: "4.6.14-rc3"
+      tag: "4.6.14"
     tarantool:
       kind: Deployment
       service:
