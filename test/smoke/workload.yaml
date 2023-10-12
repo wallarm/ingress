@@ -22,6 +22,11 @@ data:
         location / {
           return 200;
         }
+        # Location for API discovery test
+        location /api-discovery-test {
+          return 200;
+          default_type application/json;
+        }
         # Some mocks for test_api_abuse_prevention.py
         location /.git {
             if ($http_custom_id) {
@@ -59,18 +64,21 @@ spec:
         app: workload
     spec:
       containers:
-      - name: nginx
-        image: nginx:stable-alpine
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: config
-          mountPath: /etc/nginx
-          readOnly: true
+        - name: nginx
+          image: nginx:stable-alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx
+              readOnly: true
       volumes:
-      - name: config
-        configMap:
-          name: workload
+        - name: config
+          configMap:
+            name: workload
+            items:
+              - key: nginx.conf
+                path: nginx.conf
 ---
 apiVersion: v1
 kind: Service
@@ -124,6 +132,27 @@ spec:
                 port:
                   number: 80
             path: /wallarm-application
+            pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/wallarm-mode: block
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      wallarm_application $http_custom_id;
+  name: wallarm-api-discovery
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: workload
+                port:
+                  number: 80
+            path: /api-discovery-test
             pathType: Prefix
 ---
 apiVersion: networking.k8s.io/v1

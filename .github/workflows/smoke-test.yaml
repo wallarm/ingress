@@ -20,6 +20,7 @@ jobs:
     name: Smoke
     runs-on: self-hosted-1cpu
     strategy:
+      fail-fast: false
       matrix:
         k8s: [ v1.23.13, v1.27.1 ]
     steps:
