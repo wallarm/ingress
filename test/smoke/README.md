@@ -14,7 +14,9 @@ Routines described in the document create local test environment and run smoke t
 The following software should be installed locally:
 * [Docker](https://docs.docker.com/get-docker/)
 * [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
-
+* Golang `brew install go`
+* helm `brew install helm`
+* ggrep `brew install grep` (for Mac OS users)
 ### Access to container registry
 Need to have an access (read-only is enough) to `dkr.wallarm.com/tests/smoke-tests` registry.
 It is required to perform `docker login dkr.wallarm.com` using personal access token, before to run tests.

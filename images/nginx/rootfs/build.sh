@@ -478,12 +478,10 @@ cmake -DCMAKE_BUILD_TYPE=Release \
 make
 make install
 
-# TODO: temporary fix for broken brotli https://github.com/google/ngx_brotli/issues/156
 # Get Brotli source and deps
 cd "$BUILD_PATH"
-git clone --depth=100 https://github.com/google/ngx_brotli.git
+git clone --depth=1 https://github.com/google/ngx_brotli.git
 cd ngx_brotli
-git reset --hard 63ca02abdcf79c9e788d2eedcc388d2335902e52
 git submodule init
 git submodule update
 
@@ -576,7 +574,6 @@ Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-980-CORRELATION.conf
 Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
 " > /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 
-/install_deps.sh
 # build nginx
 cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 
@@ -617,7 +614,6 @@ CC_OPT="-g -O2 -fPIE -fstack-protector-strong \
   -Werror=format-security \
   -Wno-deprecated-declarations \
   -fno-strict-aliasing \
-  -fno-omit-frame-pointer \
   -D_FORTIFY_SOURCE=2 \
   --param=ssp-buffer-size=4 \
   -DTCP_FASTOPEN=23 \
@@ -649,8 +645,7 @@ WITH_MODULES=" \
   --add-dynamic-module=$BUILD_PATH/ModSecurity-nginx-$MODSECURITY_VERSION \
   --add-dynamic-module=$BUILD_PATH/ngx_http_geoip2_module-${GEOIP2_VERSION} \
   --add-dynamic-module=$BUILD_PATH/ngx_brotli \
-  --add-dynamic-module=$BUILD_PATH/echo-nginx-module-${ECHO_NGINX_VERSION} \
-  --add-dynamic-module=/tmp/pkgs/wallarm-nginx/wallarm/module"
+  --add-dynamic-module=$BUILD_PATH/echo-nginx-module-${ECHO_NGINX_VERSION}"
 
 ./configure \
   --prefix=/usr/local/nginx \
