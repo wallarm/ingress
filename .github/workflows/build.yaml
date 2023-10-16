@@ -20,9 +20,7 @@ jobs:
       pull-requests: read
     runs-on: ubuntu-latest
     outputs:
-      base: ${{ steps.filter.outputs.base }}
       controller: ${{ steps.filter.outputs.controller }}
-      runner: ${{ steps.runner.outputs.type }}
     steps:
       - name: Checkout
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
@@ -33,26 +31,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: ${{ github.ref }}
           filters: |
-            base:
-              - 'NGINX_BASE'
             controller:
               - 'TAG'
 
-      - name: Prepare runner type
-        id: runner
-        run: |
-          RUNNER="self-hosted-4cpu"
-          if [ ${{ steps.filter.outputs.base }} == 'true' ]; then
-            RUNNER="self-hosted-32cpu"
-          fi
-          echo "Runner: ${RUNNER}"
-          echo "type=${RUNNER}" >> $GITHUB_OUTPUT
-
   build:
     name: Build and push images
-    runs-on: ${{ needs.changes.outputs.runner }}
-    if: |
-      (needs.changes.outputs.base == 'true' || needs.changes.outputs.controller == 'true')
+    runs-on: self-hosted-4cpu
+    if: needs.changes.outputs.controller == 'true'
     needs:
       - changes
     outputs:
@@ -91,7 +76,6 @@ jobs:
           PLATFORMS: amd64 arm64
           BUILDX_PLATFORMS: linux/amd64,linux/arm64
           USER: runner
-        if: needs.changes.outputs.controller == 'true'
         run: make release
 
       - name: Prepare list of images to sign
