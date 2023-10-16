@@ -23,7 +23,7 @@ SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
 NODE_BASE_URL="${NODE_BASE_URL:-http://wallarm-ingress-controller.default.svc}"
-PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node}" | xargs)
+PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node --last-failed}" | xargs)
 PYTEST_WORKERS="${PYTEST_WORKERS:-20}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
@@ -40,12 +40,12 @@ function get_logs() {
     kubectl logs -l "app.kubernetes.io/component=controller" -c controller --tail=-1
     echo "###### Cron container logs ######"
     kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
-    echo "###### List directory /etc/wallarm"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /etc/wallarm && cat /etc/wallarm/node.yaml" || true
+    echo "###### List directory /opt/wallarm/etc/wallarm"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/etc/wallarm && cat /opt/wallarm/etc/wallarm/node.yaml" || true
     echo "###### List directory /var/lib/nginx/wallarm"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/nginx/wallarm && ls -lah /var/lib/nginx/wallarm/shm" || true
-    echo "###### List directory /var/lib/wallarm-acl"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -lah /var/lib/wallarm-acl" || true
+    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/nginx/wallarm && ls -laht /opt/wallarm/var/lib/nginx/wallarm/shm" || true
+    echo "###### List directory /opt/wallarm/var/lib/wallarm-acl"
+    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/wallarm-acl" || true
 }
 
 declare -a mandatory
@@ -88,7 +88,7 @@ fi
 
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
-NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /etc/wallarm/node.yaml | grep uuid | awk '{print $2}')
+NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/node.yaml | grep uuid | awk '{print $2}')
 echo "UUID: ${NODE_UUID}"
 
 echo "Deploying pytest pod ..."
@@ -103,15 +103,12 @@ kubectl run pytest \
   --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
   --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
   --image-pull-policy=IfNotPresent \
-  --pod-running-timeout=1m0s \
+  --pod-running-timeout=3m0s \
   --restart=Never \
   --overrides='{"apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0, "imagePullSecrets": [{"name": "'"${SMOKE_IMAGE_PULL_SECRET_NAME}"'"}]}}' \
   --command -- sleep infinity
 
-kubectl wait --for=condition=Ready pods --all --timeout=60s
-
-echo "Getting logs ..."
-get_logs
+kubectl wait --for=condition=Ready pods --all --timeout=180s
 
 echo "Run smoke tests ..."
 trap get_logs_and_fail ERR

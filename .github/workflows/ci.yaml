@@ -48,34 +48,24 @@ jobs:
             smoke:
               - 'test/smoke/*'
 
-      - name: Prepare runner type
-        id: runner
-        run: |
-          RUNNER="self-hosted-4cpu"
-          if [ ${{ steps.filter.outputs.base }} == 'true' ]; then
-            RUNNER="self-hosted-32cpu"
-          fi
-          echo "Runner: ${RUNNER}"
-          echo "type=${RUNNER}" >> $GITHUB_OUTPUT
-
   build:
     name: Build images
-    runs-on: ${{ needs.changes.outputs.runner }}
+    runs-on: ${{ matrix.RUNNER }}
     if: |
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true' || needs.changes.outputs.smoke == 'true')
     needs:
       - changes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ARCH: amd64
+            RUNNER: self-hosted-4cpu
+          - ARCH: arm64
+            RUNNER: github-runner-4cpu-arm64
+    env:
+      ARCH: ${{ matrix.ARCH }}
     steps:
-      - name: Import secrets
-        uses: hashicorp/vault-action@cb841f2c86fb6d07cff94fda240828c1abc5ba43 # v2.7.3
-        id: secrets
-        with:
-          exportEnv: false
-          url: ${{ secrets.VAULT_URL }}
-          role: ${{ secrets.VAULT_ROLE }}
-          method: kubernetes
-          secrets: kv-gitlab-ci/data/github/shared/node-repo-key key | NODE_REPO_KEY
-
       - name: Checkout
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
 
@@ -86,17 +76,8 @@ jobs:
           version: latest
           use: false
 
-      - name: Build base image
-        if: needs.changes.outputs.base == 'true'
-        run: |
-          eval $(ssh-agent -s)
-          echo "${{ steps.secrets.outputs.NODE_REPO_KEY }}" | tr -d '\r' | ssh-add -
-          make -C images/nginx OUTPUT=--load build
-          docker save -o base.tar $(cat NGINX_BASE)
-
       - name: Build controller images
         env:
-          ARCH: amd64
           REGISTRY: wallarm
           TAG: 1.0.0-dev
           USER: runner
@@ -105,7 +86,7 @@ jobs:
           make clean-image build image image-chroot       
           echo "Building E2E image ..."
           make -C test/e2e-image image          
-          docker save -o controller.tar \
+          docker save -o controller-${{ env.ARCH }}.tar \
           wallarm/ingress-controller:1.0.0-dev \
           wallarm/ingress-controller-chroot:1.0.0-dev \
           nginx-ingress-controller:e2e
@@ -114,29 +95,25 @@ jobs:
         uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
         with:
           retention-days: 1
-          name: controller.tar
-          path: controller.tar
+          name: controller-${{ env.ARCH }}.tar
+          path: controller-${{ env.ARCH }}.tar
 
-      - name: Cache base image
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
-        with:
-          retention-days: 1
-          name: base.tar
-          path: base.tar
-
-  smoke:
-    name: Smoke
-    runs-on: self-hosted-2cpu
+  presmoke:
+    name: PreSmoke
+    runs-on: self-hosted-1cpu
     needs:
       - build
       - changes
     if: |
       (needs.changes.outputs.helm == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.smoke == 'true')
-    strategy:
-      fail-fast: false
-      matrix:
-        k8s: [v1.23.13, v1.27.1]
+    outputs:
+      api_token: ${{ steps.export.outputs.api_token }}
+      user_secret: ${{ steps.export.outputs.user_secret }}
+      user_uuid: ${{ steps.export.outputs.user_uuid }}
+      token_name: ${{ steps.export.outputs.token_name }}
+      token_secret: ${{ steps.export.outputs.token_secret }}
+    env:
+      SECRET: ${{ secrets.PGP_SECRET_SIGNING_PASSPHRASE }}
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@cb841f2c86fb6d07cff94fda240828c1abc5ba43 # v2.7.3
@@ -152,36 +129,68 @@ jobs:
             kv-gitlab-ci/data/github/ingress user_uuid ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
+      - name: output secrets
+        id: export
+        run: |
+          echo "api_token=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "${{ steps.secrets.outputs.api_token }}") | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "user_secret=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "${{ steps.secrets.outputs.user_secret }}") | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "user_uuid=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "${{ steps.secrets.outputs.user_uuid }}") | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "token_name=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "${{ steps.secrets.outputs.token_name }}") | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "token_secret=$(gpg --symmetric --batch --passphrase "$SECRET" --output - <(echo "${{ steps.secrets.outputs.token_secret }}") | base64 -w0)" >> $GITHUB_OUTPUT
 
+  smoke:
+    name: Smoke
+    runs-on: ${{ matrix.RUNNER }}
+    needs: presmoke
+    strategy:
+      fail-fast: false
+      matrix:
+        k8s: [v1.23.13, v1.27.1]
+        ARCH: [amd64, arm64]
+        include:
+          - ARCH: amd64
+            RUNNER: self-hosted-2cpu
+          - ARCH: arm64
+            RUNNER: github-runner-4cpu-arm64
+    env:
+      ARCH: ${{ matrix.ARCH }}
+      KIND_CLUSTER_NAME: kind-${{ matrix.k8s }}
+      KUBECONFIG: $HOME/.kube/kind-config-${{ matrix.k8s }}
+      SECRET: ${{ secrets.PGP_SECRET_SIGNING_PASSPHRASE }}
+    steps:
       - name: Checkout
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
 
       - name: Load cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
-          name: controller.tar
+          name: controller-${{ env.ARCH }}.tar
 
       - name: Load images
-        run: docker load -i controller.tar
+        run: docker load -i controller-${{ env.ARCH }}.tar
+
+      - name: Import secrets
+        id: import
+        run: |
+          echo "api_token=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.presmoke.outputs.api_token }}" | base64 --decode))" >> $GITHUB_OUTPUT
+          echo "user_secret=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.presmoke.outputs.user_secret }}" | base64 --decode))" >> $GITHUB_OUTPUT
+          echo "user_uuid=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.presmoke.outputs.user_uuid }}" | base64 --decode))" >> $GITHUB_OUTPUT
+          echo "token_name=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.presmoke.outputs.token_name }}" | base64 --decode))" >> $GITHUB_OUTPUT
+          echo "token_secret=$(gpg --decrypt --quiet --batch --passphrase "$SECRET" --output - <(echo "${{ needs.presmoke.outputs.token_secret }}" | base64 --decode))" >> $GITHUB_OUTPUT
 
       - name: Create cluster
         run: kind create cluster --image=kindest/node:${{ matrix.k8s }}
 
       - name: Run smoke tests
         env:
-          ARCH: amd64
-          KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
-          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
-          USER_UUID: ${{ steps.secrets.outputs.user_uuid }}
-          USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
-          SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
-          SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
-          CLIENT_ID: 4
+          WALLARM_API_TOKEN: ${{ steps.import.outputs.api_token }}
+          USER_UUID: ${{ steps.import.outputs.user_uuid }}
+          USER_SECRET: ${{ steps.import.outputs.user_secret }}
+          SMOKE_REGISTRY_TOKEN: ${{ steps.import.outputs.token_name }}
+          SMOKE_REGISTRY_SECRET: ${{ steps.import.outputs.token_secret }}
         run: |
-          kind get kubeconfig > $HOME/.kube/kind-config-kind
-          export KUBECONFIG=$HOME/.kube/kind-config-kind
           make kind-smoke-test
 
   chart-testing:
@@ -191,6 +200,8 @@ jobs:
       - build
       - changes
     if: needs.changes.outputs.helm == 'true'
+    env:
+      ARCH: amd64
     strategy:
       matrix:
         # "upgrade" is disabled, there is an issue with this mode if values.yaml changed https://github.com/helm/chart-testing/issues/525
@@ -214,17 +225,16 @@ jobs:
       - name: Load cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
-          name: controller.tar
+          name: controller-${{ env.ARCH }}.tar
 
       - name: Load images
-        run: docker load -i controller.tar
+        run: docker load -i controller-${{ env.ARCH }}.tar
 
       - name: Create cluster
         run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
 
       - name: Run chart testing ${{ matrix.method }}
         env:
-          ARCH: amd64
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
@@ -242,27 +252,19 @@ jobs:
       - build
       - changes
     if: needs.changes.outputs.go == 'true'
+    env:
+      ARCH: amd64
     steps:
       - name: Checkout
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
 
-      - name: Load base build cache
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
-        with:
-          name: base.tar
-
-      - name: Load base image
-        if: needs.changes.outputs.base == 'true'
-        run: docker load -i base.tar
-
       - name: Load controller build cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
-          name: controller.tar
+          name: controller-${{ env.ARCH }}.tar
 
       - name: Load controller images
-        run: docker load -i controller.tar
+        run: docker load -i controller-${{ env.ARCH }}.tar
 
       - name: Create cluster
         run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
@@ -286,6 +288,8 @@ jobs:
       - changes
       - build
     if: needs.changes.outputs.go == 'true'
+    env:
+      ARCH: amd64
     strategy:
       matrix:
         k8s: [v1.24.12, v1.25.8, v1.26.3, v1.27.1]
@@ -303,30 +307,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
 
-      - name: Load base build cache
-        if: needs.changes.outputs.base == 'true'
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
-        with:
-          name: base.tar
-
-      - name: Load base image
-        if: needs.changes.outputs.base == 'true'
-        run: docker load -i base.tar
-
       - name: Load controller build cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
-          name: controller.tar
+          name: controller-${{ env.ARCH }}.tar
 
       - name: Load controller images
-        run: docker load -i controller.tar
+        run: docker load -i controller-${{ env.ARCH }}.tar
 
       - name: Create cluster ${{ matrix.k8s }}
         run: kind create cluster --image=kindest/node:${{ matrix.k8s }} --config test/e2e/kind.yaml
 
       - name: Run e2e tests
         env:
-          ARCH: amd64
           KIND_CLUSTER_NAME: kind
           SKIP_CLUSTER_CREATION: true
           SKIP_INGRESS_IMAGE_CREATION: true
@@ -346,14 +339,16 @@ jobs:
       - build
     if: |
       (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true')
+    env:
+      ARCH: amd64
     steps:
       - name: Load controller build cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
         with:
-          name: controller.tar
+          name: controller-${{ env.ARCH }}.tar
 
       - name: Load controller images
-        run: docker load -i controller.tar
+        run: docker load -i controller-${{ env.ARCH }}.tar
 
       - name: Scan controller image
         uses: anchore/scan-action@24fd7c9060f3c96848dd1929fac8d796fb5ae4b4
