@@ -11,8 +11,14 @@ metadata:
     {{- end }}
   name: {{ include "ingress-nginx.controller.fullname" . }}-wallarm-tarantool
   namespace: {{ .Release.Namespace }}
-  {{- if .Values.controller.wallarm.tarantool.annotations }}
-  annotations: {{ toYaml .Values.controller.wallarm.tarantool.annotations | nindent 4 }}
+  {{- if or .Values.controller.wallarm.tarantool.annotations (and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled)) }}
+  annotations:
+  {{- if and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled) }}
+    checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
+  {{- end }}
+  {{- if .Values.controller.wallarm.tarantool.annotations -}}
+  {{ toYaml .Values.controller.wallarm.tarantool.annotations | nindent 4 }}
+  {{- end }}
   {{- end }}
 spec:
   selector:
