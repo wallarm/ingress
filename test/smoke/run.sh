@@ -42,12 +42,12 @@ set -o pipefail
 
 cleanup() {
   if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
-    kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
+    kind "export" logs --name "${KIND_CLUSTER_NAME}" "${ARTIFACTS}/logs" || true
   fi
   if [[ "${CI:-}" == "true" ]]; then
     kind delete cluster \
       --verbosity=${KIND_LOG_LEVEL} \
-      --name ${KIND_CLUSTER_NAME}
+      --name "${KIND_CLUSTER_NAME}"
   fi
 }
 
@@ -86,10 +86,23 @@ if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
     echo "[test-env] creating Kubernetes cluster with kind"
     kind create cluster \
       --verbosity=${KIND_LOG_LEVEL} \
-      --name ${KIND_CLUSTER_NAME} \
-      --config ${DIR}/kind.yaml \
+      --name "${KIND_CLUSTER_NAME}" \
       --retain \
-      --image "kindest/node:${K8S_VERSION}"
+      --image "kindest/node:${K8S_VERSION}" \
+      --config=<(cat << EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30000
+        hostPort: 8080
+        protocol: TCP
+    extraMounts:
+      - hostPath: ${PWD}/allure_report
+        containerPath: /allure_report
+EOF
+)
 
     echo "Kubernetes cluster:"
     kubectl get nodes -o wide

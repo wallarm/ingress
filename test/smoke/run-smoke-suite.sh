@@ -92,24 +92,91 @@ NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/
 echo "UUID: ${NODE_UUID}"
 
 echo "Deploying pytest pod ..."
-kubectl run pytest \
-  --env="NODE_BASE_URL=${NODE_BASE_URL}" \
-  --env="NODE_UUID=${NODE_UUID}" \
-  --env="WALLARM_API_HOST=${WALLARM_API_HOST}" \
-  --env="API_CA_VERIFY=${WALLARM_API_CA_VERIFY}" \
-  --env="CLIENT_ID=${CLIENT_ID}" \
-  --env="USER_UUID=${USER_UUID}" \
-  --env="USER_SECRET=${USER_SECRET}" \
-  --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
-  --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
-  --image-pull-policy=IfNotPresent \
-  --pod-running-timeout=3m0s \
-  --restart=Never \
-  --overrides='{"apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0, "imagePullSecrets": [{"name": "'"${SMOKE_IMAGE_PULL_SECRET_NAME}"'"}]}}' \
-  --command -- sleep infinity
 
-kubectl wait --for=condition=Ready pods --all --timeout=180s
+POD_CONFIG=$(cat << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pytest
+spec:
+  terminationGracePeriodSeconds: 0
+  restartPolicy: Never
+  imagePullSecrets:
+    - name: "${SMOKE_IMAGE_PULL_SECRET_NAME}"
+  containers:
+  - command:
+    - sleep
+    - infinity
+    env:
+    - name: NODE_BASE_URL
+      value: "${NODE_BASE_URL}"
+    - name: NODE_UUID
+      value: "${NODE_UUID}"
+    - name: WALLARM_API_HOST
+      value: "${WALLARM_API_HOST}"
+    - name: API_CA_VERIFY
+      value: "${WALLARM_API_CA_VERIFY}"
+    - name: CLIENT_ID
+      value: "${CLIENT_ID}"
+    - name: USER_UUID
+      value: "${USER_UUID}"
+    - name: USER_SECRET
+      value: "${USER_SECRET}"
+    - name: HOSTNAME_OLD_NODE
+      value: "${HOSTNAME_OLD_NODE}"
+    image: "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
+    imagePullPolicy: IfNotPresent
+    name: pytest
+EOF
+)
+
+if [ "${ALLURE_GENERATE_REPORT:-false}" = "true" ]; then
+POD_CONFIG+=$(cat << EOF
+
+    volumeMounts:
+    - mountPath: /tests/_out/allure_report
+      name: allure-report
+      readOnly: false
+  volumes:
+  - name: allure-report
+    hostPath:
+      path: /allure_report
+      type: DirectoryOrCreate
+EOF
+)
+fi
+
+echo "${POD_CONFIG}" | kubectl apply -f -
+
+echo "Getting logs ..."
+kubectl wait --for=condition=Ready pods --all --timeout=600s
 
 echo "Run smoke tests ..."
 trap get_logs_and_fail ERR
-kubectl exec pytest ${EXEC_ARGS} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
+
+ENV_VARS=""
+if [ "${ALLURE_UPLOAD_REPORT:-false}" = "true" ]; then
+  export ALLURE_ENDPOINT="${ALLURE_ENDPOINT:-https://allure.wallarm.com}"
+  export ALLURE_PROJECT_ID="${ALLURE_PROJECT_ID:-24}"
+  export ALLURE_TOKEN="${ALLURE_TOKEN:-${ALLURE_SERVER_TOKEN}}"
+  export ALLURE_LAUNCH_NAME="${WORKFLOW_RUN:-local}-${WORKFLOW_NAME:-local}-${JOB_NAME:-local}"
+  export ALLURE_RESULTS="/tests/_out/allure_report"
+  RUN_TESTS="allurectl watch -- pytest"
+  ENV_VARS=(
+    "env"
+    "ALLURE_ENDPOINT=$ALLURE_ENDPOINT"
+    "ALLURE_PROJECT_ID=$ALLURE_PROJECT_ID"
+    "ALLURE_TOKEN=$ALLURE_TOKEN"
+    "ALLURE_LAUNCH_NAME=$ALLURE_LAUNCH_NAME"
+    "ALLURE_RESULTS=$ALLURE_RESULTS"
+  )
+  ENV_VARS_STR="${ENV_VARS[*]}"
+else
+  RUN_TESTS="pytest"
+fi
+
+EXEC_CMD="$ENV_VARS_STR $RUN_TESTS -n ${PYTEST_WORKERS} ${PYTEST_ARGS}"
+
+echo "Executing command: kubectl exec pytest ${EXEC_ARGS} -- $EXEC_CMD"
+# shellcheck disable=SC2086
+kubectl exec pytest ${EXEC_ARGS} -- $EXEC_CMD
