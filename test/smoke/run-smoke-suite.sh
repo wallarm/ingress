@@ -11,6 +11,9 @@ set -o pipefail
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
+# Variable required for smoke tests report
+export ALLURE_UPLOAD_REPORT="${ALLURE_UPLOAD_REPORT:-false}"
+export ALLURE_REPORT_GENERATE="${ALLURE_REPORT_GENERATE:-false}"
 
 # Variables required for pulling Docker image with pytest
 SMOKE_REGISTRY_NAME="${SMOKE_REGISTRY_NAME:-dkr.wallarm.com}"
@@ -28,8 +31,13 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-20}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
+function clear_allure_report() {
+  [[ "$ALLURE_REPORT_GENERATE" == false && -d "allure_report" ]] && rm -rf allure_report/* 2>/dev/null
+}
+
 function get_logs_and_fail() {
     get_logs
+    clear_allure_report
     exit 1
 }
 
@@ -93,7 +101,7 @@ echo "UUID: ${NODE_UUID}"
 
 echo "Deploying pytest pod ..."
 
-POD_CONFIG=$(cat << EOF
+kubectl apply -f - << EOF
 apiVersion: v1
 kind: Pod
 metadata:
@@ -104,49 +112,45 @@ spec:
   imagePullSecrets:
     - name: "${SMOKE_IMAGE_PULL_SECRET_NAME}"
   containers:
-  - command:
-    - sleep
-    - infinity
+  - command: [sleep, infinity]
     env:
-    - name: NODE_BASE_URL
-      value: "${NODE_BASE_URL}"
-    - name: NODE_UUID
-      value: "${NODE_UUID}"
-    - name: WALLARM_API_HOST
-      value: "${WALLARM_API_HOST}"
-    - name: API_CA_VERIFY
-      value: "${WALLARM_API_CA_VERIFY}"
-    - name: CLIENT_ID
-      value: "${CLIENT_ID}"
-    - name: USER_UUID
-      value: "${USER_UUID}"
-    - name: USER_SECRET
-      value: "${USER_SECRET}"
-    - name: HOSTNAME_OLD_NODE
-      value: "${HOSTNAME_OLD_NODE}"
+    - {name: NODE_BASE_URL, value: "${NODE_BASE_URL}"}
+    - {name: NODE_UUID, value: "${NODE_UUID}"}
+    - {name: WALLARM_API_HOST, value: "${WALLARM_API_HOST}"}
+    - {name: API_CA_VERIFY, value: "${WALLARM_API_CA_VERIFY}"}
+    - {name: CLIENT_ID, value: "${CLIENT_ID}"}
+    - {name: USER_UUID, value: "${USER_UUID}"}
+    - {name: USER_SECRET, value: "${USER_SECRET}"}
+    - {name: HOSTNAME_OLD_NODE, value: "${HOSTNAME_OLD_NODE}"}
+    - {name: KIND_CLUSTER_NAME, value: "${KIND_CLUSTER_NAME}"}
+    - {name: ALLURE_ENDPOINT, value: "${ALLURE_ENDPOINT:-}"}
+    - {name: ALLURE_PROJECT_ID, value: "${ALLURE_PROJECT_ID:-}"}
+    - {name: ALLURE_TOKEN, value: "${ALLURE_TOKEN:-}"}
+    - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS:-/tests/_out/allure_report}"}
+    - name: ALLURE_LAUNCH_TAGS
+      value: >
+        USER:${GITHUB_ACTOR:-local},
+        WORKFLOW:${GITHUB_WORKFLOW:-local},
+        RUN_ID:${GITHUB_RUN_ID:-local},
+        BRANCH:${GITHUB_HEAD_REF:-local},
+        JOB:${GITHUB_JOB:-local}
+    - name: ALLURE_LAUNCH_NAME
+      value: >
+        ${GITHUB_WORKFLOW:-local}-
+        ${GITHUB_RUN_ID:-local}-
+        ${GITHUB_JOB:-local}-
+        ${GITHUB_HEAD_REF:-local}-${KIND_CLUSTER_NAME}
     image: "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
     imagePullPolicy: IfNotPresent
     name: pytest
-EOF
-)
-
-if [ "${ALLURE_GENERATE_REPORT:-false}" = "true" ]; then
-POD_CONFIG+=$(cat << EOF
-
     volumeMounts:
-    - mountPath: /tests/_out/allure_report
-      name: allure-report
-      readOnly: false
+    - {mountPath: /tests/_out/allure_report, name: allure-report, readOnly: false}
   volumes:
   - name: allure-report
-    hostPath:
-      path: /allure_report
-      type: DirectoryOrCreate
+    hostPath: {path: /allure_report, type: DirectoryOrCreate}
 EOF
-)
-fi
 
-echo "${POD_CONFIG}" | kubectl apply -f -
+
 
 echo "Getting logs ..."
 kubectl wait --for=condition=Ready pods --all --timeout=600s
@@ -154,29 +158,10 @@ kubectl wait --for=condition=Ready pods --all --timeout=600s
 echo "Run smoke tests ..."
 trap get_logs_and_fail ERR
 
-ENV_VARS=""
-if [ "${ALLURE_UPLOAD_REPORT:-false}" = "true" ]; then
-  export ALLURE_ENDPOINT="${ALLURE_ENDPOINT:-https://allure.wallarm.com}"
-  export ALLURE_PROJECT_ID="${ALLURE_PROJECT_ID:-24}"
-  export ALLURE_TOKEN="${ALLURE_TOKEN:-${ALLURE_SERVER_TOKEN}}"
-  export ALLURE_LAUNCH_NAME="${WORKFLOW_RUN:-local}-${WORKFLOW_NAME:-local}-${JOB_NAME:-local}"
-  export ALLURE_RESULTS="/tests/_out/allure_report"
-  RUN_TESTS="allurectl watch -- pytest"
-  ENV_VARS=(
-    "env"
-    "ALLURE_ENDPOINT=$ALLURE_ENDPOINT"
-    "ALLURE_PROJECT_ID=$ALLURE_PROJECT_ID"
-    "ALLURE_TOKEN=$ALLURE_TOKEN"
-    "ALLURE_LAUNCH_NAME=$ALLURE_LAUNCH_NAME"
-    "ALLURE_RESULTS=$ALLURE_RESULTS"
-  )
-  ENV_VARS_STR="${ENV_VARS[*]}"
-else
-  RUN_TESTS="pytest"
-fi
+GITHUB_VARS=$(env | awk -F '=' '/^GITHUB_/ {vars = vars $1 "=" $2 " ";} END {print vars}')
+RUN_TESTS=$([ "$ALLURE_UPLOAD_REPORT" = "true" ] && echo "allurectl watch -- pytest" || echo "pytest")
 
-EXEC_CMD="$ENV_VARS_STR $RUN_TESTS -n ${PYTEST_WORKERS} ${PYTEST_ARGS}"
-
-echo "Executing command: kubectl exec pytest ${EXEC_ARGS} -- $EXEC_CMD"
+EXEC_CMD="env $GITHUB_VARS $RUN_TESTS -n ${PYTEST_WORKERS} ${PYTEST_ARGS}"
 # shellcheck disable=SC2086
-kubectl exec pytest ${EXEC_ARGS} -- $EXEC_CMD
+kubectl exec pytest ${EXEC_ARGS} -- ${EXEC_CMD}
+clear_allure_report
