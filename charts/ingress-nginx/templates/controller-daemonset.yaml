@@ -11,14 +11,9 @@ metadata:
     {{- end }}
   name: {{ include "ingress-nginx.controller.fullname" . }}
   namespace: {{ .Release.Namespace }}
-  {{- if or .Values.controller.annotations (and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled)) }}
+  {{- if .Values.controller.annotations }}
   annotations:
-  {{- if and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled) }}
-    checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
-  {{- end }}
-  {{- if .Values.controller.annotations -}}
   {{ toYaml .Values.controller.annotations | nindent 4 }}
-  {{- end }}
   {{- end }}
 spec:
   selector:
@@ -32,10 +27,15 @@ spec:
   minReadySeconds: {{ .Values.controller.minReadySeconds }}
   template:
     metadata:
-    {{- if .Values.controller.podAnnotations }}
+    {{- if or .Values.controller.podAnnotations (and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled)) }}
       annotations:
+      {{- if and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled) }}
+        checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
+      {{- end }}
+      {{- if .Values.controller.podAnnotations -}}
       {{- range $key, $value := .Values.controller.podAnnotations }}
         {{ $key }}: {{ $value | quote }}
+      {{- end }}
       {{- end }}
     {{- end }}
       labels:
