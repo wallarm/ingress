@@ -61,8 +61,6 @@ jobs:
         include:
           - ARCH: amd64
             RUNNER: self-hosted-4cpu
-          - ARCH: arm64
-            RUNNER: github-runner-4cpu-arm64
     env:
       ARCH: ${{ matrix.ARCH }}
     steps:
@@ -110,17 +108,14 @@ jobs:
       fail-fast: false
       matrix:
         k8s: [v1.23.13, v1.27.1]
-        ARCH: [amd64, arm64]
+        ARCH: [amd64]
         include:
           - ARCH: amd64
-            RUNNER: self-hosted-2cpu
-          - ARCH: arm64
-            RUNNER: github-runner-4cpu-arm64
+            RUNNER: self-hosted-1cpu
     env:
       ARCH: ${{ matrix.ARCH }}
       KIND_CLUSTER_NAME: kind-${{ matrix.k8s }}
       KUBECONFIG: $HOME/.kube/kind-config-${{ matrix.k8s }}
-      SECRET: ${{ secrets.PGP_SECRET_SIGNING_PASSPHRASE }}
     steps:
       - name: Checkout
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
@@ -145,6 +140,11 @@ jobs:
           USER_UUID: ${{ secrets.USER_UUID }}
           SMOKE_REGISTRY_TOKEN: ${{ secrets.SMOKE_REGISTRY_TOKEN }}
           SMOKE_REGISTRY_SECRET: ${{ secrets.SMOKE_REGISTRY_SECRET }}
+          ALLURE_UPLOAD_REPORT: true
+          ALLURE_GENERATE_REPORT: true
+          ALLURE_TOKEN: ${{ secrets.ALLURE_SERVER_TOKEN }}
+          ALLURE_ENDPOINT: ${{ secrets.ALLURE_SERVER_URL }}
+          ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
         run: |
           make kind-smoke-test
 

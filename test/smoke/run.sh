@@ -87,9 +87,22 @@ if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
     kind create cluster \
       --verbosity=${KIND_LOG_LEVEL} \
       --name ${KIND_CLUSTER_NAME} \
-      --config ${DIR}/kind.yaml \
       --retain \
-      --image "kindest/node:${K8S_VERSION}"
+      --image "kindest/node:${K8S_VERSION}" \
+      --config=<(cat << EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30000
+        hostPort: 8080
+        protocol: TCP
+    extraMounts:
+      - hostPath: $(CURDIR)/allure_report
+        containerPath: /allure_report
+EOF
+)
 
     echo "Kubernetes cluster:"
     kubectl get nodes -o wide

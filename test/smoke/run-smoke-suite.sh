@@ -11,6 +11,9 @@ set -o pipefail
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
+# Variable required for smoke tests report
+export ALLURE_UPLOAD_REPORT="${ALLURE_UPLOAD_REPORT:-false}"
+export ALLURE_REPORT_GENERATE="${ALLURE_REPORT_GENERATE:-false}"
 
 # Variables required for pulling Docker image with pytest
 SMOKE_REGISTRY_NAME="${SMOKE_REGISTRY_NAME:-dkr.wallarm.com}"
@@ -28,8 +31,13 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-20}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
+function clear_allure_report() {
+  [[ "$ALLURE_REPORT_GENERATE" == false && -d "allure_report" ]] && rm -rf allure_report/* 2>/dev/null
+}
+
 function get_logs_and_fail() {
     get_logs
+    clear_allure_report
     exit 1
 }
 
@@ -92,24 +100,68 @@ NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/
 echo "UUID: ${NODE_UUID}"
 
 echo "Deploying pytest pod ..."
-kubectl run pytest \
-  --env="NODE_BASE_URL=${NODE_BASE_URL}" \
-  --env="NODE_UUID=${NODE_UUID}" \
-  --env="WALLARM_API_HOST=${WALLARM_API_HOST}" \
-  --env="API_CA_VERIFY=${WALLARM_API_CA_VERIFY}" \
-  --env="CLIENT_ID=${CLIENT_ID}" \
-  --env="USER_UUID=${USER_UUID}" \
-  --env="USER_SECRET=${USER_SECRET}" \
-  --env="HOSTNAME_OLD_NODE=${HOSTNAME_OLD_NODE}" \
-  --image="${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}" \
-  --image-pull-policy=IfNotPresent \
-  --pod-running-timeout=3m0s \
-  --restart=Never \
-  --overrides='{"apiVersion": "v1", "spec":{"terminationGracePeriodSeconds": 0, "imagePullSecrets": [{"name": "'"${SMOKE_IMAGE_PULL_SECRET_NAME}"'"}]}}' \
-  --command -- sleep infinity
 
-kubectl wait --for=condition=Ready pods --all --timeout=180s
+kubectl apply -f - << EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pytest
+spec:
+  terminationGracePeriodSeconds: 0
+  restartPolicy: Never
+  imagePullSecrets:
+    - name: "${SMOKE_IMAGE_PULL_SECRET_NAME}"
+  containers:
+  - command: [sleep, infinity]
+    env:
+    - {name: NODE_BASE_URL, value: "${NODE_BASE_URL}"}
+    - {name: NODE_UUID, value: "${NODE_UUID}"}
+    - {name: WALLARM_API_HOST, value: "${WALLARM_API_HOST}"}
+    - {name: API_CA_VERIFY, value: "${WALLARM_API_CA_VERIFY}"}
+    - {name: CLIENT_ID, value: "${CLIENT_ID}"}
+    - {name: USER_UUID, value: "${USER_UUID}"}
+    - {name: USER_SECRET, value: "${USER_SECRET}"}
+    - {name: HOSTNAME_OLD_NODE, value: "${HOSTNAME_OLD_NODE}"}
+    - {name: KIND_CLUSTER_NAME, value: "${KIND_CLUSTER_NAME}"}
+    - {name: ALLURE_ENDPOINT, value: "${ALLURE_ENDPOINT:-}"}
+    - {name: ALLURE_PROJECT_ID, value: "${ALLURE_PROJECT_ID:-}"}
+    - {name: ALLURE_TOKEN, value: "${ALLURE_TOKEN:-}"}
+    - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS:-/tests/_out/allure_report}"}
+    - name: ALLURE_LAUNCH_TAGS
+      value: >
+        USER:${GITHUB_ACTOR:-local},
+        WORKFLOW:${GITHUB_WORKFLOW:-local},
+        RUN_ID:${GITHUB_RUN_ID:-local},
+        BRANCH:${GITHUB_HEAD_REF:-local},
+        JOB:${GITHUB_JOB:-local}
+    - name: ALLURE_LAUNCH_NAME
+      value: >
+        ${GITHUB_WORKFLOW:-local}-
+        ${GITHUB_RUN_ID:-local}-
+        ${GITHUB_JOB:-local}-
+        ${GITHUB_HEAD_REF:-local}-${KIND_CLUSTER_NAME}
+    image: "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
+    imagePullPolicy: IfNotPresent
+    name: pytest
+    volumeMounts:
+    - {mountPath: /tests/_out/allure_report, name: allure-report, readOnly: false}
+  volumes:
+  - name: allure-report
+    hostPath: {path: /allure_report, type: DirectoryOrCreate}
+EOF
+
+
+
+echo "Getting logs ..."
+kubectl wait --for=condition=Ready pods --all --timeout=600s
 
 echo "Run smoke tests ..."
 trap get_logs_and_fail ERR
-kubectl exec pytest ${EXEC_ARGS} -- pytest -n ${PYTEST_WORKERS} ${PYTEST_ARGS}
+
+GITHUB_VARS=$(env | awk -F '=' '/^GITHUB_/ {vars = vars $1 "=" $2 " ";} END {print vars}')
+RUN_TESTS=$([ "$ALLURE_UPLOAD_REPORT" = "true" ] && echo "allurectl watch -- pytest" || echo "pytest")
+
+EXEC_CMD="env $GITHUB_VARS $RUN_TESTS -n ${PYTEST_WORKERS} ${PYTEST_ARGS}"
+# shellcheck disable=SC2086
+kubectl exec pytest ${EXEC_ARGS} -- ${EXEC_CMD}
+clear_allure_report

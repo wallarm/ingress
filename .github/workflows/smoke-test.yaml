@@ -1,5 +1,5 @@
 # The workflow aims to run on daily basis from the main branch. Also can be run manually by QA for debugging Node tests for Ingress
-name: Smoke test
+name: Smoke_Test
 
 on:
   workflow_dispatch:
@@ -52,12 +52,18 @@ jobs:
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
           SKIP_IMAGE_LOADING: true
+          ALLURE_UPLOAD_REPORT: true
+          ALLURE_GENERATE_REPORT: true
+          ALLURE_TOKEN: ${{ secrets.ALLURE_SERVER_TOKEN }}
+          ALLURE_ENDPOINT: ${{ secrets.ALLURE_SERVER_URL }}
+          ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
           USER_UUID: ${{ steps.secrets.outputs.user_uuid }}
           USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
           SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
           SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
         run: |
+          set -x
           if [ ${{ github.event_name }} == 'workflow_dispatch' ];
           then
             export SMOKE_IMAGE_TAG="${{ github.event.inputs.tag }}"
