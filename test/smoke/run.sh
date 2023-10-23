@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 KIND_LOG_LEVEL="1"
 
 if ! [ -z $DEBUG ]; then
@@ -99,7 +98,7 @@ nodes:
         hostPort: 8080
         protocol: TCP
     extraMounts:
-      - hostPath: $(CURDIR)/allure_report
+      - hostPath: "${CURDIR}/allure_report"
         containerPath: /allure_report
 EOF
 )

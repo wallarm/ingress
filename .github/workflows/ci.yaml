@@ -145,6 +145,8 @@ jobs:
           ALLURE_TOKEN: ${{ secrets.ALLURE_SERVER_TOKEN }}
           ALLURE_ENDPOINT: ${{ secrets.ALLURE_SERVER_URL }}
           ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
+          ALLURE_ENVIRONMENT_K8S: ${{ matrix.k8s }}
+          ALLURE_ENVIRONMENT_ARCH: ${{ matrix.ARCH }}
         run: |
           make kind-smoke-test
 
