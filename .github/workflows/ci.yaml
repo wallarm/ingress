@@ -25,7 +25,7 @@ jobs:
       runner: ${{ steps.runner.outputs.type }}
     steps:
       - name: Checkout
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
 
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.10.2
         id: filter
@@ -65,7 +65,7 @@ jobs:
       ARCH: ${{ matrix.ARCH }}
     steps:
       - name: Checkout
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
 
       - name: Setup Docker Buildx
         if: needs.changes.outputs.base == 'true'
@@ -118,7 +118,7 @@ jobs:
       KUBECONFIG: $HOME/.kube/kind-config-${{ matrix.k8s }}
     steps:
       - name: Checkout
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
 
       - name: Load cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
@@ -173,7 +173,7 @@ jobs:
           secrets: kv-gitlab-ci/data/github/ingress api_token
 
       - name: Checkout
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
         with:
           fetch-depth: 0
 
@@ -211,7 +211,7 @@ jobs:
       ARCH: amd64
     steps:
       - name: Checkout
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
 
       - name: Load controller build cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
@@ -260,7 +260,7 @@ jobs:
           secrets: kv-gitlab-ci/data/github/ingress api_token
 
       - name: Checkout
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v3.0.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
 
       - name: Load controller build cache
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a
