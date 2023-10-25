@@ -62,8 +62,9 @@ jobs:
           USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
           SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
           SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
+          ALLURE_ENVIRONMENT_K8S: ${{ matrix.k8s }}
+          ALLURE_ENVIRONMENT_ARCH: ${{ matrix.ARCH }}
         run: |
-          set -x
           if [ ${{ github.event_name }} == 'workflow_dispatch' ];
           then
             export SMOKE_IMAGE_TAG="${{ github.event.inputs.tag }}"
