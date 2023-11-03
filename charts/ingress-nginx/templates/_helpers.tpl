@@ -30,6 +30,17 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 {{- end -}}
 
+{{/*
+Allow the release namespace to be overridden for multi-namespace deployments in combined charts
+*/}}
+{{- define "ingress-nginx.namespace" -}}
+  {{- if .Values.namespaceOverride -}}
+    {{- .Values.namespaceOverride | trunc 63 | trimSuffix "-" -}}
+  {{- else -}}
+    {{- .Release.Namespace -}}
+  {{- end -}}
+{{- end -}}
+
 
 {{/*
 Container SecurityContext.
@@ -354,7 +365,6 @@ IngressClass parameters.
 Extra modules.
 */}}
 {{- define "extraModules" -}}
-
 - name: {{ .name }}
   image: {{ .image }}
   {{- if .distroless | default false }}
@@ -365,8 +375,10 @@ Extra modules.
   {{- if .containerSecurityContext }}
   securityContext: {{ .containerSecurityContext | toYaml | nindent 4 }}
   {{- end }}
+  {{- if .resources }}
+  resources: {{ .resources | toYaml | nindent 4 }}
+  {{- end }}
   volumeMounts:
     - name: {{ toYaml "modules"}}
       mountPath: {{ toYaml "/modules_mount"}}
-
 {{- end -}}

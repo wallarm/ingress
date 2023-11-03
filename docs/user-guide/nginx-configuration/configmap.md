@@ -29,7 +29,9 @@ The following table shows a configuration option's name, type, and the default v
 |:---|:---|:------|:----|
 |[add-headers](#add-headers)|string|""||
 |[allow-backend-server-header](#allow-backend-server-header)|bool|"false"||
-|[allow-snippet-annotations](#allow-snippet-annotations)|bool|true||
+|[allow-cross-namespace-resources](#allow-cross-namespace-resources)|bool|"true"||
+|[allow-snippet-annotations](#allow-snippet-annotations)|bool|false||
+|[annotations-risk-level](#annotations-risk-level)|string|Critical||
 |[annotation-value-word-blocklist](#annotation-value-word-blocklist)|string array|""||
 |[hide-headers](#hide-headers)|string array|empty||
 |[access-log-params](#access-log-params)|string|""||
@@ -37,6 +39,7 @@ The following table shows a configuration option's name, type, and the default v
 |[http-access-log-path](#http-access-log-path)|string|""||
 |[stream-access-log-path](#stream-access-log-path)|string|""||
 |[enable-access-log-for-default-backend](#enable-access-log-for-default-backend)|bool|"false"||
+|[enable-auth-access-log](#enable-auth-access-log)|bool|"false"||
 |[error-log-path](#error-log-path)|string|"/var/log/nginx/error.log"||
 |[enable-modsecurity](#enable-modsecurity)|bool|"false"||
 |[modsecurity-snippet](#modsecurity-snippet)|string|""||
@@ -95,6 +98,7 @@ The following table shows a configuration option's name, type, and the default v
 |[ssl-buffer-size](#ssl-buffer-size)|string|"4k"||
 |[use-proxy-protocol](#use-proxy-protocol)|bool|"false"||
 |[proxy-protocol-header-timeout](#proxy-protocol-header-timeout)|string|"5s"||
+|[enable-aio-write](#enable-aio-write)|bool|"true"||
 |[use-gzip](#use-gzip)|bool|"false"||
 |[use-geoip](#use-geoip)|bool|"true"||
 |[use-geoip2](#use-geoip2)|bool|"false"||
@@ -239,12 +243,36 @@ Sets custom headers from named configmap before sending traffic to the client. S
 
 Enables the return of the header Server from the backend instead of the generic nginx string. _**default:**_ is disabled
 
+## allow-cross-namespace-resources
+
+Enables users to consume cross namespace resource on annotations, when was previously enabled . _**default:**_ true
+
+**Annotations that may be impacted with this change**:
+* `auth-secret`
+* `auth-proxy-set-header`
+* `auth-tls-secret`
+* `fastcgi-params-configmap`
+* `proxy-ssl-secret`
+
+
+**This option will be defaulted to false in the next major release**
+
 ## allow-snippet-annotations
 
-Enables Ingress to parse and add *-snippet annotations/directives created by the user. _**default:**_ `true`
+Enables Ingress to parse and add *-snippet annotations/directives created by the user. _**default:**_ `false`
 
 Warning: We recommend enabling this option only if you TRUST users with permission to create Ingress objects, as this
 may allow a user to add restricted configurations to the final nginx.conf file
+
+**This option is defaulted to false since v1.9.0**
+
+## annotations-risk-level
+
+Represents the risk accepted on an annotation. If the risk is, for instance `Medium`, annotations with risk High and Critical will not be accepted.
+
+Accepted values are `Critical`, `High`, `Medium` and `Low`.
+
+Defaults to `Critical` but will be changed to `High` on the next minor release
 
 ## annotation-value-word-blocklist
 
@@ -298,6 +326,10 @@ __Note:__ If not specified, the `access-log-path` will be used.
 ## enable-access-log-for-default-backend
 
 Enables logging access to default backend. _**default:**_ is disabled.
+
+## enable-auth-access-log
+
+Enables logging access to the authentication endpoint. _**default:**_ is disabled.
 
 ## error-log-path
 
@@ -683,11 +715,18 @@ Enables or disables the [PROXY protocol](https://www.nginx.com/resources/admin-g
 Sets the timeout value for receiving the proxy-protocol headers. The default of 5 seconds prevents the TLS passthrough handler from waiting indefinitely on a dropped connection.
 _**default:**_ 5s
 
+## enable-aio-write
+
+Enables or disables the directive [aio_write](https://nginx.org/en/docs/http/ngx_http_core_module.html#aio_write) that writes files asynchronously. _**default:**_ true
+
 ## use-gzip
 
 Enables or disables compression of HTTP responses using the ["gzip" module](https://nginx.org/en/docs/http/ngx_http_gzip_module.html). MIME types to compress are controlled by [gzip-types](#gzip-types). _**default:**_ false
 
 ## use-geoip
+
+!!! attention
+   GeoIP is deprecated and removed on v1.10. Users willing to use GeoIP should use GeoIP2
 
 Enables or disables ["geoip" module](https://nginx.org/en/docs/http/ngx_http_geoip_module.html) that creates variables with values depending on the client IP address, using the precompiled MaxMind databases.
 _**default:**_ true
