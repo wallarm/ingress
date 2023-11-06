@@ -61,19 +61,14 @@ jobs:
       matrix:
         include:
           - ARCH: amd64
-            RUNNER: self-hosted-4cpu
+            RUNNER: self-hosted-amd64-2cpu
+          - ARCH: arm64
+            RUNNER: self-hosted-arm64-2cpu
     env:
       ARCH: ${{ matrix.ARCH }}
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
-
-      - name: Setup Docker Buildx
-        if: needs.changes.outputs.base == 'true'
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v2.0.0
-        with:
-          version: latest
-          use: false
 
       - name: Build controller images
         env:
@@ -109,10 +104,11 @@ jobs:
       fail-fast: false
       matrix:
         k8s: [v1.23.13, v1.28.0]
-        ARCH: [amd64]
         include:
+          - ARCH: ard64
+            RUNNER: self-hosted-arm64-1cpu
           - ARCH: amd64
-            RUNNER: self-hosted-1cpu
+            RUNNER: self-hosted-amd64-1cpu
     env:
       ARCH: ${{ matrix.ARCH }}
       KIND_CLUSTER_NAME: kind-${{ matrix.k8s }}
@@ -287,7 +283,7 @@ jobs:
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=6 kind-e2e-test
+          make E2E_NODES=5 kind-e2e-test
 
   scan:
     name: Scan images
