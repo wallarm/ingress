@@ -120,6 +120,7 @@ spec:
     - {name: NODE_BASE_URL, value: "${NODE_BASE_URL}"}
     - {name: NODE_UUID, value: "${NODE_UUID}"}
     - {name: WALLARM_API_HOST, value: "${WALLARM_API_HOST}"}
+    - {name: WALLARM_API_PRESET, value: "${WALLARM_API_PRESET:-eu1}"}
     - {name: API_CA_VERIFY, value: "${WALLARM_API_CA_VERIFY}"}
     - {name: CLIENT_ID, value: "${CLIENT_ID}"}
     - {name: USER_UUID, value: "${USER_UUID}"}
