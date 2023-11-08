@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-amd64-1cpu
     outputs:
       chart_version: ${{ steps.extract_tag.outputs.tag }}
       release_type: ${{ steps.check_release.outputs.type }}
@@ -83,7 +83,7 @@ jobs:
   update_version:
     name: Update package version
     if: needs.release.outputs.release_type == 'production'
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-amd64-1cpu
     needs: release
     steps:
       - name: Import secrets

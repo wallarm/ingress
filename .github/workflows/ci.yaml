@@ -60,7 +60,9 @@ jobs:
       matrix:
         include:
           - ARCH: amd64
-            RUNNER: self-hosted-4cpu
+            RUNNER: self-hosted-amd64-2cpu
+          - ARCH: arm64
+            RUNNER: self-hosted-arm64-2cpu
     env:
       ARCH: ${{ matrix.ARCH }}
     steps:
@@ -108,15 +110,33 @@ jobs:
       fail-fast: false
       matrix:
         k8s: [v1.23.13, v1.27.1]
-        ARCH: [amd64]
+        ARCH: [amd64, arm64]
         include:
           - ARCH: amd64
-            RUNNER: self-hosted-1cpu
+            RUNNER: self-hosted-amd64-1cpu
+          - ARCH: arm64
+            RUNNER: self-hosted-arm64-1cpu
     env:
       ARCH: ${{ matrix.ARCH }}
       KIND_CLUSTER_NAME: kind-${{ matrix.k8s }}
       KUBECONFIG: $HOME/.kube/kind-config-${{ matrix.k8s }}
     steps:
+      - name: Import secrets
+        uses: hashicorp/vault-action@cb841f2c86fb6d07cff94fda240828c1abc5ba43 # v2.7.3
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          path: kubernetes-ci
+          secrets: |
+            kv-gitlab-ci/data/github/ingress api_token ;
+            kv-gitlab-ci/data/github/ingress user_secret ;
+            kv-gitlab-ci/data/github/ingress user_uuid ;
+            kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
+            kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
+
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
 
@@ -135,11 +155,11 @@ jobs:
         env:
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
-          WALLARM_API_TOKEN: ${{ secrets.WALLARM_API_TOKEN }}
-          USER_SECRET: ${{ secrets.USER_SECRET }}
-          USER_UUID: ${{ secrets.USER_UUID }}
-          SMOKE_REGISTRY_TOKEN: ${{ secrets.SMOKE_REGISTRY_TOKEN }}
-          SMOKE_REGISTRY_SECRET: ${{ secrets.SMOKE_REGISTRY_SECRET }}
+          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
+          USER_UUID: ${{ steps.secrets.outputs.user_uuid }}
+          USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
+          SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
+          SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
           ALLURE_UPLOAD_REPORT: true
           ALLURE_GENERATE_REPORT: true
           ALLURE_TOKEN: ${{ secrets.ALLURE_SERVER_TOKEN }}
@@ -152,7 +172,7 @@ jobs:
 
   chart-testing:
     name: Chart testing
-    runs-on: self-hosted-2cpu
+    runs-on: self-hosted-amd64-2cpu
     needs:
       - build
       - changes
@@ -172,6 +192,7 @@ jobs:
           url: ${{ secrets.VAULT_URL }}
           role: ${{ secrets.VAULT_ROLE }}
           method: kubernetes
+          path: kubernetes-ci
           secrets: kv-gitlab-ci/data/github/ingress api_token
 
       - name: Checkout
@@ -198,13 +219,13 @@ jobs:
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
           CT_MODE: ${{ matrix.method }}
         run: |
-          kind get kubeconfig > $HOME/.kube/kind-config-kind
-          export KUBECONFIG=$HOME/.kube/kind-config-kind
+          kind get kubeconfig > $GITHUB_WORKSPACE/kind-config-kind
+          export KUBECONFIG=$GITHUB_WORKSPACE/kind-config-kind
           make kind-e2e-chart-tests
 
   e2e:
     name: E2E
-    runs-on: self-hosted-4cpu
+    runs-on: self-hosted-amd64-4cpu
     needs:
       - build
       - changes
@@ -240,7 +261,7 @@ jobs:
 
   e2e-wallarm:
     name: E2E - Wallarm
-    runs-on: self-hosted-4cpu
+    runs-on: self-hosted-amd64-4cpu
     needs:
       - changes
       - build
@@ -248,6 +269,7 @@ jobs:
     env:
       ARCH: amd64
     strategy:
+      fail-fast: false # TODO: temporary for arm64 new arc testing
       matrix:
         k8s: [v1.24.12, v1.25.8, v1.26.3, v1.27.1]
     steps:
@@ -259,6 +281,7 @@ jobs:
           url: ${{ secrets.VAULT_URL }}
           role: ${{ secrets.VAULT_ROLE }}
           method: kubernetes
+          path: kubernetes-ci
           secrets: kv-gitlab-ci/data/github/ingress api_token
 
       - name: Checkout
@@ -285,11 +308,11 @@ jobs:
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=5 kind-e2e-test
+          make E2E_NODES=6 kind-e2e-test
 
   scan:
     name: Scan images
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-amd64-1cpu
     continue-on-error: true
     needs:
       - changes
