@@ -32,6 +32,7 @@ jobs:
           url: ${{ secrets.VAULT_URL }}
           role: ${{ secrets.VAULT_ROLE }}
           method: kubernetes
+          path: kubernetes-ci
           secrets: |
             kv-gitlab-ci/data/github/ingress api_token ;
             kv-gitlab-ci/data/github/ingress user_secret ;
