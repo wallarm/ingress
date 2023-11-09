@@ -36,7 +36,7 @@ jobs:
 
   build:
     name: Build and push images
-    runs-on: self-hosted-4cpu
+    runs-on: self-hosted-amd64-4cpu
     if: needs.changes.outputs.controller == 'true'
     needs:
       - changes
@@ -101,7 +101,7 @@ jobs:
 
   sign:
     name: Sign images
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-amd64-1cpu
     needs:
       - changes
       - build

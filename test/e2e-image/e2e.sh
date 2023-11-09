@@ -31,8 +31,8 @@ ginkgo_args=(
   "--poll-progress-after=180s"
   "--randomize-all"
   "--show-node-events"
-  "--succinct"
-  "--timeout=75m"
+  "-v"
+  "--timeout=90m"
 )
 
 if [ -n "${FOCUS}" ]; then
