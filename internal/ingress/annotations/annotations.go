@@ -114,7 +114,7 @@ type Ingress struct {
 	XForwardedPrefix     string
 	SSLCipher            sslcipher.Config
 	Logs                 log.Config
-	Wallarm            	 wallarm.Config
+	Wallarm              wallarm.Config
 	ModSecurity          modsecurity.Config
 	Mirror               mirror.Config
 	StreamSnippet        string

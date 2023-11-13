@@ -38,10 +38,10 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/opentracing"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxyssl"
-	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ratelimit"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/redirect"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/rewrite"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 )
 
 // TODO: The API shouldn't be importing structs from annotation code. Instead we probably want a conversion from internal

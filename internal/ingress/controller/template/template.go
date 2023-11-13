@@ -287,8 +287,8 @@ var funcMap = text_template.FuncMap{
 	"buildServerName":                    buildServerName,
 	"buildCorsOriginRegex":               buildCorsOriginRegex,
 
-	"replace": func(old, new, src string) string {
-		return strings.Replace(src, old, new, -1)
+	"replace": func(old, new, src string) string { //nolint:predeclared // new is okay here
+		return strings.ReplaceAll(src, old, new)
 	},
 }
 

@@ -35,16 +35,16 @@ const (
 	wallarmFallbackAnnotation          = "wallarm-fallback"
 	wallarmApplicationAnnotation       = "wallarm-application"
 	wallarmInstanceAnnotation          = "wallarm-instance" // alias for wallarmApplicationAnnotation
-	wallarmPartnerClientUuidAnnotation = "wallarm-partner-client-uuid"
+	wallarmPartnerClientUUIDAnnotation = "wallarm-partner-client-uuid"
 	wallarmBlockPageAnnotation         = "wallarm-block-page"
-	wallarmAclBlockPageAnnotation      = "wallarm-acl-block-page"
+	wallarmACLBlockPageAnnotation      = "wallarm-acl-block-page"
 	wallarmParseResponseAnnotation     = "wallarm-parse-response"
 	wallarmParseWebsocketAnnotation    = "wallarm-parse-websocket"
 	wallarmUnpackResponseAnnotation    = "wallarm-unpack-response"
 	wallarmParserDisableAnnotation     = "wallarm-parser-disable"
 )
 
-func validateApplicationId(s string) error {
+func validateApplicationID(s string) error {
 	i, err := strconv.Atoi(s)
 	if err == nil && i <= 0 {
 		err = fmt.Errorf("value should be positive integer")
@@ -66,9 +66,9 @@ func validateParserDisable(s string) error {
 		"jwt":       true,
 	}
 	for _, value := range strings.Split(s, ",") {
-		parser := strings.TrimSpace(value)
+		parserName := strings.TrimSpace(value)
 		if _, ok := allowedParsers[value]; !ok {
-			return fmt.Errorf("unknown parser \"%s\"", parser)
+			return fmt.Errorf("unknown parser \"%s\"", parserName)
 		}
 	}
 	return nil
@@ -76,7 +76,7 @@ func validateParserDisable(s string) error {
 
 // https://docs.wallarm.com/admin-en/configuration-guides/configure-block-page-and-code/
 func validateBlockPage(s string) error {
-	if len(s) == 0 {
+	if s == "" {
 		return nil
 	}
 	for _, value := range strings.Split(s, ";") {
@@ -149,12 +149,12 @@ var wallarmAnnotations = parser.Annotation{
 		},
 		wallarmApplicationAnnotation: {
 			AnnotationAliases: []string{wallarmInstanceAnnotation},
-			Validator:         validateApplicationId,
+			Validator:         validateApplicationID,
 			Scope:             parser.AnnotationScopeLocation,
 			Risk:              parser.AnnotationRiskLow,
 			Documentation:     `Unique identifier of the protected application to be used in the Wallarm Cloud. The value can be a positive integer except for 0`,
 		},
-		wallarmPartnerClientUuidAnnotation: {
+		wallarmPartnerClientUUIDAnnotation: {
 			Validator:     parser.ValidateRegex(regexp.MustCompile(`[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}`), true),
 			Scope:         parser.AnnotationScopeLocation,
 			Risk:          parser.AnnotationRiskLow,
@@ -166,7 +166,7 @@ var wallarmAnnotations = parser.Annotation{
 			Risk:          parser.AnnotationRiskLow,
 			Documentation: `https://docs.wallarm.com/admin-en/configure-parameters-en/#wallarm_block_page`,
 		},
-		wallarmAclBlockPageAnnotation: {
+		wallarmACLBlockPageAnnotation: {
 			Validator:     func(string) error { return nil },
 			Scope:         parser.AnnotationScopeLocation,
 			Risk:          parser.AnnotationRiskMedium, // Deprecated + no validation
@@ -211,7 +211,7 @@ type Config struct {
 	Fallback          string   `json:"fallback"`
 	Instance          string   `json:"instance"`
 	BlockPage         string   `json:"blockPage"`
-	AclBlockPage      string   `json:"aclBlockPage"`
+	ACLBlockPage      string   `json:"aclBlockPage"`
 	ParseResponse     string   `json:"parseResponse"`
 	ParseWebsocket    string   `json:"parseWebsocket"`
 	UnpackResponse    string   `json:"unpackResponse"`
@@ -254,7 +254,7 @@ func (l1 *Config) Equal(l2 *Config) bool {
 	if !reflect.DeepEqual(l1.ParserDisable, l2.ParserDisable) {
 		return false
 	}
-	if l1.AclBlockPage != l2.AclBlockPage {
+	if l1.ACLBlockPage != l2.ACLBlockPage {
 		return false
 	}
 	if l1.PartnerClientUUID != l2.PartnerClientUUID {
@@ -300,7 +300,7 @@ func (a wallarm) Parse(ing *networking.Ingress) (interface{}, error) {
 	if err != nil {
 		config.Instance = defBackend.WallarmInstance
 	}
-	config.PartnerClientUUID, err = parser.GetStringAnnotation(wallarmPartnerClientUuidAnnotation, ing, a.annotationConfig.Annotations)
+	config.PartnerClientUUID, err = parser.GetStringAnnotation(wallarmPartnerClientUUIDAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
 		config.PartnerClientUUID = defBackend.WallarmPartnerClientUUID
 	}
@@ -308,9 +308,9 @@ func (a wallarm) Parse(ing *networking.Ingress) (interface{}, error) {
 	if err != nil {
 		config.BlockPage = defBackend.WallarmBlockPage
 	}
-	config.AclBlockPage, err = parser.GetStringAnnotation(wallarmAclBlockPageAnnotation, ing, a.annotationConfig.Annotations)
+	config.ACLBlockPage, err = parser.GetStringAnnotation(wallarmACLBlockPageAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		config.AclBlockPage = defBackend.WallarmAclBlockPage
+		config.ACLBlockPage = defBackend.WallarmACLBlockPage
 	}
 	config.ParseResponse, err = parser.GetStringAnnotation(wallarmParseResponseAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {

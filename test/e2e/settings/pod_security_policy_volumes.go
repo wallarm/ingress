@@ -78,18 +78,18 @@ var _ = framework.IngressNginxDescribe("[Security] Pod Security Policies with vo
 
 			volumes := deployment.Spec.Template.Spec.Volumes
 			volumes = append(
-			        volumes,
-			        corev1.Volume{
-                        Name: "ssl", VolumeSource: corev1.VolumeSource{
-                            EmptyDir: &corev1.EmptyDirVolumeSource{},
-                        },
-                    },
-                    corev1.Volume{
-                        Name: "tmp", VolumeSource: corev1.VolumeSource{
-                            EmptyDir: &corev1.EmptyDirVolumeSource{},
-                        },
-                    },
-            )
+				volumes,
+				corev1.Volume{
+					Name: "ssl", VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+				corev1.Volume{
+					Name: "tmp", VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			)
 			deployment.Spec.Template.Spec.Volumes = volumes
 
 			fsGroup := int64(33)
@@ -97,16 +97,16 @@ var _ = framework.IngressNginxDescribe("[Security] Pod Security Policies with vo
 				FSGroup: &fsGroup,
 			}
 
-            volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
-            volumeMounts = append(
-                    volumeMounts,
-                    corev1.VolumeMount{
-                        Name: "ssl", MountPath: "/etc/my-amazing-ssl",
-                    },
-                    corev1.VolumeMount{
-                        Name: "tmp", MountPath: "/my-other-tmp",
-                    },
-            )
+			volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+			volumeMounts = append(
+				volumeMounts,
+				corev1.VolumeMount{
+					Name: "ssl", MountPath: "/etc/my-amazing-ssl",
+				},
+				corev1.VolumeMount{
+					Name: "tmp", MountPath: "/my-other-tmp",
+				},
+			)
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 
 			_, err := f.KubeClientSet.AppsV1().Deployments(f.Namespace).Update(context.TODO(), deployment, metav1.UpdateOptions{})

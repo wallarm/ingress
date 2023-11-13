@@ -826,12 +826,12 @@ type Configuration struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmfallback
 	WallarmFallback string `json:"wallarm-fallback"`
 
-	WallarmAclExportEnable              string `json:"wallarm-acl-export-enable"`
-	WallarmAclExportShmSize             string `json:"wallarm-acl-export-shm-size"`
-	WallarmAclExportSampleLimit         int    `json:"wallarm-acl-export-sample-limit"`
-	WallarmAclExportSampleGroupLifetime int    `json:"wallarm-acl-export-sample-group-lifetime"`
-	WallarmAclExportStatsBucketInterval int    `json:"wallarm-acl-export-stats-bucket-interval"`
-	WallarmAclExportStatsBucketLifetime int    `json:"wallarm-acl-export-stats-bucket-lifetime"`
+	WallarmACLExportEnable              string `json:"wallarm-acl-export-enable"`
+	WallarmACLExportShmSize             string `json:"wallarm-acl-export-shm-size"`
+	WallarmACLExportSampleLimit         int    `json:"wallarm-acl-export-sample-limit"`
+	WallarmACLExportSampleGroupLifetime int    `json:"wallarm-acl-export-sample-group-lifetime"`
+	WallarmACLExportStatsBucketInterval int    `json:"wallarm-acl-export-stats-bucket-interval"`
+	WallarmACLExportStatsBucketLifetime int    `json:"wallarm-acl-export-stats-bucket-lifetime"`
 
 	// Checksum contains a checksum of the configmap configuration
 	Checksum string `json:"-"`
@@ -1029,7 +1029,7 @@ func NewDefault() Configuration {
 			WallarmInstance:          "",
 			WallarmPartnerClientUUID: "",
 			WallarmBlockPage:         "",
-			WallarmAclBlockPage:      "",
+			WallarmACLBlockPage:      "",
 			WallarmParseResponse:     "on",
 			WallarmParseWebsocket:    "off",
 			WallarmUnpackResponse:    "on",
@@ -1085,12 +1085,12 @@ func NewDefault() Configuration {
 		WallarmRequestMemoryLimit:              "0",
 		WallarmWorkerRlimitVmem:                "1g",
 		WallarmFallback:                        "on",
-		WallarmAclExportEnable:                 "on",
-		WallarmAclExportShmSize:                "64M",
-		WallarmAclExportSampleLimit:            10,
-		WallarmAclExportSampleGroupLifetime:    3600,
-		WallarmAclExportStatsBucketInterval:    60,
-		WallarmAclExportStatsBucketLifetime:    1800,
+		WallarmACLExportEnable:                 "on",
+		WallarmACLExportShmSize:                "64M",
+		WallarmACLExportSampleLimit:            10,
+		WallarmACLExportSampleGroupLifetime:    3600,
+		WallarmACLExportStatsBucketInterval:    60,
+		WallarmACLExportStatsBucketLifetime:    1800,
 		GlobalExternalAuth:                     defGlobalExternalAuth,
 		ProxySSLLocationOnly:                   false,
 		DefaultType:                            "text/html",

@@ -128,7 +128,7 @@ type Backend struct {
 
 	// Deprecated. This directive lets you set up the page returned to the client when blocking by IP ACL
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclblockpage
-	WallarmAclBlockPage string `json:"wallarm-acl-block-page"`
+	WallarmACLBlockPage string `json:"wallarm-acl-block-page"`
 
 	// The mode of processing web server responses.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparseresponse
@@ -144,7 +144,7 @@ type Backend struct {
 
 	// Allows to disable parsers.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparserdisable
-	WallarmParserDisable []string `json:"wallarm-parser-disable,-"`
+	WallarmParserDisable []string `json:"wallarm-parser-disable"`
 
 	// Name server/s used to resolve names of upstream servers into IP addresses.
 	// The file /etc/resolv.conf is used as DNS resolution configuration.
