@@ -286,6 +286,10 @@ var funcMap = text_template.FuncMap{
 	"shouldLoadAuthDigestModule":         shouldLoadAuthDigestModule,
 	"buildServerName":                    buildServerName,
 	"buildCorsOriginRegex":               buildCorsOriginRegex,
+
+	"replace": func(old, new, src string) string {
+		return strings.Replace(src, old, new, -1)
+	},
 }
 
 // escapeLiteralDollar will replace the $ character with ${literal_dollar}

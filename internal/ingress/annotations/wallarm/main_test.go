@@ -23,36 +23,44 @@ import (
 	api "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"reflect"
 
 	"k8s.io/ingress-nginx/internal/ingress/annotations/parser"
 	"k8s.io/ingress-nginx/internal/ingress/defaults"
 	"k8s.io/ingress-nginx/internal/ingress/resolver"
-	"reflect"
 )
 
-func buildIngress() *extensions.Ingress {
-	defaultBackend := extensions.IngressBackend{
-		ServiceName: "default-backend",
-		ServicePort: intstr.FromInt(80),
+func buildIngress() *networking.Ingress {
+	defaultBackend := networking.IngressBackend{
+		Service: &networking.IngressServiceBackend{
+			Name: "default-backend",
+			Port: networking.ServiceBackendPort{
+				Number: 80,
+			},
+		},
 	}
 
-	return &extensions.Ingress{
+	return &networking.Ingress{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      "foo",
 			Namespace: api.NamespaceDefault,
 		},
-		Spec: extensions.IngressSpec{
-			Backend: &extensions.IngressBackend{
-				ServiceName: "default-backend",
-				ServicePort: intstr.FromInt(80),
+		Spec: networking.IngressSpec{
+			DefaultBackend: &networking.IngressBackend{
+				Service: &networking.IngressServiceBackend{
+					Name: "default-backend",
+					Port: networking.ServiceBackendPort{
+						Number: 80,
+					},
+				},
 			},
-			Rules: []extensions.IngressRule{
+			Rules: []networking.IngressRule{
 				{
 					Host: "foo.bar.com",
-					IngressRuleValue: extensions.IngressRuleValue{
-						HTTP: &extensions.HTTPIngressRuleValue{
-							Paths: []extensions.HTTPIngressPath{
+					IngressRuleValue: networking.IngressRuleValue{
+						HTTP: &networking.HTTPIngressRuleValue{
+							Paths: []networking.HTTPIngressPath{
 								{
 									Path:    "/foo",
 									Backend: defaultBackend,
@@ -72,16 +80,16 @@ type mockBackend struct {
 
 func (m mockBackend) GetDefaultBackend() defaults.Backend {
 	return defaults.Backend{
-		WallarmMode: "off",
+		WallarmMode:              "off",
 		WallarmModeAllowOverride: "on",
-		WallarmFallback: "on",
-		WallarmInstance: "",
-		WallarmBlockPage: "",
-		WallarmAclBlockPage: "",
-		WallarmParseResponse: "on",
-		WallarmParseWebsocket: "off",
-		WallarmUnpackResponse: "on",
-		WallarmParserDisable: []string{},
+		WallarmFallback:          "on",
+		WallarmInstance:          "",
+		WallarmBlockPage:         "",
+		WallarmAclBlockPage:      "",
+		WallarmParseResponse:     "on",
+		WallarmParseWebsocket:    "off",
+		WallarmUnpackResponse:    "on",
+		WallarmParserDisable:     []string{},
 		WallarmPartnerClientUUID: "",
 	}
 }
@@ -192,5 +200,45 @@ func TestProxyWithNoAnnotation(t *testing.T) {
 	}
 	if !reflect.DeepEqual(p.ParserDisable, []string{}) {
 		t.Errorf(`expected empty slice as wallarm-parser-disable but returned %v`, p.ParserDisable)
+	}
+}
+
+func TestBlockPageValidation(t *testing.T) {
+	testcases := []struct {
+		configValue string
+		valid       bool
+	}{
+		{"", true},
+
+		{"&/<PATH_TO_FILE/HTML_HTM_FILE_NAME", true},
+		{"/url", true},
+		{"@namedLocation", true},
+		{"&variable", true},
+		{"hello/world.html", false},
+
+		{"/url response_code=420", true},
+		{"/url response_code=forbidden", false},
+		{"/url response-code=420", false},
+		{"/url response_code 420", false},
+
+		{"/url type=attack", true},
+		{"/url type=attack,acl_ip", true},
+		{"/url type=acl_source,attack,acl_ip", true},
+		{"/url type=attack acl_ip", false},
+		{"/url type=attack,acl", false},
+		{"/url type attack,acl_ip", false},
+
+		{"/url type=acl_source,attack,acl_ip response_code=420", true},
+		{"/url type=acl_source,attack,acl_ip response_code=420;@namedLocation", true},
+
+		{"/url type=acl_source,attack,acl_ip response_code=420,@namedLocation", false},
+		{"/url type=acl_source,attack,acl_ip response_code=420 @namedLocation", false},
+	}
+
+	for _, tc := range testcases {
+		valid := validateBlockPage(tc.configValue) == nil
+		if valid != tc.valid {
+			t.Errorf("failed to validate \"%s\", should be %t", tc.configValue, tc.valid)
+		}
 	}
 }
