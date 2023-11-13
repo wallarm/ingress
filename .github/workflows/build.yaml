@@ -36,7 +36,7 @@ jobs:
 
   build:
     name: Build and push images
-    runs-on: self-hosted-4cpu
+    runs-on: self-hosted-amd64-4cpu
     if: needs.changes.outputs.controller == 'true'
     needs:
       - changes
@@ -51,6 +51,7 @@ jobs:
           url: ${{ secrets.VAULT_URL }}
           role: ${{ secrets.VAULT_ROLE }}
           method: kubernetes
+          path: kubernetes-ci
           secrets: |
             kv-gitlab-ci/data/github/shared/dockerhub-creds user | DOCKERHUB_USER ;
             kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
@@ -101,7 +102,7 @@ jobs:
 
   sign:
     name: Sign images
-    runs-on: self-hosted-1cpu
+    runs-on: self-hosted-amd64-1cpu
     needs:
       - changes
       - build
@@ -117,6 +118,7 @@ jobs:
           url: ${{ secrets.VAULT_URL }}
           role: ${{ secrets.VAULT_ROLE }}
           method: kubernetes
+          path: kubernetes-ci
           secrets: |
             kv-gitlab-ci/data/node/build/cosign password | COSIGN_PASSWORD ;
             kv-gitlab-ci/data/node/build/cosign private_key | COSIGN_PRIVATE_KEY ;
