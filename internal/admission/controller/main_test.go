@@ -33,12 +33,12 @@ type failTestChecker struct {
 	t *testing.T
 }
 
-func (ftc failTestChecker) CheckIngress(ing *networking.Ingress) error {
+func (ftc failTestChecker) CheckIngress(_ *networking.Ingress) error {
 	ftc.t.Error("checker should not be called")
 	return nil
 }
 
-func (ftc failTestChecker) CheckWarning(ing *networking.Ingress) ([]string, error) {
+func (ftc failTestChecker) CheckWarning(_ *networking.Ingress) ([]string, error) {
 	ftc.t.Error("checker should not be called")
 	return nil, nil
 }
@@ -67,7 +67,7 @@ func TestHandleAdmission(t *testing.T) {
 		Checker: failTestChecker{t: t},
 	}
 
-	result, err := adm.HandleAdmission(&admissionv1.AdmissionReview{
+	_, err := adm.HandleAdmission(&admissionv1.AdmissionReview{
 		Request: &admissionv1.AdmissionRequest{
 			Kind: v1.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"},
 		},
@@ -76,12 +76,12 @@ func TestHandleAdmission(t *testing.T) {
 		t.Fatalf("with a non ingress resource, the check should not pass")
 	}
 
-	result, err = adm.HandleAdmission(nil)
+	_, err = adm.HandleAdmission(nil)
 	if err == nil {
 		t.Fatalf("with a nil AdmissionReview request, the check should not pass")
 	}
 
-	result, err = adm.HandleAdmission(&admissionv1.AdmissionReview{
+	result, err := adm.HandleAdmission(&admissionv1.AdmissionReview{
 		Request: &admissionv1.AdmissionRequest{
 			Kind: v1.GroupVersionKind{Group: networking.GroupName, Version: "v1", Kind: "Ingress"},
 			Object: runtime.RawExtension{
@@ -114,7 +114,9 @@ func TestHandleAdmission(t *testing.T) {
 		err: fmt.Errorf("this is a test error"),
 	}
 
-	adm.HandleAdmission(review)
+	if _, err := adm.HandleAdmission(review); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	if review.Response.Allowed {
 		t.Fatalf("when the checker returns an error, the request should not be allowed")
 	}
@@ -124,7 +126,9 @@ func TestHandleAdmission(t *testing.T) {
 		err: nil,
 	}
 
-	adm.HandleAdmission(review)
+	if _, err := adm.HandleAdmission(review); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
 	if !review.Response.Allowed {
 		t.Fatalf("when the checker returns no error, the request should be allowed")
 	}

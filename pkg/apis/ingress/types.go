@@ -29,8 +29,8 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/cors"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/fastcgi"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/globalratelimit"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/ipallowlist"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ipdenylist"
-	"k8s.io/ingress-nginx/internal/ingress/annotations/ipwhitelist"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/log"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/mirror"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/modsecurity"
@@ -38,10 +38,10 @@ import (
 	"k8s.io/ingress-nginx/internal/ingress/annotations/opentracing"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxy"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/proxyssl"
-	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/ratelimit"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/redirect"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/rewrite"
+	"k8s.io/ingress-nginx/internal/ingress/annotations/wallarm"
 )
 
 // TODO: The API shouldn't be importing structs from annotation code. Instead we probably want a conversion from internal
@@ -74,7 +74,7 @@ type Configuration struct {
 
 	DefaultSSLCertificate *SSLCert `json:"-"`
 
-	StreamSnippets []string
+	StreamSnippets []string `json:"StreamSnippets"`
 }
 
 // Backend describes one or more remote server/s (endpoints) associated with a service
@@ -130,7 +130,7 @@ type TrafficShapingPolicy struct {
 }
 
 // HashInclude defines if a field should be used or not to calculate the hash
-func (s Backend) HashInclude(field string, v interface{}) (bool, error) {
+func (b *Backend) HashInclude(field string, _ interface{}) (bool, error) {
 	switch field {
 	case "Endpoints":
 		return false, nil
@@ -225,7 +225,7 @@ type Server struct {
 // is required.
 // The chain in the execution order of annotations should be:
 // - Denylist
-// - Whitelist
+// - Allowlist
 // - RateLimit
 // - BasicDigestAuth
 // - ExternalAuth
@@ -299,10 +299,10 @@ type Location struct {
 	// addresses or networks are allowed.
 	// +optional
 	Denylist ipdenylist.SourceRange `json:"denylist,omitempty"`
-	// Whitelist indicates only connections from certain client
+	// Allowlist indicates only connections from certain client
 	// addresses or networks are allowed.
 	// +optional
-	Whitelist ipwhitelist.SourceRange `json:"whitelist,omitempty"`
+	Allowlist ipallowlist.SourceRange `json:"allowlist,omitempty"`
 	// Proxy contains information about timeouts and buffer sizes
 	// to be used in connections against endpoints
 	// +optional
@@ -414,5 +414,4 @@ type Ingress struct {
 }
 
 // GeneralConfig holds the definition of lua general configuration data
-type GeneralConfig struct {
-}
+type GeneralConfig struct{}

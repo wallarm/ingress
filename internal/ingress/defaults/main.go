@@ -128,7 +128,7 @@ type Backend struct {
 
 	// Deprecated. This directive lets you set up the page returned to the client when blocking by IP ACL
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmaclblockpage
-	WallarmAclBlockPage string `json:"wallarm-acl-block-page"`
+	WallarmACLBlockPage string `json:"wallarm-acl-block-page"`
 
 	// The mode of processing web server responses.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparseresponse
@@ -144,11 +144,11 @@ type Backend struct {
 
 	// Allows to disable parsers.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmparserdisable
-	WallarmParserDisable []string `json:"wallarm-parser-disable,-"`
+	WallarmParserDisable []string `json:"wallarm-parser-disable"`
 
 	// Name server/s used to resolve names of upstream servers into IP addresses.
 	// The file /etc/resolv.conf is used as DNS resolution configuration.
-	Resolver []net.IP
+	Resolver []net.IP `json:"Resolver"`
 
 	// SkipAccessLogURLs sets a list of URLs that should not appear in the NGINX access log
 	// This is useful with urls like `/health` or `health-check` that make "complex" reading the logs
@@ -217,4 +217,16 @@ type Backend struct {
 	// By default, the NGINX ingress controller uses a list of all endpoints (Pod IP/port) in the NGINX upstream configuration.
 	// It disables that behavior and instead uses a single upstream in NGINX, the service's Cluster IP and port.
 	ServiceUpstream bool `json:"service-upstream"`
+}
+
+type SecurityConfiguration struct {
+	// AllowCrossNamespaceResources enables users to consume cross namespace resource on annotations
+	// Case disabled, attempts to use secrets or configmaps from a namespace different from Ingress will
+	// be denied
+	// This valid will default to `false` on future releases
+	AllowCrossNamespaceResources bool `json:"allow-cross-namespace-resources"`
+
+	// AnnotationsRiskLevel represents the risk accepted on an annotation. If the risk is, for instance `Medium`, annotations
+	// with risk High and Critical will not be accepted
+	AnnotationsRiskLevel string `json:"annotations-risk-level"`
 }

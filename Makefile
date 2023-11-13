@@ -72,6 +72,7 @@ image: clean-image ## Build image for a particular arch.
 	docker build \
 		${PLATFORM_FLAG} ${PLATFORM} \
 		--no-cache \
+		--pull \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
 		--build-arg TARGETARCH="$(ARCH)" \
@@ -130,6 +131,12 @@ static-check: ## Run verification script for boilerplate, codegen, gofmt, golint
 	@build/run-in-docker.sh \
 	    MAC_OS=$(MAC_OS) \
 		hack/verify-all.sh
+
+.PHONY: golint-check
+golint-check:
+	@build/run-in-docker.sh \
+	    MAC_OS=$(MAC_OS) \
+		hack/verify-golint.sh
 
 ###############################
 # Tests for ingress-nginx

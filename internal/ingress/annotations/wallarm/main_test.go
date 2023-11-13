@@ -15,6 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//nolint:gofumpt,goconst // maybe later
 package wallarm
 
 import (
@@ -23,36 +24,44 @@ import (
 	api "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"reflect"
 
 	"k8s.io/ingress-nginx/internal/ingress/annotations/parser"
 	"k8s.io/ingress-nginx/internal/ingress/defaults"
 	"k8s.io/ingress-nginx/internal/ingress/resolver"
-	"reflect"
 )
 
-func buildIngress() *extensions.Ingress {
-	defaultBackend := extensions.IngressBackend{
-		ServiceName: "default-backend",
-		ServicePort: intstr.FromInt(80),
+func buildIngress() *networking.Ingress {
+	defaultBackend := networking.IngressBackend{
+		Service: &networking.IngressServiceBackend{
+			Name: "default-backend",
+			Port: networking.ServiceBackendPort{
+				Number: 80,
+			},
+		},
 	}
 
-	return &extensions.Ingress{
+	return &networking.Ingress{
 		ObjectMeta: meta_v1.ObjectMeta{
 			Name:      "foo",
 			Namespace: api.NamespaceDefault,
 		},
-		Spec: extensions.IngressSpec{
-			Backend: &extensions.IngressBackend{
-				ServiceName: "default-backend",
-				ServicePort: intstr.FromInt(80),
+		Spec: networking.IngressSpec{
+			DefaultBackend: &networking.IngressBackend{
+				Service: &networking.IngressServiceBackend{
+					Name: "default-backend",
+					Port: networking.ServiceBackendPort{
+						Number: 80,
+					},
+				},
 			},
-			Rules: []extensions.IngressRule{
+			Rules: []networking.IngressRule{
 				{
 					Host: "foo.bar.com",
-					IngressRuleValue: extensions.IngressRuleValue{
-						HTTP: &extensions.HTTPIngressRuleValue{
-							Paths: []extensions.HTTPIngressPath{
+					IngressRuleValue: networking.IngressRuleValue{
+						HTTP: &networking.HTTPIngressRuleValue{
+							Paths: []networking.HTTPIngressPath{
 								{
 									Path:    "/foo",
 									Backend: defaultBackend,
@@ -72,16 +81,16 @@ type mockBackend struct {
 
 func (m mockBackend) GetDefaultBackend() defaults.Backend {
 	return defaults.Backend{
-		WallarmMode: "off",
+		WallarmMode:              "off",
 		WallarmModeAllowOverride: "on",
-		WallarmFallback: "on",
-		WallarmInstance: "",
-		WallarmBlockPage: "",
-		WallarmAclBlockPage: "",
-		WallarmParseResponse: "on",
-		WallarmParseWebsocket: "off",
-		WallarmUnpackResponse: "on",
-		WallarmParserDisable: []string{},
+		WallarmFallback:          "on",
+		WallarmInstance:          "",
+		WallarmBlockPage:         "",
+		WallarmACLBlockPage:      "",
+		WallarmParseResponse:     "on",
+		WallarmParseWebsocket:    "off",
+		WallarmUnpackResponse:    "on",
+		WallarmParserDisable:     []string{},
 		WallarmPartnerClientUUID: "",
 	}
 }
@@ -129,8 +138,8 @@ func TestProxy(t *testing.T) {
 	if w.BlockPage != "block" {
 		t.Errorf("expected block as wallarm-block-page but returned %v", w.BlockPage)
 	}
-	if w.AclBlockPage != "block" {
-		t.Errorf("expected block as wallarm-acl-block-page but returned %v", w.AclBlockPage)
+	if w.ACLBlockPage != "block" {
+		t.Errorf("expected block as wallarm-acl-block-page but returned %v", w.ACLBlockPage)
 	}
 	if w.ParseResponse != "off" {
 		t.Errorf("expected off as wallarm-parse-response but returned %v", w.ParseResponse)
@@ -178,8 +187,8 @@ func TestProxyWithNoAnnotation(t *testing.T) {
 	if p.BlockPage != "" {
 		t.Errorf(`expected "" as wallarm-block-page but returned %v`, p.BlockPage)
 	}
-	if p.AclBlockPage != "" {
-		t.Errorf(`expected "" as wallarm-acl-block-page but returned %v`, p.AclBlockPage)
+	if p.ACLBlockPage != "" {
+		t.Errorf(`expected "" as wallarm-acl-block-page but returned %v`, p.ACLBlockPage)
 	}
 	if p.ParseResponse != "on" {
 		t.Errorf(`expected "on" as wallarm-parse-response but returned %v`, p.ParseResponse)
@@ -192,5 +201,45 @@ func TestProxyWithNoAnnotation(t *testing.T) {
 	}
 	if !reflect.DeepEqual(p.ParserDisable, []string{}) {
 		t.Errorf(`expected empty slice as wallarm-parser-disable but returned %v`, p.ParserDisable)
+	}
+}
+
+func TestBlockPageValidation(t *testing.T) {
+	testcases := []struct {
+		configValue string
+		valid       bool
+	}{
+		{"", true},
+
+		{"&/<PATH_TO_FILE/HTML_HTM_FILE_NAME", true},
+		{"/url", true},
+		{"@namedLocation", true},
+		{"&variable", true},
+		{"hello/world.html", false},
+
+		{"/url response_code=420", true},
+		{"/url response_code=forbidden", false},
+		{"/url response-code=420", false},
+		{"/url response_code 420", false},
+
+		{"/url type=attack", true},
+		{"/url type=attack,acl_ip", true},
+		{"/url type=acl_source,attack,acl_ip", true},
+		{"/url type=attack acl_ip", false},
+		{"/url type=attack,acl", false},
+		{"/url type attack,acl_ip", false},
+
+		{"/url type=acl_source,attack,acl_ip response_code=420", true},
+		{"/url type=acl_source,attack,acl_ip response_code=420;@namedLocation", true},
+
+		{"/url type=acl_source,attack,acl_ip response_code=420,@namedLocation", false},
+		{"/url type=acl_source,attack,acl_ip response_code=420 @namedLocation", false},
+	}
+
+	for _, tc := range testcases {
+		valid := validateBlockPage(tc.configValue) == nil
+		if valid != tc.valid {
+			t.Errorf("failed to validate \"%s\", should be %t", tc.configValue, tc.valid)
+		}
 	}
 }

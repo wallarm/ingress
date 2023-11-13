@@ -18,25 +18,205 @@ limitations under the License.
 package wallarm
 
 import (
+	"fmt"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+
 	networking "k8s.io/api/networking/v1"
 	"k8s.io/ingress-nginx/internal/ingress/annotations/parser"
 	"k8s.io/ingress-nginx/internal/ingress/resolver"
-	"reflect"
-	"strings"
 )
 
+const (
+	wallarmModeAnnotation              = "wallarm-mode"
+	wallarmModeAllowOverrideAnnotation = "wallarm-mode-allow-override"
+	wallarmFallbackAnnotation          = "wallarm-fallback"
+	wallarmApplicationAnnotation       = "wallarm-application"
+	wallarmInstanceAnnotation          = "wallarm-instance" // alias for wallarmApplicationAnnotation
+	wallarmPartnerClientUUIDAnnotation = "wallarm-partner-client-uuid"
+	wallarmBlockPageAnnotation         = "wallarm-block-page"
+	wallarmACLBlockPageAnnotation      = "wallarm-acl-block-page"
+	wallarmParseResponseAnnotation     = "wallarm-parse-response"
+	wallarmParseWebsocketAnnotation    = "wallarm-parse-websocket"
+	wallarmUnpackResponseAnnotation    = "wallarm-unpack-response"
+	wallarmParserDisableAnnotation     = "wallarm-parser-disable"
+)
+
+func validateApplicationID(s string) error {
+	i, err := strconv.Atoi(s)
+	if err == nil && i <= 0 {
+		err = fmt.Errorf("value should be positive integer")
+	}
+	return err
+}
+
+func validateParserDisable(s string) error {
+	allowedParsers := map[string]bool{
+		"cookie":    true,
+		"zlib":      true,
+		"htmljs":    true,
+		"json":      true,
+		"multipart": true,
+		"base64":    true,
+		"percent":   true,
+		"urlenc":    true,
+		"xml":       true,
+		"jwt":       true,
+	}
+	for _, value := range strings.Split(s, ",") {
+		parserName := strings.TrimSpace(value)
+		if _, ok := allowedParsers[value]; !ok {
+			return fmt.Errorf("unknown parser \"%s\"", parserName)
+		}
+	}
+	return nil
+}
+
+// https://docs.wallarm.com/admin-en/configuration-guides/configure-block-page-and-code/
+func validateBlockPage(s string) error {
+	if s == "" {
+		return nil
+	}
+	for _, value := range strings.Split(s, ";") {
+		valueSplit := strings.Split(value, " ")
+		page := valueSplit[0]
+		switch page[0] {
+		case '/', '&', '@', '$':
+			break
+		default:
+			return fmt.Errorf("invalid block page format \"%s\"", page)
+		}
+		if len(valueSplit) == 1 {
+			continue
+		}
+		for _, optional := range valueSplit[1:] {
+			optionalSplit := strings.Split(optional, "=")
+			if len(optionalSplit) != 2 {
+				return fmt.Errorf("invalid block page optional param format \"%s\"", optional)
+			}
+			optionalKey := optionalSplit[0]
+			optionalValue := optionalSplit[1]
+			switch optionalKey {
+			case "response_code":
+				_, err := strconv.Atoi(optionalValue)
+				if err != nil {
+					return fmt.Errorf("invalid response_code value \"%s\"", optionalValue)
+				}
+			case "type":
+				for _, typeValue := range strings.Split(optionalValue, ",") {
+					switch typeValue {
+					case "acl_ip", "acl_source", "attack":
+						break
+					default:
+						return fmt.Errorf("invalid type value \"%s\"", typeValue)
+					}
+				}
+			default:
+				return fmt.Errorf("invalid block page optional param name \"%s\"", optionalKey)
+			}
+		}
+	}
+	return nil
+}
+
+var wallarmAnnotations = parser.Annotation{
+	Annotations: parser.AnnotationFields{
+		wallarmModeAnnotation: {
+			Validator: parser.ValidateOptions(
+				[]string{"off", "monitoring", "safe_blocking", "block"}, true, true,
+			),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `Traffic processing mode`,
+		},
+		wallarmModeAllowOverrideAnnotation: {
+			Validator: parser.ValidateOptions(
+				[]string{"off", "strict", "on"}, true, true,
+			),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `Manages the ability to override the wallarm_mode values via filtering rules downloaded from the Wallarm Cloud (custom ruleset)`,
+		},
+		wallarmFallbackAnnotation: {
+			Validator: parser.ValidateOptions(
+				[]string{"off", "on"}, true, true,
+			),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `With the value set to on, NGINX has the ability to enter an emergency mode; if proton.db or custom ruleset cannot be downloaded, this setting disables the Wallarm module for the http, server, and location blocks, for which the data fails to download. NGINX keeps functioning`,
+		},
+		wallarmApplicationAnnotation: {
+			AnnotationAliases: []string{wallarmInstanceAnnotation},
+			Validator:         validateApplicationID,
+			Scope:             parser.AnnotationScopeLocation,
+			Risk:              parser.AnnotationRiskLow,
+			Documentation:     `Unique identifier of the protected application to be used in the Wallarm Cloud. The value can be a positive integer except for 0`,
+		},
+		wallarmPartnerClientUUIDAnnotation: {
+			Validator:     parser.ValidateRegex(regexp.MustCompile(`[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}`), true),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `Unique identifier of the tenant for the multi-tenant Wallarm node. The value should be a string in the UUID format`,
+		},
+		wallarmBlockPageAnnotation: {
+			Validator:     validateBlockPage,
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `https://docs.wallarm.com/admin-en/configure-parameters-en/#wallarm_block_page`,
+		},
+		wallarmACLBlockPageAnnotation: {
+			Validator:     func(string) error { return nil },
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskMedium, // Deprecated + no validation
+			Documentation: `Deprecated. Use "wallarm-block-page" instead`,
+		},
+		wallarmParseResponseAnnotation: {
+			Validator: parser.ValidateOptions(
+				[]string{"off", "on"}, true, true,
+			),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `Whether to analyze the application responses. Response analysis is required for vulnerability detection during passive detection and active threat verification`,
+		},
+		wallarmParseWebsocketAnnotation: {
+			Validator: parser.ValidateOptions(
+				[]string{"off", "on"}, true, true,
+			),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `Wallarm provides full WebSockets support under the API Security subscription plan. By default, the WebSockets' messages are not analyzed for attacks. To enable the feature, activate the API Security subscription plan and use the annotation`,
+		},
+		wallarmUnpackResponseAnnotation: {
+			Validator: parser.ValidateOptions(
+				[]string{"off", "on"}, true, true,
+			),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `Whether to decompress compressed data returned in the application response. Possible values are on (decompression is enabled) and off (decompression is disabled). This parameter is effective only if wallarm response parsing is on`,
+		},
+		wallarmParserDisableAnnotation: {
+			Validator:     validateParserDisable,
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `Allows to disable parsers. The directive values correspond to the name of the parser to be disabled`,
+		},
+	},
+}
+
 type Config struct {
-	Mode string `json:"mode"`
-	ModeAllowOverride string `json:"modeAllowOverride"`
-	Fallback string `json:"fallback"`
-	Instance string `json:"instance"`
-	BlockPage string `json:"blockPage"`
-	AclBlockPage string `json:"aclBlockPage"`
-	ParseResponse string `json:"parseResponse"`
-	ParseWebsocket string `json:"parseWebsocket"`
-	UnpackResponse string `json:"unpackResponse"`
-	ParserDisable []string `json:"parserDisable"`
-	PartnerClientUUID string `json:"partnerClientUUID"`
+	Mode              string   `json:"mode"`
+	ModeAllowOverride string   `json:"modeAllowOverride"`
+	Fallback          string   `json:"fallback"`
+	Instance          string   `json:"instance"`
+	BlockPage         string   `json:"blockPage"`
+	ACLBlockPage      string   `json:"aclBlockPage"`
+	ParseResponse     string   `json:"parseResponse"`
+	ParseWebsocket    string   `json:"parseWebsocket"`
+	UnpackResponse    string   `json:"unpackResponse"`
+	ParserDisable     []string `json:"parserDisable"`
+	PartnerClientUUID string   `json:"partnerClientUUID"`
 }
 
 // Equal tests for equality between two Configuration types
@@ -74,7 +254,7 @@ func (l1 *Config) Equal(l2 *Config) bool {
 	if !reflect.DeepEqual(l1.ParserDisable, l2.ParserDisable) {
 		return false
 	}
-	if l1.AclBlockPage != l2.AclBlockPage {
+	if l1.ACLBlockPage != l2.ACLBlockPage {
 		return false
 	}
 	if l1.PartnerClientUUID != l2.PartnerClientUUID {
@@ -85,84 +265,85 @@ func (l1 *Config) Equal(l2 *Config) bool {
 }
 
 type wallarm struct {
-	r resolver.Resolver
+	r                resolver.Resolver
+	annotationConfig parser.Annotation
 }
 
 // NewParser creates a new wallarm module configuration annotation parser
 func NewParser(r resolver.Resolver) parser.IngressAnnotation {
-	return wallarm{r}
+	return wallarm{
+		r:                r,
+		annotationConfig: wallarmAnnotations,
+	}
 }
 
 // ParseAnnotations parses the annotations contained in the ingress
 // rule used to configure upstream check parameters
 func (a wallarm) Parse(ing *networking.Ingress) (interface{}, error) {
-
+	var err error
 	defBackend := a.r.GetDefaultBackend()
-	mode, err := parser.GetStringAnnotation("wallarm-mode", ing)
+	config := &Config{}
+
+	config.Mode, err = parser.GetStringAnnotation(wallarmModeAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		mode = defBackend.WallarmMode
+		config.Mode = defBackend.WallarmMode
 	}
-	modeAllowOverride, err := parser.GetStringAnnotation("wallarm-mode-allow-override", ing)
+	config.ModeAllowOverride, err = parser.GetStringAnnotation(wallarmModeAllowOverrideAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		modeAllowOverride = defBackend.WallarmModeAllowOverride
+		config.ModeAllowOverride = defBackend.WallarmModeAllowOverride
 	}
-	fallback, err := parser.GetStringAnnotation("wallarm-fallback", ing)
+	config.Fallback, err = parser.GetStringAnnotation(wallarmFallbackAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		fallback = defBackend.WallarmFallback
+		config.Fallback = defBackend.WallarmFallback
 	}
-	instance, err := parser.GetStringAnnotation("wallarm-application", ing)
+	config.Instance, err = parser.GetStringAnnotation(wallarmApplicationAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		instance, err = parser.GetStringAnnotation("wallarm-instance", ing)
-		if err != nil {
-			instance = defBackend.WallarmInstance
-		}
+		config.Instance = defBackend.WallarmInstance
 	}
-	partnerClientUUID, err := parser.GetStringAnnotation("wallarm-partner-client-uuid", ing)
+	config.PartnerClientUUID, err = parser.GetStringAnnotation(wallarmPartnerClientUUIDAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		partnerClientUUID = defBackend.WallarmPartnerClientUUID
+		config.PartnerClientUUID = defBackend.WallarmPartnerClientUUID
 	}
-	blockPage, err := parser.GetStringAnnotation("wallarm-block-page", ing)
+	config.BlockPage, err = parser.GetStringAnnotation(wallarmBlockPageAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		blockPage = defBackend.WallarmBlockPage
+		config.BlockPage = defBackend.WallarmBlockPage
 	}
-	aclBlockPage, err := parser.GetStringAnnotation("wallarm-acl-block-page", ing)
+	config.ACLBlockPage, err = parser.GetStringAnnotation(wallarmACLBlockPageAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		aclBlockPage = defBackend.WallarmAclBlockPage
+		config.ACLBlockPage = defBackend.WallarmACLBlockPage
 	}
-	parseResponse, err := parser.GetStringAnnotation("wallarm-parse-response", ing)
+	config.ParseResponse, err = parser.GetStringAnnotation(wallarmParseResponseAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		parseResponse = defBackend.WallarmParseResponse
+		config.ParseResponse = defBackend.WallarmParseResponse
 	}
-	parseWebsocket, err := parser.GetStringAnnotation("wallarm-parse-websocket", ing)
+	config.ParseWebsocket, err = parser.GetStringAnnotation(wallarmParseWebsocketAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		parseWebsocket = defBackend.WallarmParseWebsocket
+		config.ParseWebsocket = defBackend.WallarmParseWebsocket
 	}
-	unpackResponse, err := parser.GetStringAnnotation("wallarm-unpack-response", ing)
+	config.UnpackResponse, err = parser.GetStringAnnotation(wallarmUnpackResponseAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
-		unpackResponse = defBackend.WallarmUnpackResponse
-	}
-	parserDisable := []string{}
-	pd, err := parser.GetStringAnnotation("wallarm-parser-disable", ing)
-	if err != nil {
-		parserDisable = defBackend.WallarmParserDisable
-	} else {
-		parserDisable = strings.Split(pd, ",")
-	}
-	for i, v := range parserDisable {
-		parserDisable[i] = strings.TrimSpace(v)
+		config.UnpackResponse = defBackend.WallarmUnpackResponse
 	}
 
-	return &Config{
-		mode,
-		modeAllowOverride,
-		fallback,
-		instance,
-		blockPage,
-		aclBlockPage,
-		parseResponse,
-		parseWebsocket,
-		unpackResponse,
-		parserDisable,
-		partnerClientUUID,
-	}, nil
+	config.ParserDisable = []string{}
+	pd, err := parser.GetStringAnnotation(wallarmParserDisableAnnotation, ing, a.annotationConfig.Annotations)
+	if err != nil {
+		config.ParserDisable = defBackend.WallarmParserDisable
+	} else {
+		config.ParserDisable = strings.Split(pd, ",")
+	}
+	for i, v := range config.ParserDisable {
+		config.ParserDisable[i] = strings.TrimSpace(v)
+	}
+
+	return config, nil
+}
+
+func (a wallarm) GetDocumentation() parser.AnnotationFields {
+	return a.annotationConfig.Annotations
+}
+
+func (a wallarm) Validate(anns map[string]string) error {
+	maxrisk := parser.StringRiskToRisk(a.r.GetSecurityConfiguration().AnnotationsRiskLevel)
+	return parser.CheckAnnotationRisk(anns, maxrisk, wallarmAnnotations.Annotations)
 }
