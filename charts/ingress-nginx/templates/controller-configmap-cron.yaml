@@ -18,7 +18,7 @@ data:
 
     {{- with .Values.controller.wallarm.cron.jobs.syncIpLists }}
     # sync-ip-lists
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists --one-time -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists -l STDOUT
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.exportMetrics }}
@@ -28,7 +28,7 @@ data:
 
     {{- with .Values.controller.wallarm.cron.jobs.syncIpListsSource }}
     # sync-ip-lists-source
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists-source --one-time -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.syncNode }}
