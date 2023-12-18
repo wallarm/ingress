@@ -320,6 +320,25 @@ Create the name of the controller service account to use
 {{ toYaml .Values.controller.wallarm.collectd.resources | indent 4 }}
 {{- end -}}
 
+{{- define "ingress-nginx.wallarmApifirewallContainer" -}}
+- name: api-firewall
+{{- if .Values.controller.wallarm.apifirewall.image }}
+  {{- with .Values.controller.wallarm.apifirewall.image }}
+  image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
+{{- end }}
+  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+  args: ["api-firewall"]
+  volumeMounts:
+    - name: wallarm
+      mountPath: {{ include "wallarm.path" . }}
+  securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
+  resources:
+{{ toYaml .Values.controller.wallarm.apifirewall.resources | indent 4 }}
+{{- end -}}
+
 {{/*
 Create the name of the backend service account to use - only used when podsecuritypolicy is also enabled
 */}}

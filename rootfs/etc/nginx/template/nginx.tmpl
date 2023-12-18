@@ -1288,6 +1288,21 @@ stream {
         {{ end }}
         {{ end }}
 
+        {{ if $all.Cfg.EnableWallarm }}
+        # api firewall
+        location ~ ^/wallarm-apifw(.*)$ {
+            wallarm_mode off;
+            proxy_pass http://api-firewall:8088$1;
+            error_page 404 431         = @wallarm-apifw-fallback;
+            error_page 500 502 503 504 = @wallarm-apifw-fallback;
+        }
+
+        location @wallarm-apifw-fallback {
+            wallarm_mode off;
+            return 500 "API FW fallback";
+        }
+        {{ end }}
+
         location {{ $path }} {
             {{ $ing := (getIngressInformation $location.Ingress $server.Hostname $location.IngressPath) }}
             set $namespace      {{ $ing.Namespace | quote}};

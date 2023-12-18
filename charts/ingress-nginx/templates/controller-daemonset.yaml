@@ -198,6 +198,7 @@ spec:
       {{- if .Values.controller.wallarm.enabled }}
         {{ include "ingress-nginx.wallarmCronContainer" . | nindent 8 }}
         {{ include "ingress-nginx.wallarmCollectdContainer" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmApifirewallContainer" . | nindent 8 }}
       {{- end }}
     {{- if (or .Values.controller.extraInitContainers .Values.controller.extraModules .Values.controller.opentelemetry.enabled .Values.controller.wallarm.enabled) }}
       initContainers:

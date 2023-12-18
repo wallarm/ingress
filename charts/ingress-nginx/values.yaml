@@ -877,6 +877,9 @@ controller:
       resources: {}
     collectd:
       resources: {}
+    apifirewall:
+      resources: {}
+      livenessProbe: {} # TODO
 
 # -- Rollback limit
 ##
