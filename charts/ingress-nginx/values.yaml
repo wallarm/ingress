@@ -879,7 +879,16 @@ controller:
       resources: {}
     apifirewall:
       resources: {}
-      livenessProbe: {} # TODO
+      livenessProbe:
+        httpGet:
+          path: "/"
+          port: 9667
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 1
+        successThreshold: 1
+        failureThreshold: 5
 
 # -- Rollback limit
 ##
