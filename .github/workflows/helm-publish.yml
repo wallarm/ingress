@@ -47,8 +47,14 @@ jobs:
           echo "Release type: ${TYPE}"
           echo "type=${TYPE}" >> $GITHUB_OUTPUT
 
-      - name: Publish Helm charts (Prod)
-        if: steps.check_release.outputs.type == 'production'
+      - name: Update versions for RC
+        if: steps.check_release.outputs.type == 'release-candidate'
+        run: |
+          yq -y -i '.version += "-rc"' ./charts/ingress-nginx/Chart.yaml
+          echo "X_TAG=${X_TAG}-rc" >> $GITHUB_ENV
+
+      - name: Publish Helm charts
+        if: steps.check_release.outputs.type =~ 'production|release-candidate'
         uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # master
         with:
           token: ${{ steps.secrets.outputs.GITHUB_TOKEN }}
@@ -58,25 +64,6 @@ jobs:
           repository: helm-charts
           branch: main
           target_dir: "wallarm-ingress"
-          index_dir: .
-          app_version: "${{ env.X_TAG }}"
-          chart_version: "${{ env.X_TAG }}"
-
-      - name: Update chart name for RC versions
-        if: steps.check_release.outputs.type == 'release-candidate'
-        run: yq -y -i '.name = "wallarm-ingress-rc"' ./charts/ingress-nginx/Chart.yaml
-
-      - name: Publish Helm charts (RC)
-        if: steps.check_release.outputs.type == 'release-candidate'
-        uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # master
-        with:
-          token: ${{ steps.secrets.outputs.GITHUB_TOKEN }}
-          charts_dir: ./charts
-          charts_url: https://charts.wallarm.com
-          linting: off
-          repository: helm-charts
-          branch: main
-          target_dir: "wallarm-ingress-rc"
           index_dir: .
           app_version: "${{ env.X_TAG }}"
           chart_version: "${{ env.X_TAG }}"
