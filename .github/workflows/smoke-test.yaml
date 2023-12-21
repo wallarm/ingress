@@ -65,6 +65,7 @@ jobs:
           SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
           ALLURE_ENVIRONMENT_K8S: ${{ matrix.k8s }}
           ALLURE_ENVIRONMENT_ARCH: amd64
+          TEST_RC: 'True'
         run: |
           if [ ${{ github.event_name }} == 'workflow_dispatch' ];
           then
