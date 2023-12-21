@@ -874,6 +874,15 @@ controller:
         exportBlockedStat:
           schedule: "* * * * *"
           timeout: 24h
+        detectCredStuffing:
+          schedule: "* * * * *"
+          timeout: 10m
+        syncApiSpecs:
+          schedule: "* * * * *"
+          timeout: 10m
+        apiFirewall:
+          schedule: "* * * * *"
+          timeout: 10m
       resources: {}
     collectd:
       resources: {}

@@ -35,3 +35,13 @@ data:
     # sync-node
     {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
     {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.syncApiSpecs }}
+    # sync-api-specs
+    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/sync-api-specs -l STDOUT
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.apiFirewall }}
+    # api-firewall
+    {{ .schedule }} /opt/wallarm/usr/bin/api-firewall --log-level=DEBUG
+    {{- end }}

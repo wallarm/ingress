@@ -50,3 +50,8 @@ data:
     # export-blocked-stats
     {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-blocked-stats -l STDOUT -L DEBUG
     {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.detectCredStuffing }}
+    # detect-cred-stuffing
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/detect-cred-stuffing -l STDOUT
+    {{- end }}
