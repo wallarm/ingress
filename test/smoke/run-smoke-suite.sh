@@ -97,7 +97,12 @@ fi
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
 NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/node.yaml | grep uuid | awk '{print $2}')
+if [[ -z "${NODE_UUID}" ]]; then
+  echo "Failed to retrieve Wallarm Node UUID"
+  get_logs_and_fail
+fi
 echo "UUID: ${NODE_UUID}"
+
 
 RAND_NUM="${RANDOM}${RANDOM}${RANDOM}"
 RAND_NUM=${RAND_NUM:0:10}
