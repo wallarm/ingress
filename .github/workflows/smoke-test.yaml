@@ -34,9 +34,9 @@ jobs:
           method: kubernetes
           path: kubernetes-ci
           secrets: |
-            kv-gitlab-ci/data/github/ingress api_token ;
-            kv-gitlab-ci/data/github/ingress user_secret ;
-            kv-gitlab-ci/data/github/ingress user_uuid ;
+            kv-gitlab-ci/data/github/ingress-audit api_token ;
+            kv-gitlab-ci/data/github/ingress-audit user_secret ;
+            kv-gitlab-ci/data/github/ingress-audit user_uuid ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
 
@@ -59,6 +59,9 @@ jobs:
           ALLURE_ENDPOINT: ${{ secrets.ALLURE_SERVER_URL }}
           ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
+          WALLARM_API_HOST: audit.api.wallarm.com # TODO: tmp
+          WALLARM_API_PRESET: audit # TODO: tmp
+          CLIENT_ID: "55146" # TODO: tmp
           USER_UUID: ${{ steps.secrets.outputs.user_uuid }}
           USER_SECRET: ${{ steps.secrets.outputs.user_secret }}
           SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
