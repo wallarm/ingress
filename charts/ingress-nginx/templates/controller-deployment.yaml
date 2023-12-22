@@ -253,6 +253,8 @@ spec:
           emptyDir: {}
         - name: wallarm-cache
           emptyDir: {}
+        - name: wallarm-apifw
+          emptyDir: {}
         - name: wallarm-cron
           configMap:
             name: {{ template "ingress-nginx.wallarmControllerCronConfig" . }}

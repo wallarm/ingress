@@ -89,6 +89,14 @@ Get specific paths
 {{- end }}
 {{- end -}}
 
+{{- define "wallarm-apifw.path" -}}
+{{- if .Values.controller.image.chroot -}}
+{{- printf "/chroot/opt/wallarm/var/lib/wallarm-api" -}}
+{{- else -}}
+{{- printf "/opt/wallarm/var/lib/wallarm-api" -}}
+{{- end }}
+{{- end -}}
+
 {{/*
 Get specific image
 */}}
@@ -246,6 +254,8 @@ Create the name of the controller service account to use
     name: wallarm
   - mountPath: {{ include "wallarm-acl.path" . }}
     name: wallarm-acl
+  - mountPath: {{ include "wallarm-apifw.path" . }}
+    name: wallarm-apifw
   - mountPath: /secrets/wallarm/token
     name: wallarm-token
     subPath: token
@@ -279,6 +289,8 @@ Create the name of the controller service account to use
     name: wallarm
   - mountPath: {{ include "wallarm-acl.path" . }}
     name: wallarm-acl
+  - mountPath: {{ include "wallarm-apifw.path" . }}
+    name: wallarm-apifw
   - mountPath: /opt/cron/crontab
     name: wallarm-cron
     subPath: crontab
@@ -332,8 +344,8 @@ Create the name of the controller service account to use
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args: ["api-firewall"]
   volumeMounts:
-    - name: wallarm
-      mountPath: {{ include "wallarm.path" . }}
+    - name: wallarm-apifw
+      mountPath: {{ include "wallarm-apifw.path" . }}
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.apifirewall.resources | indent 4 }}

@@ -120,6 +120,8 @@ spec:
           emptyDir: {}
         - name: wallarm-acl
           emptyDir: {}
+        - name: wallarm-apifw
+          emptyDir: {}
         - name: wallarm-cron
           configMap:
             name: {{ template "ingress-nginx.wallarmTarantoolCronConfig" . }}
