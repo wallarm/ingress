@@ -880,9 +880,6 @@ controller:
         syncApiSpecs:
           schedule: "* * * * *"
           timeout: 10m
-        apiFirewall:
-          schedule: "* * * * *"
-          timeout: 10m
       resources: {}
     collectd:
       resources: {}
