@@ -164,7 +164,7 @@ jobs:
           ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
           ALLURE_ENVIRONMENT_K8S: ${{ matrix.k8s }}
           ALLURE_ENVIRONMENT_ARCH: ${{ matrix.ARCH }}
-          TEST_RC: 'True'
+          TEST_RC: true
         run: |
           make kind-smoke-test
 
