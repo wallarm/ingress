@@ -1292,7 +1292,7 @@ stream {
         # api firewall
         location ~ ^/wallarm-apifw(.*)$ {
             wallarm_mode off;
-            proxy_pass http://localhost:8088$1;
+            proxy_pass http://127.0.0.2:8088$1;
             error_page 404 431         = @wallarm-apifw-fallback;
             error_page 500 502 503 504 = @wallarm-apifw-fallback;
         }
