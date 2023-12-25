@@ -132,7 +132,7 @@ spec:
     - {name: ALLURE_PROJECT_ID, value: "${ALLURE_PROJECT_ID:-}"}
     - {name: ALLURE_TOKEN, value: "${ALLURE_TOKEN:-}"}
     - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS:-/tests/_out/allure_report}"}
-    - {name: TEST_RC, value: "${TEST_RC}"}
+    - {name: TEST_RC, value: "${TEST_RC:-false}"}
     - name: ALLURE_LAUNCH_TAGS
       value: >
         USER:${GITHUB_ACTOR:-local},
