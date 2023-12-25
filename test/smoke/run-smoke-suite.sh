@@ -48,6 +48,8 @@ function get_logs() {
     kubectl logs -l "app.kubernetes.io/component=controller" -c controller --tail=-1
     echo "###### Cron container logs ######"
     kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
+    echo "###### API-WF container logs ######"
+    kubectl logs -l "app.kubernetes.io/component=controller" -c api-firewall --tail=-1 || true
     echo "###### List directory /opt/wallarm/etc/wallarm"
     kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/etc/wallarm && cat /opt/wallarm/etc/wallarm/node.yaml" || true
     echo "###### List directory /var/lib/nginx/wallarm"

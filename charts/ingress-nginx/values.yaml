@@ -884,17 +884,30 @@ controller:
     collectd:
       resources: {}
     apifirewall:
+      enabled: true
       resources: {}
+      livenessProbeEnabled: true
       livenessProbe:
         httpGet:
-          path: "/"
+          path: "/v1/liveness"
           port: 9667
           scheme: HTTP
+        failureThreshold: 3
         initialDelaySeconds: 10
         periodSeconds: 10
-        timeoutSeconds: 1
         successThreshold: 1
-        failureThreshold: 5
+        timeoutSeconds: 1
+      readinessProbeEnabled: true
+      readinessProbe:
+        httpGet:
+          path: "/v1/readiness"
+          port: 9667
+          scheme: HTTP
+        failureThreshold: 3
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
 
 # -- Rollback limit
 ##

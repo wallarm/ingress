@@ -347,8 +347,19 @@ Create the name of the controller service account to use
     - name: wallarm-apifw
       mountPath: {{ include "wallarm-apifw.path" . }}
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
-  resources:
-{{ toYaml .Values.controller.wallarm.apifirewall.resources | indent 4 }}
+  resources: {{ toYaml .Values.controller.wallarm.apifirewall.resources | nindent 4 }}
+{{- if or .Values.controller.wallarm.apifirewall.livenessProbeEnabled .Values.controller.wallarm.apifirewall.readinessProbeEnabled }}
+  ports:
+    - name: health
+      containerPort: 9667
+      protocol: TCP
+{{- end }}
+{{- if .Values.controller.wallarm.apifirewall.livenessProbeEnabled }}
+  livenessProbe: {{ toYaml .Values.controller.wallarm.apifirewall.livenessProbe | nindent 4 }}
+{{- end }}
+{{- if .Values.controller.wallarm.apifirewall.readinessProbeEnabled }}
+  readinessProbe: {{ toYaml .Values.controller.wallarm.apifirewall.readinessProbe | nindent 4 }}
+{{- end }}
 {{- end -}}
 
 {{/*
