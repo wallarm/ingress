@@ -309,8 +309,6 @@ jobs:
           WALLARM_ENABLED: true
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
           WALLARM_API_HOST: audit.api.wallarm.com # TODO: tmp
-          WALLARM_API_PRESET: audit # TODO: tmp
-          CLIENT_ID: "55146" # TODO: tmp
         run: |
           kind get kubeconfig > $HOME/.kube/kind-config-kind
           make E2E_NODES=6 kind-e2e-test
