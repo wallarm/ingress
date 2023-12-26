@@ -826,6 +826,8 @@ type Configuration struct {
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmfallback
 	WallarmFallback string `json:"wallarm-fallback"`
 
+	WallarmApiFwEnabled                 bool   `json:"wallarm-apifw-enabled"`
+	WallarmApiFwPort                    int    `json:"wallarm-apifw-port"`
 	WallarmACLExportEnable              string `json:"wallarm-acl-export-enable"`
 	WallarmACLExportShmSize             string `json:"wallarm-acl-export-shm-size"`
 	WallarmACLExportSampleLimit         int    `json:"wallarm-acl-export-sample-limit"`

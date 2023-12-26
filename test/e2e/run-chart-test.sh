@@ -50,7 +50,7 @@ export ARCH=${ARCH:-amd64}
 # Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
 CT_IMAGE="quay.io/dmitriev/chart-testing:3.7.1"
 
-HELM_EXTRA_ARGS="--timeout 180s"
+HELM_EXTRA_ARGS="--timeout 240s"
 HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
  --set controller.wallarm.enabled=true \

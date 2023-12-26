@@ -885,6 +885,17 @@ controller:
       resources: {}
     apifirewall:
       enabled: true
+      config:
+        # 18081
+        mainPort: 8088
+        # 18082
+        healthPort: 9667
+        specificationUpdatePeriod: 1m
+        unknownParametersDetection: true
+        #### TRACE|DEBUG|INFO|WARNING|ERROR
+        logLevel: INFO
+        ### TEXT|JSON
+        logFormat: TEXT
       resources: {}
       livenessProbeEnabled: true
       livenessProbe:

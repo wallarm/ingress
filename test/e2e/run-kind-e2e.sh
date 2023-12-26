@@ -130,10 +130,10 @@ if [ "${WALLARM_ENABLED}" == "true" ]; then
     echo "WALLARM_API_TOKEN must be set! Exiting ..."
     exit 1
   fi
-    if [ -z "${WALLARM_API_HOST}" ]; then
-      echo "WALLARM_API_HOST must be set! Exiting ..."
-      exit 1
-    fi
+  if [ -z "${WALLARM_API_HOST}" ]; then
+    echo "WALLARM_API_HOST must be set! Exiting ..."
+    exit 1
+  fi
 fi
 
 echo "[dev-env] running e2e tests..."

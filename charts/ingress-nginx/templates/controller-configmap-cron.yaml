@@ -36,7 +36,9 @@ data:
     {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
     {{- end }}
 
+    {{- if .Values.controller.wallarm.apifirewall.enabled }}
     {{- with .Values.controller.wallarm.cron.jobs.syncApiSpecs }}
     # sync-api-specs
     {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/sync-api-specs -l STDOUT
+    {{- end }}
     {{- end }}

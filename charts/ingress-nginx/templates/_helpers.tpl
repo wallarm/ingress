@@ -343,17 +343,32 @@ Create the name of the controller service account to use
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args: ["api-firewall"]
+  env:
+    - name: APIFW_SPECIFICATION_UPDATE_PERIOD
+      value: "{{ .Values.controller.wallarm.apifirewall.config.specificationUpdatePeriod }}"
+    - name: API_MODE_UNKNOWN_PARAMETERS_DETECTION
+      value: "{{ .Values.controller.wallarm.apifirewall.config.unknownParametersDetection }}"
+    - name: APIFW_URL
+      value: "http://0.0.0.0:{{ .Values.controller.wallarm.apifirewall.config.mainPort }}"
+    - name: APIFW_HEALTH_HOST
+      value: "0.0.0.0:{{ .Values.controller.wallarm.apifirewall.config.healthPort }}"
+    - name: APIFW_LOG_LEVEL
+      value: "{{ .Values.controller.wallarm.apifirewall.config.logLevel }}"
+    - name: APIFW_LOG_FORMAT
+      value: "{{ .Values.controller.wallarm.apifirewall.config.logFormat }}"
+    - name: APIFW_MODE
+      value: api
+    - name: APIFW_READ_TIMEOUT
+      value: 5s
+    - name: APIFW_WRITE_TIMEOUT
+      value: 5s
+    - name: APIFW_API_MODE_DEBUG_PATH_DB
+      value: "/opt/wallarm/var/lib/wallarm-api/1/wallarm_api.db"
   volumeMounts:
     - name: wallarm-apifw
       mountPath: {{ include "wallarm-apifw.path" . }}
   securityContext: {{ include "controller.containerSecurityContext" . | nindent 4 }}
   resources: {{ toYaml .Values.controller.wallarm.apifirewall.resources | nindent 4 }}
-{{- if or .Values.controller.wallarm.apifirewall.livenessProbeEnabled .Values.controller.wallarm.apifirewall.readinessProbeEnabled }}
-  ports:
-    - name: health
-      containerPort: 9667
-      protocol: TCP
-{{- end }}
 {{- if .Values.controller.wallarm.apifirewall.livenessProbeEnabled }}
   livenessProbe: {{ toYaml .Values.controller.wallarm.apifirewall.livenessProbe | nindent 4 }}
 {{- end }}
