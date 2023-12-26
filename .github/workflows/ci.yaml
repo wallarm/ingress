@@ -125,12 +125,12 @@ jobs:
           method: kubernetes
           path: kubernetes-ci
           secrets: |
-            kv-gitlab-ci/data/github/ingress-audit api_token ;
-            kv-gitlab-ci/data/github/ingress-audit api_host ;
-            kv-gitlab-ci/data/github/ingress-audit api_preset ;
-            kv-gitlab-ci/data/github/ingress-audit client_id ;
-            kv-gitlab-ci/data/github/ingress-audit user_secret ;
-            kv-gitlab-ci/data/github/ingress-audit user_uuid ;
+            kv-gitlab-ci/data/github/ingress api_token ;
+            kv-gitlab-ci/data/github/ingress api_host ;
+            kv-gitlab-ci/data/github/ingress api_preset ;
+            kv-gitlab-ci/data/github/ingress client_id ;
+            kv-gitlab-ci/data/github/ingress user_secret ;
+            kv-gitlab-ci/data/github/ingress user_uuid ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
 
@@ -285,8 +285,8 @@ jobs:
           method: kubernetes
           path: kubernetes-ci
           secrets: |
-            kv-gitlab-ci/data/github/ingress-audit api_token ;
-            kv-gitlab-ci/data/github/ingress-audit api_host ;
+            kv-gitlab-ci/data/github/ingress api_token ;
+            kv-gitlab-ci/data/github/ingress api_host ;
 
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
