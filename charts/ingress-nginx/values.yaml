@@ -893,7 +893,7 @@ controller:
         specificationUpdatePeriod: 1m
         unknownParametersDetection: true
         #### TRACE|DEBUG|INFO|WARNING|ERROR
-        logLevel: INFO
+        logLevel: DEBUG
         ### TEXT|JSON
         logFormat: TEXT
       resources: {}

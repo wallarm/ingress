@@ -1292,6 +1292,7 @@ stream {
         # api firewall
         location ~ ^/wallarm-apifw(.*)$ {
             wallarm_mode off;
+            access_log off;
             proxy_pass http://127.0.0.2:{{ $all.Cfg.WallarmApiFwPort }}$1;
             error_page 404 431         = @wallarm-apifw-fallback;
             error_page 500 502 503 504 = @wallarm-apifw-fallback;
@@ -1299,8 +1300,13 @@ stream {
 
         location @wallarm-apifw-fallback {
             wallarm_mode off;
+            access_log off;
             return 500 "API FW fallback";
         }
+        {{ end }}
+
+        {{ if and $all.Cfg.EnableWallarm (not $all.Cfg.WallarmApiFwEnabled) }}
+        wallarm_enable_apifw off;
         {{ end }}
 
         location {{ $path }} {
