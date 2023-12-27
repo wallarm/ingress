@@ -884,12 +884,12 @@ controller:
     collectd:
       resources: {}
     apifirewall:
+      ### Enable or disable API Firewall functionality (true|false)
+      ###
       enabled: true
       config:
-        # 18081
-        mainPort: 8088
-        # 18082
-        healthPort: 9667
+        mainPort: 18081
+        healthPort: 18082
         specificationUpdatePeriod: 1m
         unknownParametersDetection: true
         #### TRACE|DEBUG|INFO|WARNING|ERROR
@@ -901,7 +901,7 @@ controller:
       livenessProbe:
         httpGet:
           path: "/v1/liveness"
-          port: 9667
+          port: 18082
           scheme: HTTP
         failureThreshold: 3
         initialDelaySeconds: 10
@@ -912,7 +912,7 @@ controller:
       readinessProbe:
         httpGet:
           path: "/v1/readiness"
-          port: 9667
+          port: 18082
           scheme: HTTP
         failureThreshold: 3
         initialDelaySeconds: 10
