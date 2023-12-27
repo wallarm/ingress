@@ -1350,7 +1350,7 @@ stream {
             wallarm_unpack_response      {{ $location.Wallarm.UnpackResponse }};
             {{ range $parser := $location.Wallarm.ParserDisable }}wallarm_parser_disable {{ $parser }};
             {{ end }}
-            {{ if not (isLocationOkForWallarmAPIFW $location) }}
+            {{ if and (isServerOkForWallarmAPIFW $server) (not isLocationOkForWallarmAPIFW $location) }}
             wallarm_enable_apifw off;
             {{ end }}
             {{ end }}
