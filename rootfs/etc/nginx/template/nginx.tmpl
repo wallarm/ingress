@@ -739,6 +739,7 @@ http {
         keepalive_timeout 0;
         gzip off;
 
+        wallarm_mode off;
         access_log off;
 
         {{ if $cfg.EnableOpentracing }}
@@ -757,6 +758,11 @@ http {
         # Ensure that modsecurity will not run on an internal location as this is not accessible from outside
         {{ if $all.Cfg.EnableModsecurity }}
         modsecurity off;
+        {{ end }}
+
+        # Ensure that Wallarm will not run on an internal location as this is not accessible from outside
+        {{ if $cfg.EnableWallarm }}
+        wallarm_mode off;
         {{ end }}
 
         listen 127.0.0.1:{{ .StatusPort }};
@@ -1289,7 +1295,7 @@ stream {
         {{ end }}
 
         {{ if and $all.Cfg.EnableWallarm $all.Cfg.WallarmApiFwEnabled }}
-        # api firewall
+        # Wallarm API Firewall
         location ~ ^/wallarm-apifw(.*)$ {
             wallarm_mode off;
             access_log off;
