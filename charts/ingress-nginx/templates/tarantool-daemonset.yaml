@@ -26,6 +26,7 @@ spec:
     {{- if not .Values.controller.wallarm.existingSecret.enabled }}
       annotations:
         checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
+        checksum/cron: {{ .Values.controller.wallarm.cron.jobs | toJson | sha256sum }}
     {{- end }}
       labels:
         {{- include "ingress-nginx.selectorLabels" . | nindent 8 }}
