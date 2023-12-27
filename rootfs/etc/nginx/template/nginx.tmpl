@@ -703,7 +703,8 @@ http {
         }
         {{ end }}
 
-        {{ if and $all.Cfg.EnableWallarm $all.Cfg.WallarmAPIFwEnabled }}
+        {{ if ($all.Cfg.EnableWallarm) }}
+        {{ if and ($all.Cfg.WallarmAPIFwEnabled) (shouldEnableWallarmAPIFW $server) }}
         # Wallarm API Firewall
         location ~ ^/wallarm-apifw(.*)$ {
             wallarm_mode off;
@@ -718,10 +719,9 @@ http {
             access_log off;
             return 500 "API FW fallback";
         }
-        {{ end }}
-
-        {{ if and $all.Cfg.EnableWallarm (not $all.Cfg.WallarmAPIFwEnabled) }}
+        {{ else }}
         wallarm_enable_apifw off;
+        {{ end }}
         {{ end }}
 
         {{ template "SERVER" serverConfig $all $server }}

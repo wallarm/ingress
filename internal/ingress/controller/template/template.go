@@ -290,6 +290,7 @@ var funcMap = text_template.FuncMap{
 	"replace": func(old, new, src string) string { //nolint:predeclared // new is okay here
 		return strings.ReplaceAll(src, old, new)
 	},
+	"shouldEnableWallarmAPIFW": shouldEnableWallarmAPIFW,
 }
 
 // escapeLiteralDollar will replace the $ character with ${literal_dollar}
@@ -1868,4 +1869,39 @@ func buildCorsOriginRegex(corsOrigins []string) string {
 	}
 	originsRegex += ")$ ) { set $cors 'true'; }"
 	return originsRegex
+}
+
+func shouldEnableWallarmAPIFW(s interface{}) bool {
+	server, ok := s.(*ingress.Server)
+	if !ok {
+		klog.Errorf("expected an '*ingress.Server' type but %T was returned", s)
+		return false
+	}
+	// Check server locations.
+	// If wallarm is enabled for any server location with  backend proto that is
+	// unsupported by Wallarm APIFW, disable Wallarm APIFW for that server
+	wallarmIsUsedSomewhere := false
+	for _, location := range server.Locations {
+		// do not count locations with wallarm disabled
+		if location.Wallarm.Mode == "off" {
+			continue
+		} else {
+			wallarmIsUsedSomewhere = true
+		}
+		switch strings.ToUpper(location.BackendProtocol) {
+		case autoHTTPProtocol:
+			continue
+		case httpProtocol:
+			continue
+		case httpsProtocol:
+			continue
+		case grpcProtocol:
+			return false
+		case grpcsProtocol:
+			return false
+		case fcgiProtocol:
+			return false
+		}
+	}
+	return wallarmIsUsedSomewhere
 }
