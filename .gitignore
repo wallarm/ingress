@@ -63,3 +63,4 @@ tmp/
 test/junitreports/
 wallarm-*.tar.gz
 allure_report
+tests/__snapshot__

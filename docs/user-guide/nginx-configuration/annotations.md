@@ -50,6 +50,7 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/client-body-buffer-size](#client-body-buffer-size)|string|
 |[nginx.ingress.kubernetes.io/configuration-snippet](#configuration-snippet)|string|
 |[nginx.ingress.kubernetes.io/custom-http-errors](#custom-http-errors)|[]int|
+|[nginx.ingress.kubernetes.io/disable-proxy-intercept-errors](#disable-proxy-intercept-errors)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/default-backend](#default-backend)|string|
 |[nginx.ingress.kubernetes.io/enable-cors](#enable-cors)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/cors-allow-origin](#enable-cors)|string|
@@ -330,6 +331,17 @@ Example usage:
 nginx.ingress.kubernetes.io/custom-http-errors: "404,415"
 ```
 
+## Disable Proxy intercept Errors
+
+Like the [`disable-proxy-intercept-errors`](./configmap.md#disable-proxy-intercept-errors) value in the ConfigMap, this annotation allows to disable NGINX `proxy-intercept-errors` when `custom-http-errors` are set, but only for the NGINX location associated with this ingress. If a [default backend annotation](#default-backend) is specified on the ingress, the errors will be routed to that annotation's default backend service (instead of the global default backend).
+Different ingresses can specify different sets of errors codes and there are UseCases where NGINX shall not intercept all errors returned from upstream.
+If `disable-proxy-intercept-errors` is also specified globally, the annotation will override the global value for the given ingress' hostname and path.
+
+Example usage:
+```
+nginx.ingress.kubernetes.io/disable-proxy-intercept-errors: "false"
+```
+
 ### Default Backend
 
 This annotation is of the form `nginx.ingress.kubernetes.io/default-backend: <svc name>` to specify a custom default backend.  This `<svc name>` is a reference to a service inside of the same namespace in which you are applying this annotation. This annotation overrides the global default backend. In case the service has [multiple ports](https://kubernetes.io/docs/concepts/services-networking/service/#multi-port-services), the first one is the one which will receive the backend traffic. 
@@ -517,7 +529,7 @@ Since version 1.9.0, `"auth-snippet"` annotation is disabled by default and has 
 
 #### Global External Authentication
 
-By default the controller redirects all requests to an existing service that provides authentication if `global-auth-url` is set in the NGINX ConfigMap. If you want to disable this behavior for that ingress, you can use `enable-global-auth: "false"` in the NGINX ConfigMap.
+By default the controller redirects all requests to an existing service that provides authentication if `global-auth-url` is set in the NGINX ConfigMap. If you want to disable this behavior for a specific ingress, you can use the annotation `nginx.ingress.kubernetes.io/enable-global-auth: "false"`.
 `nginx.ingress.kubernetes.io/enable-global-auth`:
    indicates if GlobalExternalAuth configuration should be applied or not to this Ingress rule. Default values is set to `"true"`.
 

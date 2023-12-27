@@ -86,7 +86,7 @@ fi
 
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   if ! command -v ginkgo &> /dev/null; then
-    go install github.com/onsi/ginkgo/v2/ginkgo@v2.13.0
+    go install github.com/onsi/ginkgo/v2/ginkgo@v2.13.1
   fi
   echo "[dev-env] building image"
   make -C "${CURDIR}" clean-image build image
