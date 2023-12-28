@@ -703,12 +703,12 @@ http {
         }
         {{ end }}
 
-        {{ if and $all.Cfg.EnableWallarm $all.Cfg.WallarmApiFwEnabled }}
+        {{ if and $all.Cfg.EnableWallarm $all.Cfg.WallarmAPIFwEnabled }}
         # Wallarm API Firewall
         location ~ ^/wallarm-apifw(.*)$ {
             wallarm_mode off;
             access_log off;
-            proxy_pass http://127.0.0.2:{{ $all.Cfg.WallarmApiFwPort }}$1;
+            proxy_pass http://127.0.0.2:{{ $all.Cfg.WallarmAPIFwPort }}$1;
             error_page 404 431         = @wallarm-apifw-fallback;
             error_page 500 502 503 504 = @wallarm-apifw-fallback;
         }
@@ -720,7 +720,7 @@ http {
         }
         {{ end }}
 
-        {{ if and $all.Cfg.EnableWallarm (not $all.Cfg.WallarmApiFwEnabled) }}
+        {{ if and $all.Cfg.EnableWallarm (not $all.Cfg.WallarmAPIFwEnabled) }}
         wallarm_enable_apifw off;
         {{ end }}
 
