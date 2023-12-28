@@ -62,7 +62,7 @@ The following table shows a configuration option's name, type, and the default v
 |[http2-max-concurrent-streams](#http2-max-concurrent-streams)|int|128||
 |[hsts](#hsts)|bool|"true"||
 |[hsts-include-subdomains](#hsts-include-subdomains)|bool|"true"||
-|[hsts-max-age](#hsts-max-age)|string|"15724800"||
+|[hsts-max-age](#hsts-max-age)|string|"31536000"||
 |[hsts-preload](#hsts-preload)|bool|"false"||
 |[keep-alive](#keep-alive)|int|75||
 |[keep-alive-requests](#keep-alive-requests)|int|1000||
@@ -164,7 +164,7 @@ The following table shows a configuration option's name, type, and the default v
 |[enable-opentelemetry](#enable-opentelemetry)|bool|"false"||
 |[opentelemetry-trust-incoming-span](#opentelemetry-trust-incoming-span)|bool|"true"||
 |[opentelemetry-operation-name](#opentelemetry-operation-name)|string|""||
-|[opentelemetry-config](#/etc/nginx/opentelemetry.toml)|string|"/etc/nginx/opentelemetry.toml"||
+|[opentelemetry-config](#/etc/ingress-controller/telemetry/opentelemetry.toml)|string|"/etc/ingress-controller/telemetry/opentelemetry.toml"||
 |[otlp-collector-host](#otlp-collector-host)|string|""||
 |[otlp-collector-port](#otlp-collector-port)|int|4317||
 |[otel-max-queuesize](#otel-max-queuesize)|int|||
@@ -180,6 +180,7 @@ The following table shows a configuration option's name, type, and the default v
 |[stream-snippet](#stream-snippet)|string|""||
 |[location-snippet](#location-snippet)|string|""||
 |[custom-http-errors](#custom-http-errors)|[]int|[]int{}||
+|[disable-proxy-intercept-errors](#disable-proxy-intercept-errors)|bool|"false"|
 |[proxy-body-size](#proxy-body-size)|string|"1m"||
 |[proxy-connect-timeout](#proxy-connect-timeout)|int|5||
 |[proxy-read-timeout](#proxy-read-timeout)|int|60||
@@ -218,6 +219,7 @@ The following table shows a configuration option's name, type, and the default v
 |[global-auth-snippet](#global-auth-snippet)|string|""||
 |[global-auth-cache-key](#global-auth-cache-key)|string|""||
 |[global-auth-cache-duration](#global-auth-cache-duration)|string|"200 202 401 5m"||
+|[global-auth-always-set-cookie](#global-auth-always-set-cookie)|bool|"false"||
 |[no-auth-locations](#no-auth-locations)|string|"/.well-known/acme-challenge"||
 |[block-cidrs](#block-cidrs)|[]string|""||
 |[block-user-agents](#block-user-agents)|[]string|""||
@@ -1128,9 +1130,17 @@ You can not use this to add new locations that proxy to the Kubernetes pods, as 
 
 Enables which HTTP codes should be passed for processing with the [error_page directive](https://nginx.org/en/docs/http/ngx_http_core_module.html#error_page)
 
-Setting at least one code also enables [proxy_intercept_errors](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_intercept_errors) which are required to process error_page.
+Setting at least one code also enables [proxy_intercept_errors](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_intercept_errors) if not disabled with [disable-proxy-intercept-errors](#disable-proxy-intercept-errors).
 
 Example usage: `custom-http-errors: 404,415`
+
+## disable-proxy-intercept-errors
+
+Allows to disable [proxy-intercept-errors](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_intercept_errors).
+
+Disabling [proxy_intercept_errors](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_intercept_errors) allows to pass upstream errors to client even if [custom-http-errors](#custom-http-errors) are set.
+
+Example usage: `disable-proxy-intercept-errors: "true"`
 
 ## proxy-body-size
 
@@ -1289,7 +1299,7 @@ _**default:**_ "/.well-known/acme-challenge"
 
 A url to an existing service that provides authentication for all the locations.
 Similar to the Ingress rule annotation `nginx.ingress.kubernetes.io/auth-url`.
-Locations that should not get authenticated can be listed using `no-auth-locations` See [no-auth-locations](#no-auth-locations). In addition, each service can be excluded from authentication via annotation `enable-global-auth` set to "false".
+Locations that should not get authenticated can be listed using `no-auth-locations` See [no-auth-locations](#no-auth-locations). In addition, each service can be excluded from authentication via annotation `nginx.ingress.kubernetes.io/enable-global-auth` set to "false".
 _**default:**_ ""
 
 _References:_ [https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/annotations.md#external-authentication](https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/annotations.md#external-authentication)

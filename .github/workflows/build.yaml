@@ -158,4 +158,3 @@ jobs:
           retention-days: 30
           name: ${{ steps.sign.outputs.sbom }}
           path: ${{ steps.sign.outputs.sbom }}
-
