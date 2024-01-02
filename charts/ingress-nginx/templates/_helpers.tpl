@@ -93,6 +93,14 @@ Get specific paths
 {{- end }}
 {{- end -}}
 
+{{- define "wallarm-apifw.path" -}}
+{{- if .Values.controller.image.chroot -}}
+{{- printf "/chroot/opt/wallarm/var/lib/wallarm-api" -}}
+{{- else -}}
+{{- printf "/opt/wallarm/var/lib/wallarm-api" -}}
+{{- end }}
+{{- end -}}
+
 {{/*
 Get specific image
 */}}
@@ -241,6 +249,8 @@ Create the name of the controller service account to use
     name: wallarm
   - mountPath: {{ include "wallarm-acl.path" . }}
     name: wallarm-acl
+  - mountPath: {{ include "wallarm-apifw.path" . }}
+    name: wallarm-apifw
   - mountPath: /secrets/wallarm/token
     name: wallarm-token
     subPath: token
@@ -274,6 +284,8 @@ Create the name of the controller service account to use
     name: wallarm
   - mountPath: {{ include "wallarm-acl.path" . }}
     name: wallarm-acl
+  - mountPath: {{ include "wallarm-apifw.path" . }}
+    name: wallarm-apifw
   - mountPath: /opt/cron/crontab
     name: wallarm-cron
     subPath: crontab
@@ -313,6 +325,54 @@ Create the name of the controller service account to use
   securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
   resources:
 {{ toYaml .Values.controller.wallarm.collectd.resources | indent 4 }}
+{{- end -}}
+
+{{- define "ingress-nginx.wallarmapiFirewallContainer" -}}
+- name: api-firewall
+{{- if .Values.controller.wallarm.apiFirewall.image }}
+  {{- with .Values.controller.wallarm.apiFirewall.image }}
+  image: "{{ .repository }}:{{ .tag }}"
+  {{- end }}
+{{- else }}
+  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
+{{- end }}
+  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+  args: ["api-firewall"]
+  env:
+    - name: APIFW_SPECIFICATION_UPDATE_PERIOD
+      value: "{{ .Values.controller.wallarm.apiFirewall.config.specificationUpdatePeriod }}"
+    - name: API_MODE_UNKNOWN_PARAMETERS_DETECTION
+      value: "{{ .Values.controller.wallarm.apiFirewall.config.unknownParametersDetection }}"
+    - name: APIFW_URL
+      value: "http://0.0.0.0:{{ .Values.controller.wallarm.apiFirewall.config.mainPort }}"
+    - name: APIFW_HEALTH_HOST
+      value: "0.0.0.0:{{ .Values.controller.wallarm.apiFirewall.config.healthPort }}"
+    - name: APIFW_LOG_LEVEL
+      value: "{{ .Values.controller.wallarm.apiFirewall.config.logLevel }}"
+    - name: APIFW_LOG_FORMAT
+      value: "{{ .Values.controller.wallarm.apiFirewall.config.logFormat }}"
+    - name: APIFW_MODE
+      value: api
+    - name: APIFW_READ_TIMEOUT
+      value: 5s
+    - name: APIFW_WRITE_TIMEOUT
+      value: 5s
+    - name: APIFW_API_MODE_DEBUG_PATH_DB
+      value: "{{ include "wallarm-apifw.path" . }}/1/wallarm_api.db"
+  volumeMounts:
+    - name: wallarm-apifw
+      mountPath: {{ include "wallarm-apifw.path" . }}
+  securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
+  resources: {{ toYaml .Values.controller.wallarm.apiFirewall.resources | nindent 4 }}
+  ports:
+    - name: health
+      containerPort: {{ .Values.controller.wallarm.apiFirewall.config.healthPort }}
+{{- if .Values.controller.wallarm.apiFirewall.livenessProbeEnabled }}
+  livenessProbe: {{ toYaml .Values.controller.wallarm.apiFirewall.livenessProbe | nindent 4 }}
+{{- end }}
+{{- if .Values.controller.wallarm.apiFirewall.readinessProbeEnabled }}
+  readinessProbe: {{ toYaml .Values.controller.wallarm.apiFirewall.readinessProbe | nindent 4 }}
+{{- end }}
 {{- end -}}
 
 {{/*

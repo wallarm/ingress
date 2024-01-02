@@ -287,6 +287,8 @@ var funcMap = text_template.FuncMap{
 	"replace": func(old, new, src string) string { //nolint:predeclared // new is okay here
 		return strings.ReplaceAll(src, old, new)
 	},
+	"isLocationOkForWallarmAPIFW": isLocationOkForWallarmAPIFW,
+	"isServerOkForWallarmAPIFW":   isServerOkForWallarmAPIFW,
 }
 
 // escapeLiteralDollar will replace the $ character with ${literal_dollar}
@@ -1757,4 +1759,49 @@ func buildCorsOriginRegex(corsOrigins []string) string {
 	}
 	originsRegex += ")$ ) { set $cors 'true'; }"
 	return originsRegex
+}
+
+// Location is suitable for Wallarm APIFW if wallarm_mode is not "off" and
+// backend protocol is supported
+func isLocationOkForWallarmAPIFW(l interface{}) bool {
+	location, ok := l.(*ingress.Location)
+	if !ok {
+		klog.Errorf("expected an '*ingress.Location' type but %T was returned", l)
+		return false
+	}
+	if location.Wallarm.Mode == "off" {
+		return false
+	}
+	switch strings.ToUpper(location.BackendProtocol) {
+	case autoHTTPProtocol:
+		return true
+	case httpProtocol:
+		return true
+	case httpsProtocol:
+		return true
+	case grpcProtocol:
+		return false
+	case grpcsProtocol:
+		return false
+	case fcgiProtocol:
+		return false
+	}
+	return false
+}
+
+// Server is suitable for Wallarm APIFW if at least one of its location is.
+// See `isLocationOkForWallarmAPIFW()`
+func isServerOkForWallarmAPIFW(s interface{}) bool {
+	server, ok := s.(*ingress.Server)
+	if !ok {
+		klog.Errorf("expected an '*ingress.Server' type but %T was returned", s)
+		return false
+	}
+
+	for _, location := range server.Locations {
+		if isLocationOkForWallarmAPIFW(location) {
+			return true
+		}
+	}
+	return false
 }

@@ -698,6 +698,27 @@ http {
         }
         {{ end }}
 
+        {{ if ($all.Cfg.EnableWallarm) }}
+        {{ if and ($all.Cfg.WallarmAPIFwEnabled) (isServerOkForWallarmAPIFW $server) }}
+        # Wallarm API Firewall
+        location ~ ^/wallarm-apifw(.*)$ {
+            wallarm_mode off;
+            access_log off;
+            proxy_pass http://127.0.0.2:{{ $all.Cfg.WallarmAPIFwPort }}$1;
+            error_page 404 431         = @wallarm-apifw-fallback;
+            error_page 500 502 503 504 = @wallarm-apifw-fallback;
+        }
+
+        location @wallarm-apifw-fallback {
+            wallarm_mode off;
+            access_log off;
+            return 500 "API FW fallback";
+        }
+        {{ else }}
+        wallarm_enable_apifw off;
+        {{ end }}
+        {{ end }}
+
         {{ template "SERVER" serverConfig $all $server }}
 
         {{ if not (empty $cfg.ServerSnippet) }}
@@ -734,6 +755,7 @@ http {
         keepalive_timeout 0;
         gzip off;
 
+        wallarm_mode off;
         access_log off;
 
         location ~ ^/(wallarm-metrics|metrics) {
@@ -748,6 +770,11 @@ http {
         # Ensure that modsecurity will not run on an internal location as this is not accessible from outside
         {{ if $all.Cfg.EnableModsecurity }}
         modsecurity off;
+        {{ end }}
+
+        # Ensure that Wallarm will not run on an internal location as this is not accessible from outside
+        {{ if $cfg.EnableWallarm }}
+        wallarm_mode off;
         {{ end }}
 
         listen 127.0.0.1:{{ .StatusPort }};
@@ -1304,6 +1331,9 @@ stream {
             wallarm_parse_websocket      {{ $location.Wallarm.ParseWebsocket }};
             wallarm_unpack_response      {{ $location.Wallarm.UnpackResponse }};
             {{ range $parser := $location.Wallarm.ParserDisable }}wallarm_parser_disable {{ $parser }};
+            {{ end }}
+            {{ if and (isServerOkForWallarmAPIFW $server) (not (isLocationOkForWallarmAPIFW $location)) }}
+            wallarm_enable_apifw off;
             {{ end }}
             {{ end }}
 
