@@ -55,6 +55,7 @@ export DOCKER_CLI_EXPERIMENTAL=enabled
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 export WALLARM_ENABLED="${WALLARM_ENABLED:-false}"
 export WALLARM_API_TOKEN="${WALLARM_API_TOKEN:-}"
+export WALLARM_API_HOST="${WALLARM_API_HOST:-}"
 SKIP_INGRESS_IMAGE_CREATION="${SKIP_INGRESS_IMAGE_CREATION:-false}"
 SKIP_E2E_IMAGE_CREATION="${SKIP_E2E_IMAGE_CREATION:=false}"
 SKIP_CLUSTER_CREATION="${SKIP_CLUSTER_CREATION:-false}"
@@ -127,6 +128,10 @@ fi
 if [ "${WALLARM_ENABLED}" == "true" ]; then
   if [ -z "${WALLARM_API_TOKEN}" ]; then
     echo "WALLARM_API_TOKEN must be set! Exiting ..."
+    exit 1
+  fi
+  if [ -z "${WALLARM_API_HOST}" ]; then
+    echo "WALLARM_API_HOST must be set! Exiting ..."
     exit 1
   fi
 fi
