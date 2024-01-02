@@ -48,6 +48,8 @@ function get_logs() {
     kubectl logs -l "app.kubernetes.io/component=controller" -c controller --tail=-1
     echo "###### Cron container logs ######"
     kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
+    echo "###### API-WF container logs ######"
+    kubectl logs -l "app.kubernetes.io/component=controller" -c api-firewall --tail=-1 || true
     echo "###### List directory /opt/wallarm/etc/wallarm"
     kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/etc/wallarm && cat /opt/wallarm/etc/wallarm/node.yaml" || true
     echo "###### List directory /var/lib/nginx/wallarm"
@@ -103,7 +105,6 @@ if [[ -z "${NODE_UUID}" ]]; then
 fi
 echo "UUID: ${NODE_UUID}"
 
-
 RAND_NUM="${RANDOM}${RANDOM}${RANDOM}"
 RAND_NUM=${RAND_NUM:0:10}
 
@@ -137,6 +138,7 @@ spec:
     - {name: ALLURE_PROJECT_ID, value: "${ALLURE_PROJECT_ID:-}"}
     - {name: ALLURE_TOKEN, value: "${ALLURE_TOKEN:-}"}
     - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS:-/tests/_out/allure_report}"}
+    - {name: TEST_RC, value: "${TEST_RC:-false}"}
     - name: ALLURE_LAUNCH_TAGS
       value: >
         USER:${GITHUB_ACTOR:-local},
@@ -160,8 +162,8 @@ spec:
     hostPath: {path: /allure_report, type: DirectoryOrCreate}
 EOF
 
-echo "Getting logs ..."
-kubectl wait --for=condition=Ready pods --all --timeout=600s
+echo "Waiting for all pods ready ..."
+kubectl wait --for=condition=Ready pods --all --timeout=300s
 
 echo "Run smoke tests ..."
 GITHUB_VARS=$(env | awk -F '=' '/^GITHUB_/ {vars = vars $1 "=" $2 " ";} END {print vars}')
@@ -169,5 +171,5 @@ RUN_TESTS=$([ "$ALLURE_UPLOAD_REPORT" = "true" ] && echo "allurectl watch --job-
 
 EXEC_CMD="env $GITHUB_VARS $RUN_TESTS -n ${PYTEST_WORKERS} ${PYTEST_ARGS}"
 # shellcheck disable=SC2086
-kubectl exec pytest ${EXEC_ARGS} -- ${EXEC_CMD} || { get_logs_and_fail; exit 1; }
+kubectl exec pytest ${EXEC_ARGS} -- ${EXEC_CMD} || get_logs_and_fail
 clear_allure_report
