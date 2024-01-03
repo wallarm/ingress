@@ -13,40 +13,45 @@ data:
   crontab: |
     {{- with .Values.controller.wallarm.cron.jobs.exportAttacks }}
     # export-attacks
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-attacks -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-attacks -l STDOUT -L {{ .logLevel }}
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.exportCounters }}
     # export-counters
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-counters -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-counters -l STDOUT -L {{ .logLevel }}
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.exportEnvironment }}
     # export-environment
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT -L {{ .logLevel }}
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.bruteDetect }}
     # brute-detect
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/brute-detect -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/brute-detect -l STDOUT -L {{ .logLevel }}
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.syncMarkers }}
     # sync-markers
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-markers -l STDOUT
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-markers -l STDOUT -L {{ .logLevel }}
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.weakJwtDetect }}
     # weak-jwt-detect
-    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/weak-jwt-detect -l STDOUT
+    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/weak-jwt-detect -l STDOUT -L {{ .logLevel }}
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.syncNode }}
     # sync-node
-    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L DEBUG
+    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L {{ .logLevel }}
     {{- end }}
 
     {{- with .Values.controller.wallarm.cron.jobs.exportBlockedStat }}
     # export-blocked-stats
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-blocked-stats -l STDOUT -L DEBUG
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-blocked-stats -l STDOUT -L {{ .logLevel }}
+    {{- end }}
+
+    {{- with .Values.controller.wallarm.cron.jobs.detectCredStuffing }}
+    # detect-cred-stuffing
+    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/detect-cred-stuffing -l STDOUT -L {{ .logLevel }}
     {{- end }}

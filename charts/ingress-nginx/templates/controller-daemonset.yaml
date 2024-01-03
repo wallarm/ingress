@@ -83,7 +83,7 @@ spec:
       containers:
         - name: {{ .Values.controller.containerName }}
           {{- with .Values.controller.image }}
-          image: {{ if .repository }}{{ .repository }}{{ else }}{{ .registry }}/{{ include "ingress-nginx.image" . }}{{ end }}:{{ .tag }}{{ include "ingress-nginx.imageDigest" . }}
+          image: "{{ if .repository }}{{ .repository }}{{ else }}{{ .registry }}/{{ include "ingress-nginx.image" . }}{{ end }}:{{ .tag }}{{ include "ingress-nginx.imageDigest" . }}"
           {{- end }}
           imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
         {{- if .Values.controller.lifecycle }}
@@ -197,6 +197,9 @@ spec:
       {{- if .Values.controller.wallarm.enabled }}
         {{ include "ingress-nginx.wallarmCronContainer" . | nindent 8 }}
         {{ include "ingress-nginx.wallarmCollectdContainer" . | nindent 8 }}
+        {{- if .Values.controller.wallarm.apiFirewall.enabled }}
+        {{ include "ingress-nginx.wallarmapiFirewallContainer" . | nindent 8 }}
+        {{- end }}
       {{- end }}
     {{- if (or .Values.controller.extraInitContainers .Values.controller.extraModules .Values.controller.opentelemetry.enabled .Values.controller.wallarm.enabled) }}
       initContainers:
@@ -248,6 +251,8 @@ spec:
         - name: wallarm
           emptyDir: {}
         - name: wallarm-cache
+          emptyDir: {}
+        - name: wallarm-apifw
           emptyDir: {}
         - name: wallarm-cron
           configMap:

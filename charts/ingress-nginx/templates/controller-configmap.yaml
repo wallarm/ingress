@@ -18,6 +18,8 @@ data:
   enable-wallarm: "{{ .Values.controller.wallarm.enabled }}"
   wallarm-upstream-service: "{{ include "ingress-nginx.controller.fullname" . }}-wallarm-tarantool"
   wallarm-metrics-port: "{{ .Values.controller.wallarm.metrics.port }}"
+  wallarm-apifw-enabled: "{{ .Values.controller.wallarm.apiFirewall.enabled }}"
+  wallarm-apifw-port: "{{ .Values.controller.wallarm.apiFirewall.config.mainPort }}"
 {{- if .Values.controller.wallarm.fallback }}
   wallarm-fallback: "{{ .Values.controller.wallarm.fallback }}"
 {{- end }}

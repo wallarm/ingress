@@ -12,7 +12,7 @@ jobs:
   release:
     runs-on: self-hosted-amd64-1cpu
     outputs:
-      chart_version: ${{ steps.extract_tag.outputs.tag }}
+      chart_version: ${{ steps.check_release.outputs.tag }}
       release_type: ${{ steps.check_release.outputs.type }}
     steps:
       - name: Import secrets
@@ -25,61 +25,37 @@ jobs:
           method: kubernetes
           path: kubernetes-ci
           secrets: |
-            kv-gitlab-ci/data/github/shared/github_token token | GITHUB_TOKEN ;
+            kv-gitlab-ci/data/github/shared/github_token token ;
 
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-
-      - name: Extract tag name
-        id: extract_tag
-        run: |
-          X_TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/[+-].*$//g')
-          echo "X_TAG=${X_TAG}" >> $GITHUB_ENV
-          echo "tag=${X_TAG}" >> $GITHUB_OUTPUT
 
       - name: Check release type
         id: check_release
         run: |
           TYPE="production"
+          TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/[+-].*$//g')
           if [[ ${GITHUB_REF#refs/*/} =~ "rc" ]]; then
             TYPE="release-candidate"
+            TAG=${GITHUB_REF#refs/*/}
           fi
-          echo "Release type: ${TYPE}"
+          echo -e "Type: ${TYPE} \nTag: ${TAG}"
           echo "type=${TYPE}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
-      - name: Publish Helm charts (Prod)
-        if: steps.check_release.outputs.type == 'production'
-        uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # master
+      - name: Publish Helm chart
+        if: steps.check_release.outputs.type == 'release-candidate'
+        uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260
         with:
-          token: ${{ steps.secrets.outputs.GITHUB_TOKEN }}
+          token: ${{ steps.secrets.outputs.token }}
           charts_dir: ./charts
           charts_url: https://charts.wallarm.com
           linting: off
           repository: helm-charts
           branch: main
-          target_dir: "wallarm-ingress"
+          target_dir: wallarm-ingress
           index_dir: .
-          app_version: "${{ env.X_TAG }}"
-          chart_version: "${{ env.X_TAG }}"
-
-      - name: Update chart name for RC versions
-        if: steps.check_release.outputs.type == 'release-candidate'
-        run: yq -y -i '.name = "wallarm-ingress-rc"' ./charts/ingress-nginx/Chart.yaml
-
-      - name: Publish Helm charts (RC)
-        if: steps.check_release.outputs.type == 'release-candidate'
-        uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260 # master
-        with:
-          token: ${{ steps.secrets.outputs.GITHUB_TOKEN }}
-          charts_dir: ./charts
-          charts_url: https://charts.wallarm.com
-          linting: off
-          repository: helm-charts
-          branch: main
-          target_dir: "wallarm-ingress-rc"
-          index_dir: .
-          app_version: "${{ env.X_TAG }}"
-          chart_version: "${{ env.X_TAG }}"
+          chart_version: ${{ steps.check_release.outputs.tag }}
 
   update_version:
     name: Update package version
@@ -88,7 +64,7 @@ jobs:
     needs: release
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74 # v2.7.4
+        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
         id: secrets
         with:
           exportEnv: true
