@@ -936,7 +936,7 @@ controller:
       ## The image name and tag for the helper image
       ##
       image: docker.io/wallarm/node-helpers
-      tag: 4.10.0-1
+      tag: 4.10.0-2
     tarantool:
       kind: Deployment
       service:
@@ -949,9 +949,16 @@ controller:
         periodSeconds: 10
         successThreshold: 1
         timeoutSeconds: 1
+      ## Additional annotations for Tarantool pod
+      ##
+      podAnnotations: {}
+      ## Additional labels for Tarantool pod
+      ##
+      podLabels: {}
       resources: {}
       terminationGracePeriodSeconds: 30
       ## Configuration for Tarantool pod assigment
+      ##
       affinity: {}
       tolerations: []
       topologySpreadConstraints: []
@@ -988,57 +995,36 @@ controller:
     addnode:
       resources: {}
     cron:
-      jobs:
+      commands:
         exportEnvironment:
           logLevel: INFO
-          schedule: "0 */1 * * *"
-          timeout: 10m
         exportAttacks:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 3h
         exportCounters:
           logLevel: ERROR
-          schedule: "* * * * *"
-          timeout: 11m
         bruteDetect:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 6m
         syncIpLists:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 3h
         exportMetrics:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 3h
         syncIpListsSource:
           logLevel: INFO
-          schedule: "*/5 * * * *"
-          timeout: 3h
         syncMarkers:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 1h
         syncNode:
           logLevel: INFO
-          schedule: "*/2 * * * *"
         weakJwtDetect:
           logLevel: INFO
-          schedule: "* * * * *"
         exportBlockedStat:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 24h
         detectCredStuffing:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 3h
         syncApiSpecs:
           logLevel: INFO
-          schedule: "* * * * *"
-          timeout: 10m
+      ### Supervisord log level (blather|trace|debug|info|warn|error|critical)
+      ### Ref: http://supervisord.org/logging.html
+      logLevel: warn
       resources: {}
     collectd:
       resources: {}
@@ -1051,9 +1037,9 @@ controller:
         healthPort: 18082
         specificationUpdatePeriod: 1m
         unknownParametersDetection: true
-        #### TRACE|DEBUG|INFO|WARNING|ERROR
-        logLevel: DEBUG
-        ### TEXT|JSON
+        #### Log level RACE|DEBUG|INFO|WARNING|ERROR
+        logLevel: INFO
+        ### Log format TEXT|JSON
         logFormat: TEXT
       resources: {}
       livenessProbeEnabled: false

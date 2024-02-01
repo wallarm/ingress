@@ -270,7 +270,7 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["cron"]
+  args: ["supervisord"]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -286,9 +286,9 @@ Create the name of the controller service account to use
     name: wallarm-acl
   - mountPath: {{ include "wallarm-apifw.path" . }}
     name: wallarm-apifw
-  - mountPath: /opt/cron/crontab
+  - mountPath: /opt/supervisord/supervisord.conf
     name: wallarm-cron
-    subPath: crontab
+    subPath: supervisord.conf
     readOnly: true
   - mountPath: /secrets/wallarm/token
     name: wallarm-token
