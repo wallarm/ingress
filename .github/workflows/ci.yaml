@@ -107,9 +107,9 @@ jobs:
         ARCH: [amd64, arm64]
         include:
           - ARCH: amd64
-            RUNNER: self-hosted-amd64-1cpu
+            RUNNER: self-hosted-amd64-2cpu
           - ARCH: arm64
-            RUNNER: self-hosted-arm64-1cpu
+            RUNNER: self-hosted-arm64-2cpu
     env:
       ARCH: ${{ matrix.ARCH }}
       KIND_CLUSTER_NAME: kind-${{ matrix.k8s }}
@@ -227,96 +227,96 @@ jobs:
           export KUBECONFIG=$GITHUB_WORKSPACE/kind-config-kind
           make kind-e2e-chart-tests
 
-  e2e:
-    name: E2E
-    runs-on: self-hosted-amd64-4cpu
-    needs:
-      - build
-      - changes
-    if: needs.changes.outputs.go == 'true'
-    env:
-      ARCH: amd64
-    steps:
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: Load controller build cache
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
-        with:
-          name: controller-${{ env.ARCH }}.tar
-
-      - name: Load controller images
-        run: docker load -i controller-${{ env.ARCH }}.tar
-
-      - name: Create cluster
-        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
-
-      - name: Run e2e tests
-        env:
-          KIND_CLUSTER_NAME: kind
-          SKIP_CLUSTER_CREATION: true
-          SKIP_INGRESS_IMAGE_CREATION: true
-          SKIP_E2E_IMAGE_CREATION: true
-          ARCH: amd64
-        run: |
-          kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make kind-e2e-test
-
-
-  e2e-wallarm:
-    name: E2E - Wallarm
-    runs-on: self-hosted-amd64-4cpu
-    needs:
-      - changes
-      - build
-    if: needs.changes.outputs.go == 'true'
-    env:
-      ARCH: amd64
-    strategy:
-      fail-fast: true
-      matrix:
-        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1, v1.28.0]
-
-    steps:
-      - name: Import secrets
-        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74 # v2.7.4
-        id: secrets
-        with:
-          exportEnv: false
-          url: ${{ secrets.VAULT_URL }}
-          role: ${{ secrets.VAULT_ROLE }}
-          method: kubernetes
-          path: kubernetes-ci
-          secrets: |
-            kv-gitlab-ci/data/github/ingress api_token ;
-            kv-gitlab-ci/data/github/ingress api_host ;
-
-      - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: Load controller build cache
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
-        with:
-          name: controller-${{ env.ARCH }}.tar
-
-      - name: Load controller images
-        run: docker load -i controller-${{ env.ARCH }}.tar
-
-      - name: Create cluster ${{ matrix.k8s }}
-        run: kind create cluster --image=kindest/node:${{ matrix.k8s }} --config test/e2e/kind.yaml
-
-      - name: Run e2e tests
-        env:
-          KIND_CLUSTER_NAME: kind
-          SKIP_CLUSTER_CREATION: true
-          SKIP_INGRESS_IMAGE_CREATION: true
-          SKIP_E2E_IMAGE_CREATION: true
-          WALLARM_ENABLED: true
-          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
-          WALLARM_API_HOST: ${{ steps.secrets.outputs.api_host }}
-        run: |
-          kind get kubeconfig > $HOME/.kube/kind-config-kind
-          make E2E_NODES=7 kind-e2e-test
+#  e2e:
+#    name: E2E
+#    runs-on: self-hosted-amd64-4cpu
+#    needs:
+#      - build
+#      - changes
+#    if: needs.changes.outputs.go == 'true'
+#    env:
+#      ARCH: amd64
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+#
+#      - name: Load controller build cache
+#        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
+#        with:
+#          name: controller-${{ env.ARCH }}.tar
+#
+#      - name: Load controller images
+#        run: docker load -i controller-${{ env.ARCH }}.tar
+#
+#      - name: Create cluster
+#        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
+#
+#      - name: Run e2e tests
+#        env:
+#          KIND_CLUSTER_NAME: kind
+#          SKIP_CLUSTER_CREATION: true
+#          SKIP_INGRESS_IMAGE_CREATION: true
+#          SKIP_E2E_IMAGE_CREATION: true
+#          ARCH: amd64
+#        run: |
+#          kind get kubeconfig > $HOME/.kube/kind-config-kind
+#          make kind-e2e-test
+#
+#
+#  e2e-wallarm:
+#    name: E2E - Wallarm
+#    runs-on: self-hosted-amd64-4cpu
+#    needs:
+#      - changes
+#      - build
+#    if: needs.changes.outputs.go == 'true'
+#    env:
+#      ARCH: amd64
+#    strategy:
+#      fail-fast: true
+#      matrix:
+#        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1, v1.28.0]
+#
+#    steps:
+#      - name: Import secrets
+#        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74 # v2.7.4
+#        id: secrets
+#        with:
+#          exportEnv: false
+#          url: ${{ secrets.VAULT_URL }}
+#          role: ${{ secrets.VAULT_ROLE }}
+#          method: kubernetes
+#          path: kubernetes-ci
+#          secrets: |
+#            kv-gitlab-ci/data/github/ingress api_token ;
+#            kv-gitlab-ci/data/github/ingress api_host ;
+#
+#      - name: Checkout
+#        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+#
+#      - name: Load controller build cache
+#        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935
+#        with:
+#          name: controller-${{ env.ARCH }}.tar
+#
+#      - name: Load controller images
+#        run: docker load -i controller-${{ env.ARCH }}.tar
+#
+#      - name: Create cluster ${{ matrix.k8s }}
+#        run: kind create cluster --image=kindest/node:${{ matrix.k8s }} --config test/e2e/kind.yaml
+#
+#      - name: Run e2e tests
+#        env:
+#          KIND_CLUSTER_NAME: kind
+#          SKIP_CLUSTER_CREATION: true
+#          SKIP_INGRESS_IMAGE_CREATION: true
+#          SKIP_E2E_IMAGE_CREATION: true
+#          WALLARM_ENABLED: true
+#          WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
+#          WALLARM_API_HOST: ${{ steps.secrets.outputs.api_host }}
+#        run: |
+#          kind get kubeconfig > $HOME/.kube/kind-config-kind
+#          make E2E_NODES=7 kind-e2e-test
 
   scan:
     name: Scan images

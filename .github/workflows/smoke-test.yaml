@@ -18,7 +18,7 @@ permissions:
 jobs:
   smoke:
     name: Smoke
-    runs-on: self-hosted-amd64-1cpu
+    runs-on: self-hosted-amd64-2cpu
     strategy:
       fail-fast: false
       matrix:
