@@ -107,9 +107,9 @@ jobs:
         ARCH: [amd64, arm64]
         include:
           - ARCH: amd64
-            RUNNER: self-hosted-amd64-1cpu
+            RUNNER: self-hosted-amd64-2cpu
           - ARCH: arm64
-            RUNNER: self-hosted-arm64-1cpu
+            RUNNER: self-hosted-arm64-2cpu
     env:
       ARCH: ${{ matrix.ARCH }}
       KIND_CLUSTER_NAME: kind-${{ matrix.k8s }}
