@@ -1,7 +1,7 @@
 apiVersion: v2
 name: wallarm-ingress
-version: 4.10.0-rc4
-appVersion: 4.10.0-rc4
+version: 4.10.0
+appVersion: 4.10.0
 home: https://github.com/wallarm/ingress
 description: Ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer with Wallarm module
 icon: https://static.wallarm.com/wallarm-logo.svg
