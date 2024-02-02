@@ -171,4 +171,5 @@ kubectl apply -f "${DIR}"/workload.yaml
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] running smoke tests suite ..."
+sleep 60
 make -C "${DIR}"/../../ smoke-test
