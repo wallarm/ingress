@@ -18,7 +18,7 @@ permissions:
 jobs:
   smoke:
     name: Smoke
-    runs-on: self-hosted-amd64-1cpu
+    runs-on: self-hosted-amd64-2cpu
     strategy:
       fail-fast: false
       matrix:
@@ -74,6 +74,7 @@ jobs:
           ALLURE_PROJECT_ID: ${{ steps.secrets.outputs.allure_project_id }}
           ALLURE_ENVIRONMENT_K8S: ${{ matrix.k8s }}
           ALLURE_ENVIRONMENT_ARCH: amd64
+          TEST_RC: true
         run: |
           if [ ${{ github.event_name }} == 'workflow_dispatch' ];
           then

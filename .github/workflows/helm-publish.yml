@@ -44,7 +44,6 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Publish Helm chart
-        if: steps.check_release.outputs.type == 'release-candidate'
         uses: stefanprodan/helm-gh-pages@0ad2bb377311d61ac04ad9eb6f252fb68e207260
         with:
           token: ${{ steps.secrets.outputs.token }}

@@ -31,31 +31,85 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-20}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
-function clear_allure_report() {
+function clean_allure_report() {
   [[ "$ALLURE_GENERATE_REPORT" == false && -d "allure_report" ]] && rm -rf allure_report/* 2>/dev/null || true
 }
 
 function get_logs_and_fail() {
     get_logs
-    clear_allure_report
+    extra_debug_logs
+    clean_allure_report
     exit 1
 }
 
 function get_logs() {
+    echo "#################################"
     echo "###### Init container logs ######"
+    echo "#################################"
     kubectl logs -l "app.kubernetes.io/component=controller" -c addnode --tail=-1
+    echo -e "#################################\n"
+
+    echo "#######################################"
     echo "###### Controller container logs ######"
+    echo "#######################################"
     kubectl logs -l "app.kubernetes.io/component=controller" -c controller --tail=-1
+    echo -e "#######################################\n"
+
+    echo "#################################"
     echo "###### Cron container logs ######"
+    echo "#################################"
     kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
+    echo -e "#################################\n"
+
+    echo "###################################"
     echo "###### API-WF container logs ######"
+    echo "###################################"
     kubectl logs -l "app.kubernetes.io/component=controller" -c api-firewall --tail=-1 || true
-    echo "###### List directory /opt/wallarm/etc/wallarm"
+    echo -e "####################################\n"
+
+    echo "####################################################"
+    echo "###### List directory /opt/wallarm/etc/wallarm #####"
+    echo "####################################################"
     kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/etc/wallarm && cat /opt/wallarm/etc/wallarm/node.yaml" || true
+    echo -e "#####################################################\n"
+
+    echo "############################################"
     echo "###### List directory /var/lib/nginx/wallarm"
+    echo "############################################"
     kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/nginx/wallarm && ls -laht /opt/wallarm/var/lib/nginx/wallarm/shm" || true
-    echo "###### List directory /opt/wallarm/var/lib/wallarm-acl"
+    echo -e "############################################\n"
+
+    echo "############################################################"
+    echo "###### List directory /opt/wallarm/var/lib/wallarm-acl #####"
+    echo "############################################################"
     kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/wallarm-acl" || true
+    echo -e "############################################################\n"
+
+    echo "##################################################"
+    echo "###### TARANTOOL Pod - Cron container logs  ######"
+    echo "##################################################"
+    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-tarantool" -c cron --tail=-1
+    echo -e "##################################################\n"
+
+    echo "######################################################"
+    echo "###### TARANTOOL Pod - Tarantool container logs ######"
+    echo "######################################################"
+    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-tarantool" -c tarantool --tail=-1
+    echo -e "######################################################\n"
+}
+
+
+function extra_debug_logs {
+  echo "############################################"
+  echo "###### Extra cluster debug info ############"
+  echo "############################################"
+
+  echo "Grepping cluster OOMKilled events..."
+  kubectl get events -A | grep -i OOMKill || true
+
+  echo "Displaying pods state in default namespace..."
+  kubectl get pods
+
 }
 
 declare -a mandatory
@@ -98,12 +152,12 @@ fi
 
 echo "Retrieving Wallarm Node UUID ..."
 POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
-NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/node.yaml | grep uuid | awk '{print $2}')
+NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/node.yaml | grep uuid | awk '{print $2}' | xargs)
 if [[ -z "${NODE_UUID}" ]]; then
   echo "Failed to retrieve Wallarm Node UUID"
   get_logs_and_fail
 fi
-echo "UUID: ${NODE_UUID}"
+echo "Node UUID: ${NODE_UUID}"
 
 RAND_NUM="${RANDOM}${RANDOM}${RANDOM}"
 RAND_NUM=${RAND_NUM:0:10}
@@ -172,4 +226,5 @@ RUN_TESTS=$([ "$ALLURE_UPLOAD_REPORT" = "true" ] && echo "allurectl watch --job-
 EXEC_CMD="env $GITHUB_VARS $RUN_TESTS -n ${PYTEST_WORKERS} ${PYTEST_ARGS}"
 # shellcheck disable=SC2086
 kubectl exec pytest ${EXEC_ARGS} -- ${EXEC_CMD} || get_logs_and_fail
-clear_allure_report
+extra_debug_logs
+clean_allure_report

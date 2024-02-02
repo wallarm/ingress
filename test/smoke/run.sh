@@ -132,6 +132,12 @@ controller:
     apiHost: ${WALLARM_API_HOST}
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
     fallback: "off"
+    cron:
+      jobs:
+        detectCredStuffing:
+          logLevel: DEBUG
+        syncNode:
+          logLevel: DEBUG
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
@@ -165,4 +171,5 @@ kubectl apply -f "${DIR}"/workload.yaml
 kubectl wait --for=condition=Ready pods --all --timeout=60s
 
 echo "[test-env] running smoke tests suite ..."
+sleep 60
 make -C "${DIR}"/../../ smoke-test
