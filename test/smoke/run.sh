@@ -132,6 +132,12 @@ controller:
     apiHost: ${WALLARM_API_HOST}
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
     fallback: "off"
+    cron:
+      jobs:
+        detectCredStuffing:
+          logLevel: DEBUG
+        syncNode:
+          logLevel: DEBUG
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
