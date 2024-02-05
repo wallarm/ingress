@@ -23,14 +23,20 @@ spec:
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   template:
     metadata:
-    {{- if not .Values.controller.wallarm.existingSecret.enabled }}
       annotations:
+        checksum/cron: {{ .Values.controller.wallarm.cron | toJson | sha256sum }}
+      {{- if not .Values.controller.wallarm.existingSecret.enabled }}
         checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
-        checksum/cron: {{ .Values.controller.wallarm.cron.jobs | toJson | sha256sum }}
-    {{- end }}
+      {{- end }}
+      {{- with .Values.controller.wallarm.tarantool.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         {{- include "ingress-nginx.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: {{ template "ingress-nginx.wallarmTarantoolName" . }}
+      {{- with .Values.controller.wallarm.tarantool.podLabels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
     {{- if .Values.controller.wallarm.imagePullSecrets }}
       imagePullSecrets: {{ toYaml .Values.controller.wallarm.imagePullSecrets | nindent 8 }}
