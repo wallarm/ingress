@@ -16,7 +16,7 @@ jobs:
       release_type: ${{ steps.check_release.outputs.type }}
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74 # v2.7.4
+        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
         id: secrets
         with:
           exportEnv: false
@@ -63,7 +63,7 @@ jobs:
     needs: release
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74
+        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371
         id: secrets
         with:
           exportEnv: true
