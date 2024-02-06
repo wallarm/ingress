@@ -339,7 +339,7 @@ jobs:
         run: docker load -i controller-${{ env.ARCH }}.tar
 
       - name: Scan controller image
-        uses: anchore/scan-action@c35e932c2a7c572bfdb1c3dbcdadb2d4fc62418d
+        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a
         with:
           image: "wallarm/ingress-controller:1.0.0-dev"
           fail-build: true
