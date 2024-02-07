@@ -24,8 +24,9 @@ data:
         }
         # Location for API discovery test
         location /api-discovery-test {
-          return 200;
-          default_type application/json;
+            add_header Api-Discovery-Header "Hello, I am header!";
+            return 200 '{"json_response": "Hello, I am json"}';
+            default_type application/json;
         }
         # Some mocks for test_api_abuse_prevention.py
         location /.git {
