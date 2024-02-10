@@ -31,6 +31,9 @@ PYTEST_WORKERS="${PYTEST_WORKERS:-20}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
+# auto-resolve aio ver to later pass version to tests image to switch some tests on and off
+AIO_VERSION=$(cat AIO_BASE)
+
 function clean_allure_report() {
   [[ "$ALLURE_GENERATE_REPORT" == false && -d "allure_report" ]] && rm -rf allure_report/* 2>/dev/null || true
 }
@@ -192,7 +195,7 @@ spec:
     - {name: ALLURE_PROJECT_ID, value: "${ALLURE_PROJECT_ID:-}"}
     - {name: ALLURE_TOKEN, value: "${ALLURE_TOKEN:-}"}
     - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS:-/tests/_out/allure_report}"}
-    - {name: TEST_RC, value: "${TEST_RC:-false}"}
+    - {name: NODE_VERSION, value: "${NODE_VERSION:-$AIO_VERSION}"}
     - name: ALLURE_LAUNCH_TAGS
       value: >
         USER:${GITHUB_ACTOR:-local},
