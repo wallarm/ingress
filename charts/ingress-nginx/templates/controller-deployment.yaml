@@ -32,9 +32,11 @@ spec:
     metadata:
     {{- if or .Values.controller.podAnnotations (and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled)) }}
       annotations:
-      {{- if and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled) }}
+      {{- if .Values.controller.wallarm.enabled }}
+        checksum/cron: {{ .Values.controller.wallarm.cron | toJson | sha256sum }}
+        {{- if not .Values.controller.wallarm.existingSecret.enabled }}
         checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
-        checksum/cron: {{ .Values.controller.wallarm.cron.jobs | toJson | sha256sum }}
+        {{- end }}
       {{- end }}
       {{- if .Values.controller.podAnnotations -}}
       {{- range $key, $value := .Values.controller.podAnnotations }}

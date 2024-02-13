@@ -10,48 +10,117 @@ metadata:
   name: {{ template "ingress-nginx.wallarmTarantoolCronConfig" . }}
   namespace: {{ .Release.Namespace }}
 data:
-  crontab: |
-    {{- with .Values.controller.wallarm.cron.jobs.exportAttacks }}
+  supervisord.conf: |
+    [supervisord]
+    nodaemon=true
+    loglevel={{ .Values.controller.wallarm.cron.logLevel }}
+    logfile=/dev/stdout
+    logfile_maxbytes=0
+    pidfile=/opt/wallarm/run/supervisor/pid
+    {{- with .Values.controller.wallarm.cron.commands.exportAttacks }}
     # export-attacks
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-attacks -l STDOUT -L {{ .logLevel }}
+    [program:export-attacks]
+    command=/opt/wallarm/usr/share/wallarm-common/export-attacks -r -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.exportCounters }}
+    {{- with .Values.controller.wallarm.cron.commands.exportCounters }}
     # export-counters
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-counters -l STDOUT -L {{ .logLevel }}
+    [program:export-counters]
+    command=/opt/wallarm/usr/share/wallarm-common/export-counters -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.exportEnvironment }}
+    {{- with .Values.controller.wallarm.cron.commands.exportEnvironment }}
     # export-environment
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT -L {{ .logLevel }}
+    [program:export-environment]
+    command=/opt/wallarm/usr/share/wallarm-common/export-environment -w -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.bruteDetect }}
+    {{- with .Values.controller.wallarm.cron.commands.bruteDetect }}
     # brute-detect
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/brute-detect -l STDOUT -L {{ .logLevel }}
+    [program:brute-detect]
+    command=/opt/wallarm/usr/share/wallarm-common/brute-detect -w -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.syncMarkers }}
+    {{- with .Values.controller.wallarm.cron.commands.syncMarkers }}
     # sync-markers
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-markers -l STDOUT -L {{ .logLevel }}
+    [program:sync-markers]
+    command=/opt/wallarm/usr/share/wallarm-common/sync-markers -w -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.weakJwtDetect }}
+    {{- with .Values.controller.wallarm.cron.commands.weakJwtDetect }}
     # weak-jwt-detect
-    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/weak-jwt-detect -l STDOUT -L {{ .logLevel }}
+    [program:weak-jwt-detect]
+    command=/opt/wallarm/usr/share/wallarm-common/weak-jwt-detect -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.syncNode }}
+    {{- with .Values.controller.wallarm.cron.commands.syncNode }}
     # sync-node
-    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L {{ .logLevel }}
+    [program:sync-node]
+    command=/opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.exportBlockedStat }}
+    {{- with .Values.controller.wallarm.cron.commands.exportBlockedStat }}
     # export-blocked-stats
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-blocked-stats -l STDOUT -L {{ .logLevel }}
+    [program:export-blocked-stats]
+    command=/opt/wallarm/usr/share/wallarm-common/export-blocked-stats -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.detectCredStuffing }}
+    {{- with .Values.controller.wallarm.cron.commands.detectCredStuffing }}
     # detect-cred-stuffing
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/detect-cred-stuffing -l STDOUT -L {{ .logLevel }}
+    [program:detect-cred-stuffing]
+    command=/opt/wallarm/usr/share/wallarm-common/detect-cred-stuffing -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}

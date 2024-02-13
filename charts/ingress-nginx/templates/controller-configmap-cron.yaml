@@ -10,35 +10,83 @@ metadata:
   name: {{ template "ingress-nginx.wallarmControllerCronConfig" . }}
   namespace: {{ .Release.Namespace }}
 data:
-  crontab: |
-    {{- with .Values.controller.wallarm.cron.jobs.exportEnvironment }}
+  supervisord.conf: |
+    [supervisord]
+    nodaemon=true
+    loglevel={{ .Values.controller.wallarm.cron.logLevel }}
+    logfile=/dev/stdout
+    logfile_maxbytes=0
+    pidfile=/opt/wallarm/run/supervisor/pid
+    {{- with .Values.controller.wallarm.cron.commands.exportEnvironment }}
     # export-environment
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-environment -l STDOUT -L {{ .logLevel }}
+    [program:export-environment]
+    command=/opt/wallarm/usr/share/wallarm-common/export-environment -w -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.syncIpLists }}
+    {{- with .Values.controller.wallarm.cron.commands.syncIpLists }}
     # sync-ip-lists
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists -l STDOUT -L {{ .logLevel }}
+    [program:sync-ip-lists]
+    command=/opt/wallarm/usr/share/wallarm-common/sync-ip-lists -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.exportMetrics }}
+    {{- with .Values.controller.wallarm.cron.commands.exportMetrics }}
     # export-metrics
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/export-metrics -l STDOUT -L {{ .logLevel }}
+    [program:export-metrics]
+    command=/opt/wallarm/usr/share/wallarm-common/export-metrics -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.syncIpListsSource }}
+    {{- with .Values.controller.wallarm.cron.commands.syncIpListsSource }}
     # sync-ip-lists-source
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-ip-lists-source -l STDOUT -L {{ .logLevel }}
+    [program:sync-ip-lists-source]
+    command=/opt/wallarm/usr/share/wallarm-common/sync-ip-lists-source -w -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
-    {{- with .Values.controller.wallarm.cron.jobs.syncNode }}
+    {{- with .Values.controller.wallarm.cron.commands.syncNode }}
     # sync-node
-    {{ .schedule }} /opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L {{ .logLevel }}
+    [program:sync-node]
+    command=/opt/wallarm/usr/share/wallarm-common/syncnode -f -p -r 120 -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
 
     {{- if .Values.controller.wallarm.apiFirewall.enabled }}
-    {{- with .Values.controller.wallarm.cron.jobs.syncApiSpecs }}
+    {{- with .Values.controller.wallarm.cron.commands.syncApiSpecs }}
     # sync-api-specs
-    {{ .schedule }} timeout {{ .timeout }} /opt/wallarm/usr/share/wallarm-common/sync-api-specs -l STDOUT -L {{ .logLevel }}
+    [program:sync-api-specs]
+    command=/opt/wallarm/usr/share/wallarm-common/sync-api-specs -l STDOUT -L {{ .logLevel }}
+    autorestart=true
+    startretries=4294967295
+    stdout_logfile_maxbytes=0
+    stdout_logfile=/dev/stdout
+    stderr_logfile_maxbytes=0
+    stderr_logfile=/dev/stdout
     {{- end }}
     {{- end }}
