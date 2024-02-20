@@ -116,7 +116,7 @@ jobs:
       KUBECONFIG: $HOME/.kube/kind-config-${{ matrix.k8s }}
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         id: secrets
         with:
           exportEnv: false
@@ -188,7 +188,7 @@ jobs:
         method: [ "install" ]
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         id: secrets
         with:
           exportEnv: false
@@ -278,7 +278,7 @@ jobs:
 
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@9f522b85981b491eab9a52c144d15aedbd0bf371 # v2.8.0
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         id: secrets
         with:
           exportEnv: false
