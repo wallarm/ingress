@@ -61,8 +61,7 @@ function get_logs() {
 declare -a mandatory
 mandatory=(
   CLIENT_ID
-  USER_UUID
-  USER_SECRET
+  USER_TOKEN
   SMOKE_REGISTRY_TOKEN
   SMOKE_REGISTRY_SECRET
 )
@@ -129,8 +128,7 @@ spec:
     - {name: WALLARM_API_PRESET, value: "${WALLARM_API_PRESET:-eu1}"}
     - {name: API_CA_VERIFY, value: "${WALLARM_API_CA_VERIFY}"}
     - {name: CLIENT_ID, value: "${CLIENT_ID}"}
-    - {name: USER_UUID, value: "${USER_UUID}"}
-    - {name: USER_SECRET, value: "${USER_SECRET}"}
+    - {name: USER_TOKEN, value: "${USER_TOKEN}"}
     - {name: HOSTNAME_OLD_NODE, value: "${HOSTNAME_OLD_NODE}"}
     - {name: ALLURE_ENVIRONMENT_K8S, value: "${ALLURE_ENVIRONMENT_K8S:-}"}
     - {name: ALLURE_ENVIRONMENT_ARCH, value: "${ALLURE_ENVIRONMENT_ARCH:-}"}
