@@ -11,10 +11,6 @@ set -o pipefail
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
-# Variable required for smoke tests report
-export ALLURE_UPLOAD_REPORT="${ALLURE_UPLOAD_REPORT:-false}"
-export ALLURE_GENERATE_REPORT="${ALLURE_GENERATE_REPORT:-false}"
-
 # Variables required for pulling Docker image with pytest
 SMOKE_REGISTRY_NAME="${SMOKE_REGISTRY_NAME:-dkr.wallarm.com}"
 SMOKE_IMAGE_PULL_SECRET_NAME="pytest-registry-creds"
@@ -22,12 +18,21 @@ SMOKE_IMAGE_PULL_SECRET_NAME="pytest-registry-creds"
 SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
+# Allure related variables
+ALLURE_ENDPOINT="${ALLURE_ENDPOINT:-https://allure.wallarm.com}"
+ALLURE_PROJECT_ID=${ALLURE_PROJECT_ID:-10}
+ALLURE_RESULTS="${ALLURE_RESULTS:-/tests/_out/allure_report}"
+ALLURE_UPLOAD_REPORT="${ALLURE_UPLOAD_REPORT:-false}"
+ALLURE_GENERATE_REPORT="${ALLURE_GENERATE_REPORT:-false}"
+
 # Pytest related variables
+CLIENT_ID="${CLIENT_ID:-5}"
 WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
+WALLARM_API_PRESET="${WALLARM_API_PRESET:-eu1}"
 NODE_BASE_URL="${NODE_BASE_URL:-http://wallarm-ingress-controller.default.svc}"
 PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node}" | xargs)
-PYTEST_WORKERS="${PYTEST_WORKERS:-20}"
+PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
@@ -182,17 +187,17 @@ spec:
     - {name: NODE_BASE_URL, value: "${NODE_BASE_URL}"}
     - {name: NODE_UUID, value: "${NODE_UUID}"}
     - {name: WALLARM_API_HOST, value: "${WALLARM_API_HOST}"}
-    - {name: WALLARM_API_PRESET, value: "${WALLARM_API_PRESET:-eu1}"}
+    - {name: WALLARM_API_PRESET, value: "${WALLARM_API_PRESET}"}
     - {name: API_CA_VERIFY, value: "${WALLARM_API_CA_VERIFY}"}
     - {name: CLIENT_ID, value: "${CLIENT_ID}"}
     - {name: USER_TOKEN, value: "${USER_TOKEN}"}
     - {name: HOSTNAME_OLD_NODE, value: "${HOSTNAME_OLD_NODE}"}
     - {name: ALLURE_ENVIRONMENT_K8S, value: "${ALLURE_ENVIRONMENT_K8S:-}"}
     - {name: ALLURE_ENVIRONMENT_ARCH, value: "${ALLURE_ENVIRONMENT_ARCH:-}"}
-    - {name: ALLURE_ENDPOINT, value: "${ALLURE_ENDPOINT:-}"}
-    - {name: ALLURE_PROJECT_ID, value: "${ALLURE_PROJECT_ID:-}"}
+    - {name: ALLURE_ENDPOINT, value: "${ALLURE_ENDPOINT}"}
+    - {name: ALLURE_PROJECT_ID, value: "${ALLURE_PROJECT_ID}"}
     - {name: ALLURE_TOKEN, value: "${ALLURE_TOKEN:-}"}
-    - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS:-/tests/_out/allure_report}"}
+    - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS}"}
     - {name: NODE_VERSION, value: "${NODE_VERSION:-}"}
     - name: ALLURE_LAUNCH_TAGS
       value: >
