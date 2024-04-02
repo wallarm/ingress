@@ -27,6 +27,12 @@ data:
           return 200;
           default_type application/json;
         }
+        # Location for Blocking Tor Source Type
+        location /blocking-by-tor-test {
+              add_header Block-by-Tor "Hello, I am header!";
+              return 200 '{"json_response": "Hello, I am json"}';
+              default_type application/json;
+        }
         # Some mocks for test_api_abuse_prevention.py
         location /.git {
             if ($http_custom_id) {
@@ -153,6 +159,27 @@ spec:
                 port:
                   number: 80
             path: /api-discovery-test
+            pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/wallarm-mode: block
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      wallarm_application $http_custom_id;
+  name: block-by-tor-ip
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: workload
+                port:
+                  number: 80
+            path: /blocking-by-tor-test
             pathType: Prefix
 ---
 apiVersion: networking.k8s.io/v1
