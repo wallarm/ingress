@@ -52,6 +52,9 @@ data:
             }
             return 200;
         }
+        location /smoke-auto-forced-browsing/ {
+            return 404;
+        }
       }
     }
 ---
