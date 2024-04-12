@@ -18,14 +18,14 @@ permissions:
 jobs:
   smoke:
     name: Smoke
-    runs-on: self-hosted-amd64-1cpu
+    runs-on: self-hosted-amd64-2cpu
     strategy:
       fail-fast: false
       matrix:
         k8s: [ v1.23.13, v1.27.1 ]
     steps:
       - name: Import secrets
-        uses: hashicorp/vault-action@affa6f04da5c2d55e6e115b7d1b044a6b1af8c74 # v2.7.4
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
         id: secrets
         with:
           exportEnv: false
