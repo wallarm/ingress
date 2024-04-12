@@ -31,7 +31,6 @@ export WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
 export WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 export SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
-export CLIENT_ID="${CLIENT_ID:-5}"
 
 K8S_VERSION=${K8S_VERSION:-v1.25.8}
 
