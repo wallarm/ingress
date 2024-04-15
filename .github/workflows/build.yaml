@@ -66,7 +66,7 @@ jobs:
           use: false
 
       - name: Docker login
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20
         with:
           username: ${{ steps.secrets.outputs.DOCKERHUB_USER }}
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
@@ -126,7 +126,7 @@ jobs:
             kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
 
       - name: Docker login
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20
         with:
           username: ${{ steps.secrets.outputs.DOCKERHUB_USER }}
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
