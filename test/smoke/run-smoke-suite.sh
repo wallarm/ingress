@@ -192,6 +192,8 @@ spec:
     - {name: CLIENT_ID, value: "${CLIENT_ID}"}
     - {name: USER_TOKEN, value: "${USER_TOKEN}"}
     - {name: HOSTNAME_OLD_NODE, value: "${HOSTNAME_OLD_NODE}"}
+    - {name: WEBHOOK_UUID, value: "${WEBHOOK_UUID}"}
+    - {name: WEBHOOK_API_KEY, value: "${WEBHOOK_API_KEY}"}
     - {name: ALLURE_ENVIRONMENT_K8S, value: "${ALLURE_ENVIRONMENT_K8S:-}"}
     - {name: ALLURE_ENVIRONMENT_ARCH, value: "${ALLURE_ENVIRONMENT_ARCH:-}"}
     - {name: ALLURE_ENDPOINT, value: "${ALLURE_ENDPOINT}"}

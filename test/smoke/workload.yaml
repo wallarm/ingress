@@ -41,11 +41,8 @@ data:
             }
             return 200;
         }
-        location /admin {
-            if ($http_custom_id) {
-                return 401;
-            }
-            return 200;
+        location /wallarm-application/admin {
+            return 401;
         }
         location /api/v2 {
             if ($http_custom_id) {
