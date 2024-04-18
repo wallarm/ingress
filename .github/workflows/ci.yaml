@@ -129,6 +129,8 @@ jobs:
             kv-gitlab-ci/data/github/ingress api_host ;
             kv-gitlab-ci/data/github/ingress api_preset ;
             kv-gitlab-ci/data/github/ingress user_token ;
+            kv-gitlab-ci/data/github/ingress webhook_uuid ;
+            kv-gitlab-ci/data/github/ingress webhook_api_key ;
             kv-gitlab-ci/data/github/shared/allure allure_token ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
@@ -157,6 +159,8 @@ jobs:
           USER_TOKEN: ${{ steps.secrets.outputs.user_token }}
           SMOKE_REGISTRY_TOKEN: ${{ steps.secrets.outputs.token_name }}
           SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
+          WEBHOOK_API_KEY: ${{ steps.secrets.outputs.webhook_api_key }}
+          WEBHOOK_UUID: ${{ steps.secrets.outputs.webhook_uuid }}
           ALLURE_UPLOAD_REPORT: true
           ALLURE_GENERATE_REPORT: true
           ALLURE_TOKEN: ${{ steps.secrets.outputs.allure_token }}

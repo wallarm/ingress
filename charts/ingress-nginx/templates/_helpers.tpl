@@ -358,7 +358,7 @@ Create the name of the controller service account to use
     - name: APIFW_WRITE_TIMEOUT
       value: 5s
     - name: APIFW_API_MODE_DEBUG_PATH_DB
-      value: "{{ include "wallarm-apifw.path" . }}/1/wallarm_api.db"
+      value: "{{ include "wallarm-apifw.path" . }}/2/wallarm_api.db"
   volumeMounts:
     - name: wallarm-apifw
       mountPath: {{ include "wallarm-apifw.path" . }}
