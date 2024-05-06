@@ -26,7 +26,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
@@ -68,7 +68,7 @@ jobs:
       ARCH: ${{ matrix.ARCH }}
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Build controller images
         env:
@@ -136,7 +136,7 @@ jobs:
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
 
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Load cache
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe
@@ -195,7 +195,7 @@ jobs:
           secrets: kv-gitlab-ci/data/github/ingress api_token
 
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           fetch-depth: 0
 
@@ -233,7 +233,7 @@ jobs:
       ARCH: amd64
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Load controller build cache
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe
@@ -287,7 +287,7 @@ jobs:
             kv-gitlab-ci/data/github/ingress api_host ;
 
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Load controller build cache
         uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe

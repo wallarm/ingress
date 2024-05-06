@@ -45,7 +45,7 @@ jobs:
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
 
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v3.0.2
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v3.0.2
 
       - name: Create cluster
         run: kind create cluster --image=kindest/node:${{ matrix.k8s }}
