@@ -244,6 +244,9 @@ Create the name of the controller service account to use
   - name: WALLARM_LABELS
     value: "group={{ .Values.controller.wallarm.nodeGroup }}"
 {{- end }}
+{{- if .Values.controller.wallarm.addnode.extraEnvs }}
+  {{- toYaml .Values.controller.wallarm.addnode.extraEnvs | nindent 2 }}
+{{- end }}
   volumeMounts:
   - mountPath: {{ include "wallarm.path" . }}
     name: wallarm
@@ -279,6 +282,9 @@ Create the name of the controller service account to use
         fieldPath: metadata.name
   - name: WALLARM_INGRESS_CONTROLLER_VERSION
     value: {{ .Chart.Version | quote }}
+{{- if .Values.controller.wallarm.cron.extraEnvs }}
+  {{- toYaml .Values.controller.wallarm.cron.extraEnvs | nindent 2 }}
+{{- end }}
   volumeMounts:
   - mountPath: {{ include "wallarm.path" . }}
     name: wallarm
@@ -319,6 +325,10 @@ Create the name of the controller service account to use
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
   args: ["collectd"]
+{{- if .Values.controller.wallarm.collectd.extraEnvs }}
+  env:
+  {{- toYaml .Values.controller.wallarm.collectd.extraEnvs | nindent 2 }}
+{{- end }}
   volumeMounts:
     - name: wallarm
       mountPath: {{ include "wallarm.path" . }}
@@ -359,6 +369,9 @@ Create the name of the controller service account to use
       value: 5s
     - name: APIFW_API_MODE_DEBUG_PATH_DB
       value: "{{ include "wallarm-apifw.path" . }}/2/wallarm_api.db"
+{{- if .Values.controller.wallarm.apiFirewall.extraEnvs }}
+    {{- toYaml .Values.controller.wallarm.apiFirewall.extraEnvs | nindent 4 }}
+{{- end }}
   volumeMounts:
     - name: wallarm-apifw
       mountPath: {{ include "wallarm-apifw.path" . }}

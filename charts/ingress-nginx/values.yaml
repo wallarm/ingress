@@ -964,10 +964,34 @@ controller:
       topologySpreadConstraints: []
       nodeSelector:
         kubernetes.io/os: linux
+      # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
     wallarm-appstructure:
       resources: {}
+      # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
     wallarm-antibot:
       resources: {}
+      # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
     metrics:
       port: 18080
       enabled: false
@@ -994,6 +1018,14 @@ controller:
     ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
     addnode:
       resources: {}
+      # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
     cron:
       commands:
         exportEnvironment:
@@ -1026,8 +1058,24 @@ controller:
       ### Ref: http://supervisord.org/logging.html
       logLevel: warn
       resources: {}
+      # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
     collectd:
       resources: {}
+        # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
     apiFirewall:
       ### Enable or disable API Firewall functionality (true|false)
       ###
@@ -1064,6 +1112,14 @@ controller:
         periodSeconds: 10
         successThreshold: 1
         timeoutSeconds: 1
+      # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
 
 # -- Rollback limit
 ##
