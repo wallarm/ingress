@@ -167,6 +167,9 @@ EOF
 
 kubectl wait --for=condition=Ready pods --all --timeout=120s
 
+# ToDo: Add a readiness check for the webhook port controller to be ready
+sleep 15
+
 echo "[test-env] deploying test workload ..."
 kubectl apply -f "${DIR}"/workload.yaml
 kubectl wait --for=condition=Ready pods --all --timeout=60s
