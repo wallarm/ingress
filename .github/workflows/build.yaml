@@ -23,7 +23,7 @@ jobs:
       controller: ${{ steps.filter.outputs.controller }}
     steps:
       - name: Checkout
-        uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v3.0.2
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v3.0.2
 
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v2.10.2
         id: filter
@@ -57,7 +57,7 @@ jobs:
             kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
 
       - name: Checkout
-        uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v3.0.2
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v3.0.2
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v2.0.0
