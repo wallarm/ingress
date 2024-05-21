@@ -59,6 +59,9 @@ spec:
           env:
             - name: SLAB_ALLOC_ARENA
               value: "{{ .Values.controller.wallarm.tarantool.arena }}"
+          {{- if (index .Values "controller" "wallarm" "tarantool" "extraEnvs") }}
+            {{- toYaml (index .Values "controller" "wallarm" "tarantool" "extraEnvs") | nindent 12 }}
+          {{- end }}
           securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
           livenessProbe:
             tcpSocket:
@@ -85,6 +88,10 @@ spec:
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           args: ["appstructure"]
+        {{- if (index .Values "controller" "wallarm" "wallarm-appstructure" "extraEnvs") }}
+          env:
+            {{- toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "extraEnvs") | nindent 12 }}
+        {{- end }}
           securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /opt/wallarm/etc/wallarm
@@ -102,6 +109,10 @@ spec:
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           args: ["antibot"]
+        {{- if (index .Values "controller" "wallarm" "wallarm-antibot" "extraEnvs") }}
+          env:
+            {{- toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "extraEnvs") | nindent 12 }}
+        {{- end }}
           securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
           - mountPath: /opt/wallarm/etc/wallarm

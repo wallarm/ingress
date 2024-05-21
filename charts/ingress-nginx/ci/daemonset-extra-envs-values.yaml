@@ -1,0 +1,41 @@
+controller:
+  image:
+    repository: wallarm/ingress-controller
+    tag: 1.0.0-dev
+    digest: null
+  service:
+    type: ClusterIP
+  extraEnvs:
+    - name: EXTRA_NGINXCTR_KEY
+      value: EXTRA_NGINXCTR_VAL
+  wallarm:
+    apiHost: api.wallarm.com
+    addnode:
+      extraEnvs:
+        - name: EXTRA_ADDNODE_KEY
+          value: EXTRA_ADDNODE_VAL
+    cron:
+      extraEnvs:
+        - name: EXTRA_CRON_KEY
+          value: EXTRA_CRON_VAL
+    collectd:
+      extraEnvs:
+        - name: EXTRA_COLLECTD_KEY
+          value: EXTRA_COLLECTD_VAL
+    apiFirewall:
+      extraEnvs:
+        - name: EXTRA_APIFW_KEY
+          value: EXTRA_APIFW_VAL
+    tarantool:
+      kind: DaemonSet
+      extraEnvs:
+        - name: EXTRA_TARANTOOL_KEY
+          value: EXTRA_TARANTOOL_VAL
+    wallarm-appstructure:
+      extraEnvs:
+        - name: EXTRA_APPSTRUCT_KEY
+          value: EXTRA_APPSTRUCT_VAL
+    wallarm-antibot:
+      extraEnvs:
+        - name: EXTRA_ANTIBOT_KEY
+          value: EXTRA_ANTIBOT_VAL
