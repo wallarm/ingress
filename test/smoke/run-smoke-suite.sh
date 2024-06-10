@@ -209,7 +209,8 @@ spec:
         BRANCH:${GITHUB_REF_NAME:-local},
         JOB:${GITHUB_JOB:-local},
         K8S:${ALLURE_ENVIRONMENT_K8S:-},
-        ARCH:${ALLURE_ENVIRONMENT_ARCH:-}
+        ARCH:${ALLURE_ENVIRONMENT_ARCH:-},
+        GITHUB_REPO:${GITHUB_REPOSITORY:-}
     - name: ALLURE_LAUNCH_NAME
       value: >
         ${GITHUB_WORKFLOW:-local}-${GITHUB_RUN_ID:-local}-${GITHUB_JOB:-local}-
