@@ -73,7 +73,7 @@ jobs:
           path: kubernetes-ci
           secrets: |
             kv-gitlab-ci/data/github/shared/versions-repo-creds token_secret | GITLAB_TOKEN ;
-            kv-gitlab-ci/data/github/shared/versions-repo-creds token_secret | GITLAB_TOKEN_NAME ;
+            kv-gitlab-ci/data/github/shared/versions-repo-creds token_name | GITLAB_TOKEN_NAME ;
             kv-gitlab-ci/data/github/shared/versions-repo-creds host | GITLAB_HOST ;
             kv-gitlab-ci/data/github/shared/versions-repo-creds repo | GITLAB_REPO ;
 
