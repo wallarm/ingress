@@ -215,6 +215,10 @@ Create the name of the controller service account to use
 {{- end }}
 - name: WALLARM_API_TOKEN_PATH
   value: "/secrets/wallarm/token"
+- name: WALLARM_COMPONENT_NAME
+  value: wallarm-ingress-controller
+- name: WALLARM_COMPONENT_VERSION
+  value: {{ .Chart.Version | quote }}
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
@@ -227,7 +231,7 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: [ "register" {{- if eq .Values.controller.wallarm.fallback "on" }}, "fallback"{{- end }} ]
+  args: [ "register", "{{ .Values.register_mode }}" {{- if eq .Values.controller.wallarm.fallback "on" }}, "fallback"{{- end }} ]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -238,8 +242,6 @@ Create the name of the controller service account to use
     value: www-data
   - name: WALLARM_SYNCNODE_GROUP
     value: www-data
-  - name: WALLARM_INGRESS_CONTROLLER_VERSION
-    value: {{ .Chart.Version | quote }}
 {{- if .Values.controller.wallarm.nodeGroup }}
   - name: WALLARM_LABELS
     value: "group={{ .Values.controller.wallarm.nodeGroup }}"
@@ -273,15 +275,13 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["supervisord"]
+  args: ["wcli", "run", {{ include "ingress-nginx.wcli-args" . }}]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-  - name: WALLARM_INGRESS_CONTROLLER_VERSION
-    value: {{ .Chart.Version | quote }}
 {{- if .Values.controller.wallarm.cron.extraEnvs }}
   {{- toYaml .Values.controller.wallarm.cron.extraEnvs | nindent 2 }}
 {{- end }}
@@ -292,10 +292,6 @@ Create the name of the controller service account to use
     name: wallarm-acl
   - mountPath: {{ include "wallarm-apifw.path" . }}
     name: wallarm-apifw
-  - mountPath: /opt/supervisord/supervisord.conf
-    name: wallarm-cron
-    subPath: supervisord.conf
-    readOnly: true
   - mountPath: /secrets/wallarm/token
     name: wallarm-token
     subPath: token
@@ -506,4 +502,16 @@ Extra modules.
   volumeMounts:
     - name: modules
       mountPath: /modules_mount
+{{- end -}}
+
+{{/*
+Wcli arguments building
+*/}}
+{{- define "ingress-nginx.wcli-args" -}}
+"-log-level", "{{ .Values.controller.wallarm.cron.logLevel }}",{{ " " }}
+{{- with .Values.controller.wallarm.cron.commands -}}
+{{- range $name, $value := . -}}
+"job:{{ $name }}", "-log-level", "{{ $value.logLevel }}",{{ " " }}
+{{- end -}}
+{{- end -}}
 {{- end -}}
