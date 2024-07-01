@@ -35,7 +35,3 @@ controller:
       extraEnvs:
         - name: EXTRA_APPSTRUCT_KEY
           value: EXTRA_APPSTRUCT_VAL
-    wallarm-antibot:
-      extraEnvs:
-        - name: EXTRA_ANTIBOT_KEY
-          value: EXTRA_ANTIBOT_VAL

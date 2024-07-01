@@ -225,6 +225,7 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
+          {{ $_ := set .Values "register_mode" "filtering" }}
           {{ include "ingress-nginx.wallarmInitContainer.addNode" . | nindent 8 }}
       {{- end }}
     {{- end }}
@@ -260,9 +261,6 @@ spec:
           emptyDir: {}
         - name: wallarm-apifw
           emptyDir: {}
-        - name: wallarm-cron
-          configMap:
-            name: {{ template "ingress-nginx.wallarmControllerCronConfig" . }}
         {{- include "ingress-nginx.wallarmTokenVolume" . | nindent 8 }}
       {{- end }}
       {{- if .Values.controller.customTemplate.configMapName }}

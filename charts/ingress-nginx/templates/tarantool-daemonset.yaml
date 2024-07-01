@@ -43,6 +43,7 @@ spec:
     {{- end }}
       terminationGracePeriodSeconds: {{ .Values.controller.wallarm.tarantool.terminationGracePeriodSeconds }}
       initContainers:
+        {{ $_ := set .Values "register_mode" "post_analytic" }}
         {{ include "ingress-nginx.wallarmInitContainer.addNode" . | nindent 8 }}
       containers:
         {{ include "ingress-nginx.wallarmCronContainer" . | nindent 8 }}
@@ -99,27 +100,6 @@ spec:
         {{- if index .Values "controller" "wallarm" "wallarm-appstructure" "resources" }}
           resources: {{ toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "resources") | nindent 12 }}
         {{- end }}
-        - name: wallarm-antibot
-        {{- if (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
-          {{- with (index .Values "controller" "wallarm" "wallarm-antibot" "image") }}
-          image: "{{ .repository }}:{{ .tag }}"
-          {{- end }}
-        {{- else }}
-          image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
-        {{- end }}
-          imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          args: ["antibot"]
-        {{- if (index .Values "controller" "wallarm" "wallarm-antibot" "extraEnvs") }}
-          env:
-            {{- toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "extraEnvs") | nindent 12 }}
-        {{- end }}
-          securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
-          volumeMounts:
-          - mountPath: /opt/wallarm/etc/wallarm
-            name: wallarm
-        {{- if index .Values "controller" "wallarm" "wallarm-antibot" "resources" }}
-          resources: {{ toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "resources") | nindent 12 }}
-        {{- end }}
     {{- if .Values.controller.wallarm.tarantool.nodeSelector }}
       nodeSelector: {{ toYaml .Values.controller.wallarm.tarantool.nodeSelector | nindent 8 }}
     {{- end }}
@@ -139,9 +119,6 @@ spec:
           emptyDir: {}
         - name: wallarm-apifw
           emptyDir: {}
-        - name: wallarm-cron
-          configMap:
-            name: {{ template "ingress-nginx.wallarmTarantoolCronConfig" . }}
         {{- include "ingress-nginx.wallarmTokenVolume" . | nindent 8 }}
 {{- end }}
 {{- end }}
