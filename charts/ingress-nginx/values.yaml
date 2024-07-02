@@ -991,16 +991,12 @@ controller:
     wallarm-antibot:
       resources: {}
       # -- Additional environment variables to set
-      extraEnvs: []
-      # extraEnvs:
-      #   - name: FOO
-      #     valueFrom:
-      #       secretKeyRef:
-      #         key: FOO
-      #         name: secret-resource
-      extraArgs: {}
-      # extraArgs:
-      #   key: val
+      extraEnvs:
+        - name: GOMAXPROCS
+          value: "1"
+      extraArgs:
+        "-req-select-size": "50"
+        "-req-batch-size":  "250"
     metrics:
       port: 18080
       enabled: false
