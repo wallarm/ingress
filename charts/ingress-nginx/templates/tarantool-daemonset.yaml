@@ -55,7 +55,7 @@ spec:
           image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          args: ["tarantool"]
+          args: ["tarantool", {{ include "ingress-nginx.wallarm-extraargs" (index .Values "controller" "wallarm" "tarantool" "extraArgs") }}]
           env:
             - name: SLAB_ALLOC_ARENA
               value: "{{ .Values.controller.wallarm.tarantool.arena }}"
@@ -87,7 +87,7 @@ spec:
           image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          args: ["appstructure"]
+          args: ["appstructure", {{ include "ingress-nginx.wallarm-extraargs" (index .Values "controller" "wallarm" "wallarm-appstructure" "extraArgs") }}]
         {{- if (index .Values "controller" "wallarm" "wallarm-appstructure" "extraEnvs") }}
           env:
             {{- toYaml (index .Values "controller" "wallarm" "wallarm-appstructure" "extraEnvs") | nindent 12 }}
@@ -108,7 +108,7 @@ spec:
           image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
         {{- end }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-          args: ["antibot"]
+          args: ["antibot", {{ include "ingress-nginx.wallarm-extraargs" (index .Values "controller" "wallarm" "wallarm-antibot" "extraArgs") }}]
         {{- if (index .Values "controller" "wallarm" "wallarm-antibot" "extraEnvs") }}
           env:
             {{- toYaml (index .Values "controller" "wallarm" "wallarm-antibot" "extraEnvs") | nindent 12 }}

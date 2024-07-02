@@ -227,7 +227,7 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: [ "register" {{- if eq .Values.controller.wallarm.fallback "on" }}, "fallback"{{- end }} ]
+  args: [ "register" {{- if eq .Values.controller.wallarm.fallback "on" }}, "fallback"{{- end }}, {{ include "ingress-nginx.wallarm-extraargs" (index .Values "controller" "wallarm" "addnode" "extraArgs") }} ]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -273,7 +273,7 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["supervisord"]
+  args: ["supervisord", {{ include "ingress-nginx.wallarm-extraargs" (index .Values "controller" "wallarm" "cron" "extraArgs") }}]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -324,7 +324,7 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["collectd"]
+  args: ["collectd", {{ include "ingress-nginx.wallarm-extraargs" (index .Values "controller" "wallarm" "tarantool" "extraArgs") }}]
 {{- if .Values.controller.wallarm.collectd.extraEnvs }}
   env:
   {{- toYaml .Values.controller.wallarm.collectd.extraEnvs | nindent 2 }}
@@ -347,7 +347,7 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["api-firewall"]
+  args: ["api-firewall", {{ include "ingress-nginx.wallarm-extraargs" (index .Values "controller" "wallarm" "apiFirewall" "extraArgs") }}]
   env:
     - name: APIFW_SPECIFICATION_UPDATE_PERIOD
       value: "{{ .Values.controller.wallarm.apiFirewall.config.specificationUpdatePeriod }}"
@@ -506,4 +506,18 @@ Extra modules.
   volumeMounts:
     - name: modules
       mountPath: /modules_mount
+{{- end -}}
+
+{{/*
+Extra args
+*/}}
+{{- define "ingress-nginx.wallarm-extraargs" -}}
+{{- range $key, $value := . -}}
+{{- /* Accept keys without values or with false as value */ -}}
+{{- if eq ($value | quote | len) 2 -}}
+"{{ $key }}",
+{{- else -}}
+"{{ $key }}", "{{ $value }}",
+{{- end -}}
+{{- end -}}
 {{- end -}}
