@@ -972,6 +972,9 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraArgs: {}
+      # extraArgs:
+      #   key: val
     wallarm-appstructure:
       resources: {}
       # -- Additional environment variables to set
@@ -982,6 +985,9 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraArgs: {}
+      # extraArgs:
+      #   key: val
     wallarm-antibot:
       resources: {}
       # -- Additional environment variables to set
@@ -992,6 +998,9 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraArgs: {}
+      # extraArgs:
+      #   key: val
     metrics:
       port: 18080
       enabled: false
@@ -1026,6 +1035,9 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraArgs: {}
+      # extraArgs:
+      #   key: val
     cron:
       commands:
         exportEnvironment:
@@ -1066,6 +1078,9 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraArgs: {}
+      # extraArgs:
+      #   key: val
     collectd:
       resources: {}
         # -- Additional environment variables to set
@@ -1076,6 +1091,9 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraArgs: {}
+      # extraArgs:
+      #   key: val
     apiFirewall:
       ### Enable or disable API Firewall functionality (true|false)
       ###
@@ -1120,6 +1138,9 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraArgs: {}
+      # extraArgs:
+      #   key: val
 
 # -- Rollback limit
 ##
