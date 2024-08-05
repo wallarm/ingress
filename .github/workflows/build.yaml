@@ -153,7 +153,7 @@ jobs:
           echo "sbom=${SBOM_SPDX}" >> $GITHUB_OUTPUT
           
       - name: Upload SBOM
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029
         with:
           retention-days: 30
           name: ${{ steps.sign.outputs.sbom }}
