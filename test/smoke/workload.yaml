@@ -70,6 +70,8 @@ spec:
       labels:
         app: workload
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: nginx
           image: nginx:stable-alpine

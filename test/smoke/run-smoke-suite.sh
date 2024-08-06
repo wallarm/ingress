@@ -8,6 +8,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+#import functions
+source "${PWD}/test/smoke/functions.sh"
+
+# check if all mandatory vars was defined
+check_mandatory_vars
+
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 
@@ -20,16 +26,16 @@ SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
 # Allure related variables
 ALLURE_ENDPOINT="${ALLURE_ENDPOINT:-https://allure.wallarm.com}"
-ALLURE_PROJECT_ID=${ALLURE_PROJECT_ID:-10}
+ALLURE_PROJECT_ID=${ALLURE_PROJECT_ID:-0}
 ALLURE_RESULTS="${ALLURE_RESULTS:-/tests/_out/allure_report}"
 ALLURE_UPLOAD_REPORT="${ALLURE_UPLOAD_REPORT:-false}"
 ALLURE_GENERATE_REPORT="${ALLURE_GENERATE_REPORT:-false}"
 
 # Pytest related variables
-CLIENT_ID="${CLIENT_ID:-5}"
+CLIENT_ID="${CLIENT_ID}"
 WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
-WALLARM_API_HOST="${WALLARM_API_HOST:-api.wallarm.com}"
-WALLARM_API_PRESET="${WALLARM_API_PRESET:-eu1}"
+WALLARM_API_HOST="${WALLARM_API_HOST}"
+WALLARM_API_PRESET="${WALLARM_API_PRESET}"
 NODE_BASE_URL="${NODE_BASE_URL:-http://wallarm-ingress-controller.default.svc}"
 PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node}" | xargs)
 PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
@@ -38,107 +44,6 @@ HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
 NODE_VERSION=$(< "${CURDIR}/AIO_BASE" awk -F'[-.]' '{print $1"."$2"."$3}')
 echo "AiO Node version: ${NODE_VERSION}"
-
-function clean_allure_report() {
-  [[ "$ALLURE_GENERATE_REPORT" == false && -d "allure_report" ]] && rm -rf allure_report/* 2>/dev/null || true
-}
-
-function get_logs_and_fail() {
-    get_logs
-    extra_debug_logs
-    clean_allure_report
-    exit 1
-}
-
-function get_logs() {
-    echo "#################################"
-    echo "###### Init container logs ######"
-    echo "#################################"
-    kubectl logs -l "app.kubernetes.io/component=controller" -c addnode --tail=-1
-    echo -e "#################################\n"
-
-    echo "#######################################"
-    echo "###### Controller container logs ######"
-    echo "#######################################"
-    kubectl logs -l "app.kubernetes.io/component=controller" -c controller --tail=-1
-    echo -e "#######################################\n"
-
-    echo "#################################"
-    echo "###### Cron container logs ######"
-    echo "#################################"
-    kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
-    echo -e "#################################\n"
-
-    echo "###################################"
-    echo "###### API-WF container logs ######"
-    echo "###################################"
-    kubectl logs -l "app.kubernetes.io/component=controller" -c api-firewall --tail=-1 || true
-    echo -e "####################################\n"
-
-    echo "####################################################"
-    echo "###### List directory /opt/wallarm/etc/wallarm #####"
-    echo "####################################################"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/etc/wallarm && cat /opt/wallarm/etc/wallarm/node.yaml" || true
-    echo -e "#####################################################\n"
-
-    echo "############################################"
-    echo "###### List directory /var/lib/nginx/wallarm"
-    echo "############################################"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/nginx/wallarm && ls -laht /opt/wallarm/var/lib/nginx/wallarm/shm" || true
-    echo -e "############################################\n"
-
-    echo "############################################################"
-    echo "###### List directory /opt/wallarm/var/lib/wallarm-acl #####"
-    echo "############################################################"
-    kubectl exec "${POD}" -c controller -- sh -c "ls -laht /opt/wallarm/var/lib/wallarm-acl" || true
-    echo -e "############################################################\n"
-
-    echo "##################################################"
-    echo "###### TARANTOOL Pod - Cron container logs  ######"
-    echo "##################################################"
-    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-tarantool" -c cron --tail=-1
-    echo -e "##################################################\n"
-
-    echo "######################################################"
-    echo "###### TARANTOOL Pod - Tarantool container logs ######"
-    echo "######################################################"
-    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-tarantool" -c tarantool --tail=-1
-    echo -e "######################################################\n"
-}
-
-
-function extra_debug_logs {
-  echo "############################################"
-  echo "###### Extra cluster debug info ############"
-  echo "############################################"
-
-  echo "Grepping cluster OOMKilled events..."
-  kubectl get events -A | grep -i OOMKill || true
-
-  echo "Displaying pods state in default namespace..."
-  kubectl get pods
-
-}
-
-declare -a mandatory
-mandatory=(
-  CLIENT_ID
-  USER_TOKEN
-  SMOKE_REGISTRY_TOKEN
-  SMOKE_REGISTRY_SECRET
-)
-
-missing=false
-for var in "${mandatory[@]}"; do
-  if [[ -z "${!var:-}" ]]; then
-    echo "Environment variable $var must be set"
-    missing=true
-  fi
-done
-
-if [ "$missing" = true ]; then
-  exit 1
-fi
 
 if [[ "${CI:-false}" == "false" ]]; then
   trap 'kubectl delete pod pytest --now  --ignore-not-found' EXIT ERR

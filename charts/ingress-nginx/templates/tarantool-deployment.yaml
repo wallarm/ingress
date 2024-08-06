@@ -39,8 +39,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-    {{- if .Values.controller.wallarm.imagePullSecrets }}
-      imagePullSecrets: {{ toYaml .Values.controller.wallarm.imagePullSecrets | nindent 8 }}
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml .Values.imagePullSecrets | nindent 8 }}
     {{- end }}
       terminationGracePeriodSeconds: {{ .Values.controller.wallarm.tarantool.terminationGracePeriodSeconds }}
       initContainers:
