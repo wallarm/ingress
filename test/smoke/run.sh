@@ -13,6 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+#import functions
+source "${PWD}/test/smoke/functions.sh"
+
+# check if all mandatory vars was defined
+check_mandatory_vars
+
 KIND_LOG_LEVEL="1"
 
 if ! [ -z $DEBUG ]; then
@@ -34,41 +41,24 @@ export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
 K8S_VERSION=${K8S_VERSION:-v1.25.8}
 
+DOCKERHUB_REGISTRY_SERVER="https://index.docker.io/v1/"
+
+# This will prevent the secret for index.docker.io from being used if the DOCKERHUB_USER is not set.
+if [ "${DOCKERHUB_USER:-false}" = "false" ]; then
+  DOCKERHUB_REGISTRY_SERVER="fake_docker_registry_server"
+fi
+
+DOCKERHUB_SECRET_NAME="dockerhub-secret"
+DOCKERHUB_USER="${DOCKERHUB_USER:-fake_user}"
+DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
+
 set -o errexit
 set -o nounset
 set -o pipefail
 
-cleanup() {
-  if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
-    kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
-  fi
-  if [[ "${CI:-}" == "true" ]]; then
-    kind delete cluster \
-      --verbosity=${KIND_LOG_LEVEL} \
-      --name ${KIND_CLUSTER_NAME}
-  fi
-}
-
 trap cleanup EXIT ERR
 
 [[ "${CI:-}" == "true" ]] && unset KUBERNETES_SERVICE_HOST
-
-declare -a mandatory
-mandatory=(
-  WALLARM_API_TOKEN
-)
-
-missing=false
-for var in "${mandatory[@]}"; do
-  if [[ -z "${!var:-}" ]]; then
-    echo "Environment variable $var must be set"
-    missing=true
-  fi
-done
-
-if [ "$missing" = true ]; then
-  exit 1
-fi
 
 if ! command -v kind --version &> /dev/null; then
   echo "kind is not installed. Use the package manager or visit the official site https://kind.sigs.k8s.io/"
@@ -107,6 +97,15 @@ EOF
   fi
 fi
 
+# create docker-registry secret
+echo "[test-env] creating secret docker-registry ..."
+kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
+    --docker-server=${DOCKERHUB_REGISTRY_SERVER} \
+    --docker-username="${DOCKERHUB_USER}" \
+    --docker-password="${DOCKERHUB_PASSWORD}" \
+    --docker-email=docker-pull@unexists.unexists
+
+
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   echo "[test-env] building controller image..."
   make -C "${DIR}"/../../ clean-image build image
@@ -121,9 +120,14 @@ else
   export TAG
 fi
 
+
+trap describe_pods_on_exit ERR
+
 echo "[test-env] installing Helm chart using TAG=${TAG} ..."
 cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-nginx" --wait --values -
 fullnameOverride: wallarm-ingress
+imagePullSecrets:
+  - name: ${DOCKERHUB_SECRET_NAME}
 controller:
   wallarm:
     enabled: true
@@ -173,6 +177,8 @@ sleep 15
 echo "[test-env] deploying test workload ..."
 kubectl apply -f "${DIR}"/workload.yaml
 kubectl wait --for=condition=Ready pods --all --timeout=60s
+
+trap - ERR
 
 echo "[test-env] running smoke tests suite ..."
 make -C "${DIR}"/../../ smoke-test

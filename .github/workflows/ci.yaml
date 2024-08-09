@@ -70,12 +70,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
+      - name: Import secrets
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e # v2.5.0
+        id: secrets
+        with:
+          exportEnv: true
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          path: kubernetes-ci
+          secrets: |
+            kv-gitlab-ci/data/github/shared/dockerhub-creds user | DOCKERHUB_USER ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
+
       - name: Build controller images
         env:
           REGISTRY: wallarm
           TAG: 1.0.0-dev
           USER: runner
         run: |
+          echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USER} --password-stdin
           echo "Building controller images ..."
           make clean-image build image image-chroot
           echo "Building E2E image ..."
@@ -134,6 +148,8 @@ jobs:
             kv-gitlab-ci/data/github/shared/allure allure_token ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_name ;
             kv-gitlab-ci/data/github/shared/smoke-tests-registry-creds token_secret ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds user ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds password ;
 
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -146,6 +162,9 @@ jobs:
       - name: Load images
         run: docker load -i controller-${{ env.ARCH }}.tar
 
+      - name: Login to DockerHub
+        run: echo ${{ steps.secrets.outputs.password }} | docker login -u ${{ steps.secrets.outputs.user }} --password-stdin
+
       - name: Create cluster
         run: kind create cluster --image=kindest/node:${{ matrix.k8s }}
 
@@ -153,6 +172,8 @@ jobs:
         env:
           SKIP_CLUSTER_CREATION: true
           SKIP_IMAGE_CREATION: true
+          DOCKERHUB_USER: ${{ steps.secrets.outputs.user }}
+          DOCKERHUB_PASSWORD: ${{ steps.secrets.outputs.password }}
           WALLARM_API_TOKEN: ${{ steps.secrets.outputs.api_token }}
           WALLARM_API_HOST: ${{ steps.secrets.outputs.api_host }}
           WALLARM_API_PRESET: ${{ steps.secrets.outputs.api_preset }}
@@ -161,8 +182,10 @@ jobs:
           SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
           WEBHOOK_API_KEY: ${{ steps.secrets.outputs.webhook_api_key }}
           WEBHOOK_UUID: ${{ steps.secrets.outputs.webhook_uuid }}
+          CLIENT_ID: 5
           ALLURE_UPLOAD_REPORT: true
           ALLURE_GENERATE_REPORT: true
+          ALLURE_PROJECT_ID: 10
           ALLURE_TOKEN: ${{ steps.secrets.outputs.allure_token }}
           ALLURE_ENVIRONMENT_K8S: ${{ matrix.k8s }}
           ALLURE_ENVIRONMENT_ARCH: ${{ matrix.ARCH }}
@@ -192,7 +215,10 @@ jobs:
           role: ${{ secrets.VAULT_ROLE }}
           method: kubernetes
           path: kubernetes-ci
-          secrets: kv-gitlab-ci/data/github/ingress api_token
+          secrets: |
+            kv-gitlab-ci/data/github/ingress api_token ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds user ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds password ;
 
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -206,6 +232,9 @@ jobs:
 
       - name: Load images
         run: docker load -i controller-${{ env.ARCH }}.tar
+
+      - name: Login to DockerHub
+        run: echo ${{ steps.secrets.outputs.password }} | docker login -u ${{ steps.secrets.outputs.user }} --password-stdin
 
       - name: Create cluster
         run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
@@ -242,6 +271,22 @@ jobs:
 
       - name: Load controller images
         run: docker load -i controller-${{ env.ARCH }}.tar
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          path: kubernetes-ci
+          secrets: |
+            kv-gitlab-ci/data/github/shared/dockerhub-creds user ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds password ;
+
+      - name: Login to DockerHub
+        run: echo ${{ steps.secrets.outputs.password }} | docker login -u ${{ steps.secrets.outputs.user }} --password-stdin
 
       - name: Create cluster
         run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
@@ -285,6 +330,8 @@ jobs:
           secrets: |
             kv-gitlab-ci/data/github/ingress api_token ;
             kv-gitlab-ci/data/github/ingress api_host ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds user ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds password ;
 
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -296,6 +343,9 @@ jobs:
 
       - name: Load controller images
         run: docker load -i controller-${{ env.ARCH }}.tar
+
+      - name: Login to DockerHub
+        run: echo ${{ steps.secrets.outputs.password }} | docker login -u ${{ steps.secrets.outputs.user }} --password-stdin
 
       - name: Create cluster ${{ matrix.k8s }}
         run: kind create cluster --image=kindest/node:${{ matrix.k8s }} --config test/e2e/kind.yaml
@@ -332,6 +382,22 @@ jobs:
 
       - name: Load controller images
         run: docker load -i controller-${{ env.ARCH }}.tar
+
+      - name: Import secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        id: secrets
+        with:
+          exportEnv: false
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ secrets.VAULT_ROLE }}
+          method: kubernetes
+          path: kubernetes-ci
+          secrets: |
+            kv-gitlab-ci/data/github/shared/dockerhub-creds user ;
+            kv-gitlab-ci/data/github/shared/dockerhub-creds password ;
+
+      - name: Login to DockerHub
+        run: echo ${{ steps.secrets.outputs.password }} | docker login -u ${{ steps.secrets.outputs.user }} --password-stdin
 
       - name: Scan controller image
         uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a
