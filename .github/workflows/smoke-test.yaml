@@ -23,6 +23,8 @@ jobs:
       fail-fast: false
       matrix:
         k8s: [ v1.23.13, v1.27.1 ]
+    env:
+      CLIENT_ID: 5
     steps:
       - name: Import secrets
         uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
@@ -70,6 +72,7 @@ jobs:
           ALLURE_TOKEN: ${{ steps.secrets.outputs.allure_token }}
           ALLURE_ENVIRONMENT_K8S: ${{ matrix.k8s }}
           ALLURE_ENVIRONMENT_ARCH: amd64
+          ALLURE_PROJECT_ID: 10
         run: |
           if [ ${{ github.event_name }} == 'workflow_dispatch' ];
           then
