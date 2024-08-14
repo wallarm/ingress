@@ -125,6 +125,7 @@ jobs:
           - ARCH: arm64
             RUNNER: self-hosted-arm64-2cpu
     env:
+      CLIENT_ID: 5
       ARCH: ${{ matrix.ARCH }}
       KIND_CLUSTER_NAME: kind-${{ matrix.k8s }}
       KUBECONFIG: $HOME/.kube/kind-config-${{ matrix.k8s }}
@@ -182,7 +183,6 @@ jobs:
           SMOKE_REGISTRY_SECRET: ${{ steps.secrets.outputs.token_secret }}
           WEBHOOK_API_KEY: ${{ steps.secrets.outputs.webhook_api_key }}
           WEBHOOK_UUID: ${{ steps.secrets.outputs.webhook_uuid }}
-          CLIENT_ID: 5
           ALLURE_UPLOAD_REPORT: true
           ALLURE_GENERATE_REPORT: true
           ALLURE_PROJECT_ID: 10
