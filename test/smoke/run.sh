@@ -41,9 +41,10 @@ export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
 K8S_VERSION=${K8S_VERSION:-v1.25.8}
 
-DOCKERHUB_REGISTRY_SERVER="https://index.docker.io/v1/"
 
 # This will prevent the secret for index.docker.io from being used if the DOCKERHUB_USER is not set.
+DOCKERHUB_REGISTRY_SERVER="https://index.docker.io/v1/"
+
 if [ "${DOCKERHUB_USER:-false}" = "false" ]; then
   DOCKERHUB_REGISTRY_SERVER="fake_docker_registry_server"
 fi

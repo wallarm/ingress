@@ -50,6 +50,17 @@ export ARCH=${ARCH:-amd64}
 # Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
 CT_IMAGE="quay.io/dmitriev/chart-testing:3.7.1"
 
+# This will prevent the secret for index.docker.io from being used if the DOCKERHUB_USER is not set.
+DOCKERHUB_REGISTRY_SERVER="https://index.docker.io/v1/"
+
+if [ "${DOCKERHUB_USER:-false}" = "false" ]; then
+  DOCKERHUB_REGISTRY_SERVER="fake_docker_registry_server"
+fi
+
+DOCKERHUB_SECRET_NAME="dockerhub-secret"
+DOCKERHUB_USER="${DOCKERHUB_USER:-fake_user}"
+DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
+
 HELM_EXTRA_ARGS="--timeout 240s"
 HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
@@ -102,9 +113,15 @@ if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
   curl -fsSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.11.1/cmctl-linux-amd64.tar.gz
   tar xzf cmctl.tar.gz
   chmod +x cmctl
- ./cmctl help
+  ./cmctl help
+  kubectl create namespace cert-manager
+  kubectl -n cert-manager create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
+    --docker-server=${DOCKERHUB_REGISTRY_SERVER} \
+    --docker-username="${DOCKERHUB_USER}" \
+    --docker-password="${DOCKERHUB_PASSWORD}" \
+    --docker-email=docker-pull@unexists.unexists
   echo "[dev-env] apply cert-manager ..."
-  kubectl apply --wait -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+  kubectl apply --wait -f test/e2e/cert-manager.yaml
   echo "[dev-env] waiting for cert-manager components available ..."
   kubectl wait --timeout=30s --for=condition=available deployment/cert-manager -n cert-manager
   echo "[dev-env] getting validation webhook config ..."
@@ -114,7 +131,6 @@ if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
   ./cmctl check api -n cert-manager --wait=2m
 fi
 
-echo "[dev-env] running helm chart e2e tests..."
 docker run \
     --rm \
     --interactive \
