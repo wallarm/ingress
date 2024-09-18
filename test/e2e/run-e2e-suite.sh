@@ -53,6 +53,18 @@ BASEDIR=$(dirname "$0")
 NGINX_BASE_IMAGE=$(cat $BASEDIR/../../NGINX_BASE)
 HTTPBUN_IMAGE=$(cat $BASEDIR/HTTPBUN_IMAGE)
 
+
+# This will prevent the secret for index.docker.io from being used if the DOCKERHUB_USER is not set.
+DOCKERHUB_REGISTRY_SERVER="https://index.docker.io/v1/"
+
+if [ "${DOCKERHUB_USER:-false}" = "false" ]; then
+  DOCKERHUB_REGISTRY_SERVER="fake_docker_registry_server"
+fi
+
+DOCKERHUB_SECRET_NAME="dockerhub-secret"
+DOCKERHUB_USER="${DOCKERHUB_USER:-fake_user}"
+DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
+
 echo -e "${BGREEN}Granting permissions to ingress-nginx e2e service account...${NC}"
 kubectl create serviceaccount ingress-nginx-e2e || true
 kubectl create clusterrolebinding permissive-binding \
@@ -70,6 +82,14 @@ if [ $VER -lt 24 ]; then
   done
 fi
 
+
+echo "[dev-env] running helm chart e2e tests..."
+kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
+  --docker-server=${DOCKERHUB_REGISTRY_SERVER} \
+  --docker-username="${DOCKERHUB_USER}" \
+  --docker-password="${DOCKERHUB_PASSWORD}" \
+  --docker-email=docker-pull@unexists.unexists
+
 echo -e "Starting the e2e test pod"
 
 kubectl run --rm \
@@ -85,7 +105,7 @@ kubectl run --rm \
   --env="WALLARM_API_TOKEN=${WALLARM_API_TOKEN:-}" \
   --env="WALLARM_API_HOST=${WALLARM_API_HOST:-}" \
   --env="HTTPBUN_IMAGE=${HTTPBUN_IMAGE}" \
-  --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e"}}' \
+  --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e","imagePullSecrets":[{"name":"dockerhub-secret"}]}}' \
   e2e --image=nginx-ingress-controller:e2e
 
 # Get the junit-reports stored in the configMaps created during e2etests

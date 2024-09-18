@@ -88,6 +88,7 @@ if [ "${SKIP_CLUSTER_CREATION}" = "false" ]; then
   kubectl get nodes -o wide
 fi
 
+
 if [ "${SKIP_INGRESS_IMAGE_CREATION}" = "false" ]; then
   echo "[dev-env] building image"
   if [ "${IS_CHROOT}" = "true" ]; then
