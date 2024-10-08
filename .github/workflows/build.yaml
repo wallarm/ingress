@@ -8,6 +8,7 @@ on:
     paths:
       - 'NGINX_BASE'
       - 'TAG'
+  workflow_dispatch:
 
 permissions:
   contents: read
