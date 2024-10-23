@@ -363,6 +363,18 @@ Create the name of the controller service account to use
       value: 5s
     - name: APIFW_WRITE_TIMEOUT
       value: 5s
+    - name: APIFW_READ_BUFFER_SIZE
+      value: "{{ .Values.config.apiFirewall.readBufferSize }}"
+    - name: APIFW_WRITE_BUFFER_SIZE
+      value: "{{ .Values.config.apiFirewall.writeBufferSize }}"
+    - name: APIFW_MAX_REQUEST_BODY_SIZE
+      value: "{{ .Values.config.apiFirewall.maxRequestBodySize }}"
+    - name: APIFW_DISABLE_KEEPALIVE
+      value: "{{ .Values.config.apiFirewall.disableKeepalive }}"
+    - name: APIFW_MAX_CONNS_PER_IP
+      value: "{{ .Values.config.apiFirewall.maxConnectionsPerIp }}"
+    - name: APIFW_MAX_REQUESTS_PER_CONN
+      value: "{{ .Values.config.apiFirewall.maxRequestsPerConnection }}"
     - name: APIFW_API_MODE_DEBUG_PATH_DB
       value: "{{ include "wallarm-apifw.path" . }}/2/wallarm_api.db"
 {{- if .Values.controller.wallarm.apiFirewall.extraEnvs }}
