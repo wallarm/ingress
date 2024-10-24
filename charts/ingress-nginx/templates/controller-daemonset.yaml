@@ -30,6 +30,7 @@ spec:
     {{- if or .Values.controller.podAnnotations (and .Values.controller.wallarm.enabled (not .Values.controller.wallarm.existingSecret.enabled)) }}
       annotations:
       {{- if .Values.controller.wallarm.enabled }}
+        wallarm-enabled: "true"
         checksum/cron: {{ .Values.controller.wallarm.cron | toJson | sha256sum }}
         {{- if not .Values.controller.wallarm.existingSecret.enabled }}
         checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
