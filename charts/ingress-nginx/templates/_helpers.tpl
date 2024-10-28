@@ -364,11 +364,11 @@ Create the name of the controller service account to use
     - name: APIFW_WRITE_TIMEOUT
       value: 5s
     - name: APIFW_READ_BUFFER_SIZE
-      value: "{{ .Values.controller.wallarm.apiFirewall.readBufferSize }}"
+      value: "{{ .Values.controller.wallarm.apiFirewall.readBufferSize | int64 }}"
     - name: APIFW_WRITE_BUFFER_SIZE
-      value: "{{ .Values.controller.wallarm.apiFirewall.writeBufferSize }}"
+      value: "{{ .Values.controller.wallarm.apiFirewall.writeBufferSize | int64 }}"
     - name: APIFW_MAX_REQUEST_BODY_SIZE
-      value: "{{ .Values.controller.wallarm.apiFirewall.maxRequestBodySize }}"
+      value: "{{ .Values.controller.wallarm.apiFirewall.maxRequestBodySize | int64 }}"
     - name: APIFW_DISABLE_KEEPALIVE
       value: "{{ .Values.controller.wallarm.apiFirewall.disableKeepalive }}"
     - name: APIFW_MAX_CONNS_PER_IP
