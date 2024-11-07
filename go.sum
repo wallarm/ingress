@@ -289,8 +289,8 @@ github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7J
 github.com/onsi/gomega v1.10.1/go.mod h1:iN09h71vgCQne3DLsj+A5owkum+a2tYe+TOCB1ybHNo=
 github.com/onsi/gomega v1.29.0 h1:KIA/t2t5UBzoirT4H9tsML45GEbo3ouUnBHsCfD2tVg=
 github.com/onsi/gomega v1.29.0/go.mod h1:9sxs+SwGrKI0+PWe4Fxa9tFQQBG5xSsSbMXOI8PPpoQ=
-github.com/opencontainers/runc v1.1.14 h1:rgSuzbmgz5DUJjeSnw337TxDbRuqjs6iqQck/2weR6w=
-github.com/opencontainers/runc v1.1.14/go.mod h1:E4C2z+7BxR7GHXp0hAY53mek+x49X1LjPNeMTfRGvOA=
+github.com/opencontainers/runc v1.2.1 h1:mQkmeFSUxqFaVmvIn1VQPeQIKpHFya5R07aJw0DKQa8=
+github.com/opencontainers/runc v1.2.1/go.mod h1:/PXzF0h531HTMsYQnmxXkBD7YaGShm/2zcRB79dksUc=
 github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 h1:3snG66yBm59tKhhSPQrQ/0bCrv1LQbKt40LnUPiUxdc=
 github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
 github.com/peterbourgon/diskv v2.0.1+incompatible h1:UBdAOUP5p4RWqPBg048CAvpKN+vxiaj6gdUUzhl4XmI=
@@ -742,8 +742,8 @@ k8s.io/apiextensions-apiserver v0.27.6 h1:mOwSBJtThZhpJr+8gEkc3wFDIjq87E3JspR5mt
 k8s.io/apiextensions-apiserver v0.27.6/go.mod h1:AVNlLYRrESG5Poo6ASRUhY2pvoKPcNt8y/IuZ4lx3o8=
 k8s.io/apimachinery v0.27.6 h1:mGU8jmBq5o8mWBov+mLjdTBcU+etTE19waies4AQ6NE=
 k8s.io/apimachinery v0.27.6/go.mod h1:XNfZ6xklnMCOGGFNqXG7bUrQCoR04dh/E7FprV6pb+E=
-k8s.io/apiserver v0.27.6 h1:r/eHN8r3lG2buggHrVMy++kKhHlHn1HWSX1dqDtes54=
-k8s.io/apiserver v0.27.6/go.mod h1:Xeo9OEXn2kDLK5pqspjdXQx7YKgDyKSpwIB4p0BmpAQ=
+k8s.io/apiserver v0.31.2 h1:VUzOEUGRCDi6kX1OyQ801m4A7AUPglpsmGvdsekmcI4=
+k8s.io/apiserver v0.31.2/go.mod h1:o3nKZR7lPlJqkU5I3Ove+Zx3JuoFjQobGX1Gctw6XuE=
 k8s.io/cli-runtime v0.27.6 h1:ik1+20C0AvxYcqEzwebH2PHOlqBTKUHZnOuPtG2CCl8=
 k8s.io/cli-runtime v0.27.6/go.mod h1:+qSBK08EJL1fFvsfVNlETzsgGtxIhascIGZSuaQXQro=
 k8s.io/client-go v0.27.6 h1:vzI8804gpUtpMCNaFjIFyJrifH7u//LJCJPy8fQuYQg=
