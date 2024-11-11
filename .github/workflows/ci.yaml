@@ -437,7 +437,7 @@ jobs:
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
 
       - name: Scan controller image
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a
+        uses: anchore/scan-action@f2ba85e044c8f5e5014c9a539328a9c78d3bfa49
         with:
           image: "wallarm/ingress-controller:1.0.0-dev"
           fail-build: true
