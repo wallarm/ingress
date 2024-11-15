@@ -138,7 +138,7 @@ controller:
     fallback: "off"
     cron:
       commands:
-        detectCredStuffing:
+        credstuff:
           logLevel: DEBUG
         syncNode:
           logLevel: DEBUG
