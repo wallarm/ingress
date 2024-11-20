@@ -83,6 +83,7 @@ nav:
           - Introduction: "user-guide/nginx-configuration/index.md"
           - Basic usage: "user-guide/basic-usage.md"
           - Annotations: "user-guide/nginx-configuration/annotations.md"
+          - Annotations Risks: "user-guide/nginx-configuration/annotations-risk.md"
           - ConfigMap: "user-guide/nginx-configuration/configmap.md"
           - Custom NGINX template: "user-guide/nginx-configuration/custom-template.md"
           - Log format: "user-guide/nginx-configuration/log-format.md"
@@ -99,7 +100,6 @@ nav:
       - TLS/HTTPS: "user-guide/tls.md"
       - Third party addons:
           - ModSecurity Web Application Firewall: "user-guide/third-party-addons/modsecurity.md"
-          - OpenTracing: "user-guide/third-party-addons/opentracing.md"
           - OpenTelemetry: "user-guide/third-party-addons/opentelemetry.md"
   - Examples:
       - Introduction: "examples/index.md"

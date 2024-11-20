@@ -76,7 +76,7 @@ export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] creating Kubernetes cluster with kind"
 
-  export K8S_VERSION=${K8S_VERSION:-v1.26.3@sha256:61b92f38dff6ccc29969e7aa154d34e38b89443af1a2c14e6cfbd2df6419c66f}
+  export K8S_VERSION=${K8S_VERSION:-v1.29.2@sha256:51a1434a5397193442f0be2a297b488b6c919ce8a3931be0ce822606ea5ca245}
 
   # delete the cluster if it exists
   if kind get clusters | grep "${KIND_CLUSTER_NAME}"; then
@@ -97,7 +97,7 @@ fi
 
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   if ! command -v ginkgo &> /dev/null; then
-    go install github.com/onsi/ginkgo/v2/ginkgo@v2.13.1
+    go install github.com/onsi/ginkgo/v2/ginkgo@v2.20.2
   fi
   echo "[dev-env] building image"
   make -C "${CURDIR}" clean-image build image
@@ -110,18 +110,18 @@ echo "[dev-env] copying docker images to cluster..."
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" wallarm/ingress-controller:${TAG}
 
 if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
-  curl -fsSL -o cmctl.tar.gz https://github.com/cert-manager/cert-manager/releases/download/v1.11.1/cmctl-linux-amd64.tar.gz
-  tar xzf cmctl.tar.gz
-  chmod +x cmctl
-  ./cmctl help
+  echo "[dev-env] deploying cert-manager..."
+  # Download cmctl. Cannot validate checksum as OS & platform may vary.
+  curl --fail --location "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_linux_amd64.tar.gz" | tar --extract --gzip cmctl
+
   kubectl create namespace cert-manager
   kubectl -n cert-manager create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
     --docker-server=${DOCKERHUB_REGISTRY_SERVER} \
     --docker-username="${DOCKERHUB_USER}" \
     --docker-password="${DOCKERHUB_PASSWORD}" \
-    --docker-email=docker-pull@unexists.unexists
+    --docker-email=docker-pull@unexists.unexists || true
   echo "[dev-env] apply cert-manager ..."
-  kubectl apply --wait -f test/e2e/cert-manager.yaml
+  ./cmctl x install
   echo "[dev-env] waiting for cert-manager components available ..."
   kubectl wait --timeout=30s --for=condition=available deployment/cert-manager -n cert-manager
   echo "[dev-env] getting validation webhook config ..."
@@ -131,6 +131,7 @@ if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
   ./cmctl check api -n cert-manager --wait=2m
 fi
 
+echo "[dev-env] running helm chart e2e tests..."
 docker run \
     --rm \
     --interactive \

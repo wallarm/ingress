@@ -391,7 +391,7 @@ func TestCleanTempNginxCfg(t *testing.T) {
 
 	var files []string
 
-	err = filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, _ error) error {
 		if info.IsDir() && os.TempDir() != path {
 			return filepath.SkipDir
 		}
@@ -410,7 +410,7 @@ func TestCleanTempNginxCfg(t *testing.T) {
 	}
 }
 
-//nolint:unparam // Ingnore `network` always receives `"tcp"` error
+//nolint:unparam // Ignore `network` always receives `"tcp"` error
 func tryListen(network, address string) (l net.Listener, err error) {
 	condFunc := func() (bool, error) {
 		l, err = net.Listen(network, address)

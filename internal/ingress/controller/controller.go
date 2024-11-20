@@ -92,6 +92,7 @@ type Configuration struct {
 	UpdateStatus           bool
 	UseNodeInternalIP      bool
 	ElectionID             string
+	ElectionTTL            time.Duration
 	UpdateStatusOnShutdown bool
 
 	HealthCheckHost string
@@ -100,6 +101,8 @@ type Configuration struct {
 	DisableServiceExternalName bool
 
 	EnableSSLPassthrough bool
+
+	DisableLeaderElection bool
 
 	EnableProfiling bool
 
@@ -251,9 +254,8 @@ func (n *NGINXController) syncIngress(interface{}) error {
 	}
 
 	ri := utilingress.GetRemovedIngresses(n.runningConfig, pcfg)
-	re := utilingress.GetRemovedHosts(n.runningConfig, pcfg)
 	rc := utilingress.GetRemovedCertificateSerialNumbers(n.runningConfig, pcfg)
-	n.metricCollector.RemoveMetrics(ri, re, rc)
+	n.metricCollector.RemoveMetrics(ri, rc)
 
 	n.runningConfig = pcfg
 
@@ -1520,12 +1522,12 @@ func (n *NGINXController) createServers(data []*ingress.Ingress,
 func locationApplyAnnotations(loc *ingress.Location, anns *annotations.Ingress) {
 	loc.BasicDigestAuth = anns.BasicDigestAuth
 	loc.ClientBodyBufferSize = anns.ClientBodyBufferSize
+	loc.CustomHeaders = anns.CustomHeaders
 	loc.ConfigurationSnippet = anns.ConfigurationSnippet
 	loc.CorsConfig = anns.CorsConfig
 	loc.ExternalAuth = anns.ExternalAuth
 	loc.EnableGlobalAuth = anns.EnableGlobalAuth
 	loc.HTTP2PushPreload = anns.HTTP2PushPreload
-	loc.Opentracing = anns.Opentracing
 	loc.Opentelemetry = anns.Opentelemetry
 	loc.Proxy = anns.Proxy
 	loc.ProxySSL = anns.ProxySSL
@@ -1611,7 +1613,11 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
 			altEqualsPri := false
 
 			for _, loc := range servers[defServerName].Locations {
-				priUps := upstreams[loc.Backend]
+				priUps, ok := upstreams[loc.Backend]
+				if !ok {
+					klog.Warningf("cannot find primary backend %s for location %s%s", loc.Backend, servers[defServerName].Hostname, loc.Path)
+					continue
+				}
 				altEqualsPri = altUps.Name == priUps.Name
 				if altEqualsPri {
 					klog.Warningf("alternative upstream %s in Ingress %s/%s is primary upstream in Other Ingress for location %s%s!",
@@ -1670,7 +1676,11 @@ func mergeAlternativeBackends(ing *ingress.Ingress, upstreams map[string]*ingres
 
 			// find matching paths
 			for _, loc := range server.Locations {
-				priUps := upstreams[loc.Backend]
+				priUps, ok := upstreams[loc.Backend]
+				if !ok {
+					klog.Warningf("cannot find primary backend %s for location %s%s", loc.Backend, server.Hostname, loc.Path)
+					continue
+				}
 				altEqualsPri = altUps.Name == priUps.Name
 				if altEqualsPri {
 					klog.Warningf("alternative upstream %s in Ingress %s/%s is primary upstream in Other Ingress for location %s%s!",

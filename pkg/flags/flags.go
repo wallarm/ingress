@@ -132,6 +132,9 @@ Requires setting the publish-service parameter to a valid Service reference.`)
 		electionID = flags.String("election-id", "ingress-controller-leader",
 			`Election id to use for Ingress status updates.`)
 
+		electionTTL = flags.Duration("election-ttl", 30*time.Second,
+			`Duration a leader election is valid before it's getting re-elected`)
+
 		updateStatusOnShutdown = flags.Bool("update-status-on-shutdown", true,
 			`Update the load-balancer status of Ingress objects when the controller shuts down.
 Requires the update-status parameter.`)
@@ -145,6 +148,9 @@ Requires the update-status parameter.`)
 
 		enableSSLPassthrough = flags.Bool("enable-ssl-passthrough", false,
 			`Enable SSL Passthrough.`)
+
+		disableLeaderElection = flags.Bool("disable-leader-election", false,
+			`Disable Leader Election on NGINX Controller.`)
 
 		disableServiceExternalName = flags.Bool("disable-svc-external-name", false,
 			`Disable support for Services of type ExternalName.`)
@@ -226,7 +232,7 @@ Takes the form "<host>:port". If not provided, no admission controller is starte
 
 	flags.StringVar(&nginx.MaxmindMirror, "maxmind-mirror", "", `Maxmind mirror url (example: http://geoip.local/databases.`)
 	flags.StringVar(&nginx.MaxmindLicenseKey, "maxmind-license-key", "", `Maxmind license key to download GeoLite2 Databases.
-https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases .`)
+https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geolite2-databases/ .`)
 	flags.StringVar(&nginx.MaxmindEditionIDs, "maxmind-edition-ids", "GeoLite2-City,GeoLite2-ASN", `Maxmind edition ids to download GeoLite2 Databases.`)
 	flags.IntVar(&nginx.MaxmindRetriesCount, "maxmind-retries-count", 1, "Number of attempts to download the GeoIP DB.")
 	flags.DurationVar(&nginx.MaxmindRetriesTimeout, "maxmind-retries-timeout", time.Second*0, "Maxmind downloading delay between 1st and 2nd attempt, 0s - do not retry to download if something went wrong.")
@@ -311,6 +317,10 @@ https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-g
 		}
 	}
 
+	if *electionTTL <= 0 {
+		*electionTTL = 30 * time.Second
+	}
+
 	histogramBuckets := &collectors.HistogramBuckets{
 		TimeBuckets:   *timeBuckets,
 		LengthBuckets: *lengthBuckets,
@@ -324,6 +334,7 @@ https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-g
 		KubeConfigFile:              *kubeConfigFile,
 		UpdateStatus:                *updateStatus,
 		ElectionID:                  *electionID,
+		ElectionTTL:                 *electionTTL,
 		EnableProfiling:             *profiling,
 		EnableMetrics:               *enableMetrics,
 		MetricsPerHost:              *metricsPerHost,
@@ -333,6 +344,7 @@ https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-g
 		MonitorMaxBatchSize:         *monitorMaxBatchSize,
 		DisableServiceExternalName:  *disableServiceExternalName,
 		EnableSSLPassthrough:        *enableSSLPassthrough,
+		DisableLeaderElection:       *disableLeaderElection,
 		ResyncPeriod:                *resyncPeriod,
 		DefaultService:              *defaultSvc,
 		Namespace:                   *watchNamespace,

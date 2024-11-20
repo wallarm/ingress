@@ -126,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        k8s: [v1.23.13, v1.27.1]
+        k8s: [v1.26.15, v1.30.0]
         ARCH: [amd64, arm64]
         include:
           - ARCH: amd64
@@ -254,7 +254,7 @@ jobs:
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
 
       - name: Create cluster
-        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
+        run: kind create cluster --image=kindest/node:v1.26.15 --config test/e2e/kind.yaml
 
       - name: Run chart testing ${{ matrix.method }}
         env:
@@ -313,7 +313,7 @@ jobs:
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
 
       - name: Create cluster
-        run: kind create cluster --image=kindest/node:v1.25.8 --config test/e2e/kind.yaml
+        run: kind create cluster --image=kindest/node:v1.26.15 --config test/e2e/kind.yaml
 
       - name: Run e2e tests
         env:
@@ -340,9 +340,9 @@ jobs:
     env:
       ARCH: amd64
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        k8s: [v1.24.12, v1.25.8, v1.26.3,v1.27.1, v1.28.0]
+        k8s: [v1.26.15, v1.27.13, v1.28.9, v1.29.4, v1.30.0]
 
     steps:
       - name: Import secrets

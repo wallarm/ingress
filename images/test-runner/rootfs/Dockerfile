@@ -15,7 +15,7 @@ ARG BASE_IMAGE
 ARG GOLANG_VERSION
 ARG ETCD_VERSION
 
-FROM golang:${GOLANG_VERSION}-alpine3.18 as GO
+FROM golang:${GOLANG_VERSION}-alpine3.20 as GO
 FROM registry.k8s.io/etcd:${ETCD_VERSION} as etcd
 
 FROM ${BASE_IMAGE}
@@ -48,7 +48,7 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
 COPY --from=etcd /usr/local/bin/etcd /usr/local/bin/etcd
 
-RUN echo "@testing https://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
 
 RUN apk update && apk upgrade && apk add --no-cache \
   bash \
@@ -66,7 +66,8 @@ RUN apk update && apk upgrade && apk add --no-cache \
   openssl \
   cfssl@testing \
   tzdata \
-  libc6-compat
+  libc6-compat \
+  sqlite-dev
 
 RUN go install -v github.com/onsi/ginkgo/v2/ginkgo@v${GINKGO_VERSION} \
     && go install golang.org/x/lint/golint@${GOLINT_VERSION}
@@ -120,9 +121,21 @@ RUN wget -qO /tmp/helm.tgz \
   && rm -rf /tmp/*
 
 # Install a YAML Linter
-RUN pip install "yamllint==$YAML_LINT_VERSION"
+# Pip not working. Check PR https://github.com/kubernetes/ingress-nginx/pull/10874
+# RUN pip install --user "yamllint==$YAML_LINT_VERSION"
+RUN apk update -U \
+    && apk add yamllint \
+    && yamllint --version
 
 # Install Yamale YAML schema validator
-RUN pip install "yamale==$YAMALE_VERSION"
+# Commenting pip install yamale because broken cloudbuild https://github.com/kubernetes/ingress-nginx/pull/10885
+# RUN pip install --user "yamale==$YAMALE_VERSION"
+RUN wget https://github.com/23andMe/Yamale/archive/master.zip \
+    && unzip -d /tmp master.zip \
+    && cd /tmp/Yamale-master \
+    && python setup.py install \
+    && yamale -V
+
+LABEL org.opencontainers.image.source=https://github.com/kubernetes/ingress-nginx
 
 WORKDIR $GOPATH

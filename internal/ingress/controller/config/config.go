@@ -20,9 +20,8 @@ import (
 	"strconv"
 	"time"
 
-	"k8s.io/klog/v2"
-
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 
 	"k8s.io/ingress-nginx/internal/ingress/defaults"
 	"k8s.io/ingress-nginx/pkg/apis/ingress"
@@ -120,7 +119,7 @@ type Configuration struct {
 	// By default this is disabled
 	AllowBackendServerHeader bool `json:"allow-backend-server-header"`
 
-	// AccessLogParams sets additionals params for access_log
+	// AccessLogParams sets additional params for access_log
 	// http://nginx.org/en/docs/http/ngx_http_log_module.html#access_log
 	// By default it's empty
 	AccessLogParams string `json:"access-log-params,omitempty"`
@@ -424,7 +423,7 @@ type Configuration struct {
 	// Example '60s'
 	ProxyProtocolHeaderTimeout time.Duration `json:"proxy-protocol-header-timeout,omitempty"`
 
-	// Enables or disables the directive aio_write that writes files files asynchronously
+	// Enables or disables the directive aio_write that writes files asynchronously
 	// https://nginx.org/en/docs/http/ngx_http_core_module.html#aio_write
 	EnableAioWrite bool `json:"enable-aio-write,omitempty"`
 
@@ -435,6 +434,10 @@ type Configuration struct {
 	// UseGeoIP2 enables the geoip2 module for NGINX
 	// By default this is disabled
 	UseGeoIP2 bool `json:"use-geoip2,omitempty"`
+
+	// GeoIP2AutoReloadMinutes enables autoreload on geoip2 setting the interval in minutes
+	// By default this is disabled using 0
+	GeoIP2AutoReloadMinutes int `json:"geoip2-autoreload-in-minutes,omitempty"`
 
 	// Enables or disables the use of the NGINX Brotli Module for compression
 	// https://github.com/google/ngx_brotli
@@ -473,6 +476,13 @@ type Configuration struct {
 	// Defines the number of worker processes. By default auto means number of available CPU cores
 	// http://nginx.org/en/docs/ngx_core_module.html#worker_processes
 	WorkerProcesses string `json:"worker-processes,omitempty"`
+
+	// Defines whether multiple concurrent reloads of worker processes should occur.
+	// Set this to false to prevent more than n x 2 workers to exist at any time, to avoid potential OOM situations and high CPU load
+	// With this setting on false, configuration changes in the queue will be re-queued with an exponential backoff, until the number of worker process is the expected value.
+	// By default new worker processes are spawned every time there's a change that cannot be applied dynamically with no upper limit to the number of running workers
+	// http://nginx.org/en/docs/ngx_core_module.html#worker_processes
+	WorkerSerialReloads bool `json:"enable-serial-reloads,omitempty"`
 
 	// Defines a timeout for a graceful shutdown of worker processes
 	// http://nginx.org/en/docs/ngx_core_module.html#worker_shutdown_timeout
@@ -572,22 +582,6 @@ type Configuration struct {
 	// Default: true
 	ProxyAddOriginalURIHeader bool `json:"proxy-add-original-uri-header"`
 
-	// EnableOpentracing enables the nginx Opentracing extension
-	// https://github.com/opentracing-contrib/nginx-opentracing
-	// By default this is disabled
-	EnableOpentracing bool `json:"enable-opentracing"`
-
-	// OpentracingOperationName specifies a custom name for the server span
-	OpentracingOperationName string `json:"opentracing-operation-name"`
-
-	// OpentracingOperationName specifies a custom name for the location span
-	OpentracingLocationOperationName string `json:"opentracing-location-operation-name"`
-
-	// OpentracingTrustIncomingSpan sets whether or not to trust incoming trace spans
-	// If false, incoming span headers will be rejected
-	// Default: true
-	OpentracingTrustIncomingSpan bool `json:"opentracing-trust-incoming-span"`
-
 	// EnableOpentelemetry enables the nginx Opentelemetry extension
 	// By default this is disabled
 	EnableOpentelemetry bool `json:"enable-opentelemetry"`
@@ -623,7 +617,7 @@ type Configuration struct {
 	// Default: 0.01
 	OtelSamplerRatio float32 `json:"otel-sampler-ratio"`
 
-	// OtelSamplerParentBased specifies the parent based sampler to be use for any traces created
+	// OtelSamplerParentBased specifies the parent based sampler to be used for any traces created
 	// Default: true
 	OtelSamplerParentBased bool `json:"otel-sampler-parent-based"`
 
@@ -638,94 +632,6 @@ type Configuration struct {
 	// MaxExportBatchSize specifies the max export batch size to used when uploading traces
 	// Default: 512
 	OtelMaxExportBatchSize int32 `json:"otel-max-export-batch-size"`
-
-	// ZipkinCollectorHost specifies the host to use when uploading traces
-	ZipkinCollectorHost string `json:"zipkin-collector-host"`
-
-	// ZipkinCollectorPort specifies the port to use when uploading traces
-	// Default: 9411
-	ZipkinCollectorPort int `json:"zipkin-collector-port"`
-
-	// ZipkinServiceName specifies the service name to use for any traces created
-	// Default: nginx
-	ZipkinServiceName string `json:"zipkin-service-name"`
-
-	// ZipkinSampleRate specifies sampling rate for traces
-	// Default: 1.0
-	ZipkinSampleRate float32 `json:"zipkin-sample-rate"`
-
-	// JaegerCollectorHost specifies the host to use when uploading traces
-	JaegerCollectorHost string `json:"jaeger-collector-host"`
-
-	// JaegerCollectorPort specifies the port to use when uploading traces
-	// Default: 6831
-	JaegerCollectorPort int `json:"jaeger-collector-port"`
-
-	// JaegerEndpoint specifies the enpoint to use when uploading traces to a collector over TCP
-	JaegerEndpoint string `json:"jaeger-endpoint"`
-
-	// JaegerServiceName specifies the service name to use for any traces created
-	// Default: nginx
-	JaegerServiceName string `json:"jaeger-service-name"`
-
-	// JaegerPropagationFormat specifies the traceparent/tracestate propagation format
-	JaegerPropagationFormat string `json:"jaeger-propagation-format"`
-
-	// JaegerSamplerType specifies the sampler to be used when sampling traces.
-	// The available samplers are: const, probabilistic, ratelimiting, remote
-	// Default: const
-	JaegerSamplerType string `json:"jaeger-sampler-type"`
-
-	// JaegerSamplerParam specifies the argument to be passed to the sampler constructor
-	// Default: 1
-	JaegerSamplerParam string `json:"jaeger-sampler-param"`
-
-	// JaegerSamplerHost specifies the host used for remote sampling consultation
-	// Default: http://127.0.0.1
-	JaegerSamplerHost string `json:"jaeger-sampler-host"`
-
-	// JaegerSamplerHost specifies the host used for remote sampling consultation
-	// Default: 5778
-	JaegerSamplerPort int `json:"jaeger-sampler-port"`
-
-	// JaegerTraceContextHeaderName specifies the header name used for passing trace context
-	// Default: uber-trace-id
-	JaegerTraceContextHeaderName string `json:"jaeger-trace-context-header-name"`
-
-	// JaegerDebugHeader specifies the header name used for force sampling
-	// Default: jaeger-debug-id
-	JaegerDebugHeader string `json:"jaeger-debug-header"`
-
-	// JaegerBaggageHeader specifies the header name used to submit baggage if there is no root span
-	// Default: jaeger-baggage
-	JaegerBaggageHeader string `json:"jaeger-baggage-header"`
-
-	// TraceBaggageHeaderPrefix specifies the header prefix used to propagate baggage
-	// Default: uberctx-
-	JaegerTraceBaggageHeaderPrefix string `json:"jaeger-tracer-baggage-header-prefix"`
-
-	// DatadogCollectorHost specifies the datadog agent host to use when uploading traces
-	DatadogCollectorHost string `json:"datadog-collector-host"`
-
-	// DatadogCollectorPort specifies the port to use when uploading traces
-	// Default: 8126
-	DatadogCollectorPort int `json:"datadog-collector-port"`
-
-	// DatadogEnvironment specifies the environment this trace belongs to.
-	// Default: prod
-	DatadogEnvironment string `json:"datadog-environment"`
-
-	// DatadogServiceName specifies the service name to use for any traces created
-	// Default: nginx
-	DatadogServiceName string `json:"datadog-service-name"`
-
-	// DatadogOperationNameOverride overrides the operation naem to use for any traces crated
-	// Default: nginx.handle
-	DatadogOperationNameOverride string `json:"datadog-operation-name-override"`
-
-	// DatadogSampleRate specifies sample rate for any traces created.
-	// Default: use a dynamic rate instead
-	DatadogSampleRate *float32 `json:"datadog-sample-rate,omitempty"`
 
 	// MainSnippet adds custom configuration to the main section of the nginx configuration
 	MainSnippet string `json:"main-snippet"`
@@ -859,7 +765,7 @@ type Configuration struct {
 	DefaultSSLCertificate *ingress.SSLCert `json:"-"`
 
 	// ProxySSLLocationOnly controls whether the proxy-ssl parameters defined in the
-	// proxy-ssl-* annotations are applied on on location level only in the nginx.conf file
+	// proxy-ssl-* annotations are applied on location level only in the nginx.conf file
 	// Default is that those are applied on server level, too
 	ProxySSLLocationOnly bool `json:"proxy-ssl-location-only"`
 
@@ -889,9 +795,9 @@ type Configuration struct {
 	// simultaneous connections.
 	GlobalRateLimitMemcachedPoolSize int `json:"global-rate-limit-memcached-pool-size"`
 
-	// GlobalRateLimitStatucCode determines the HTTP status code to return
+	// GlobalRateLimitStatusCode determines the HTTP status code to return
 	// when limit is exceeding during global rate limiting.
-	GlobalRateLimitStatucCode int `json:"global-rate-limit-status-code"`
+	GlobalRateLimitStatusCode int `json:"global-rate-limit-status-code"`
 
 	// DebugConnections Enables debugging log for selected client connections
 	// http://nginx.org/en/docs/ngx_core_module.html#debug_connection
@@ -903,6 +809,11 @@ type Configuration struct {
 	// alphanumeric chars, "-", "_", "/".In case of additional characters,
 	// like used on Rewrite configurations the user should use pathType as ImplementationSpecific
 	StrictValidatePathType bool `json:"strict-validate-path-type"`
+
+	// GRPCBufferSizeKb Sets the size of the buffer used for reading the response received
+	// from the gRPC server. The response is passed to the client synchronously,
+	// as soon as it is received.
+	GRPCBufferSizeKb int `json:"grpc-buffer-size-kb"`
 }
 
 // NewDefault returns the default nginx configuration
@@ -996,7 +907,9 @@ func NewDefault() Configuration {
 		EnableAioWrite:                   true,
 		UseGzip:                          false,
 		UseGeoIP2:                        false,
+		GeoIP2AutoReloadMinutes:          0,
 		WorkerProcesses:                  strconv.Itoa(runtime.NumCPU()),
+		WorkerSerialReloads:              false,
 		WorkerShutdownTimeout:            "240s",
 		VariablesHashBucketSize:          256,
 		VariablesHashMaxSize:             2048,
@@ -1045,6 +958,7 @@ func NewDefault() Configuration {
 			ProxyHTTPVersion:            "1.1",
 			ProxyMaxTempFileSize:        "1024m",
 			ServiceUpstream:             false,
+			AllowedResponseHeaders:      []string{},
 		},
 		UpstreamKeepaliveConnections:           320,
 		UpstreamKeepaliveTime:                  "1h",
@@ -1053,7 +967,6 @@ func NewDefault() Configuration {
 		LimitConnZoneVariable:                  defaultLimitConnZoneVariable,
 		BindAddressIpv4:                        defBindAddress,
 		BindAddressIpv6:                        defBindAddress,
-		OpentracingTrustIncomingSpan:           true,
 		OpentelemetryTrustIncomingSpan:         true,
 		OpentelemetryConfig:                    "/etc/ingress-controller/telemetry/opentelemetry.toml",
 		OtlpCollectorPort:                      "4317",
@@ -1064,21 +977,6 @@ func NewDefault() Configuration {
 		OtelScheduleDelayMillis:                5000,
 		OtelMaxExportBatchSize:                 512,
 		OtelMaxQueueSize:                       2048,
-		ZipkinCollectorPort:                    9411,
-		ZipkinServiceName:                      "nginx",
-		ZipkinSampleRate:                       1.0,
-		JaegerCollectorPort:                    6831,
-		JaegerPropagationFormat:                "jaeger",
-		JaegerServiceName:                      "nginx",
-		JaegerSamplerType:                      "const",
-		JaegerSamplerParam:                     "1",
-		JaegerSamplerPort:                      5778,
-		JaegerSamplerHost:                      "http://127.0.0.1",
-		DatadogServiceName:                     "nginx",
-		DatadogEnvironment:                     "prod",
-		DatadogCollectorPort:                   8126,
-		DatadogOperationNameOverride:           "nginx.handle",
-		DatadogSampleRate:                      nil,
 		LimitReqStatusCode:                     503,
 		LimitConnStatusCode:                    503,
 		SyslogPort:                             514,
@@ -1106,9 +1004,10 @@ func NewDefault() Configuration {
 		GlobalRateLimitMemcachedConnectTimeout: 50,
 		GlobalRateLimitMemcachedMaxIdleTimeout: 10000,
 		GlobalRateLimitMemcachedPoolSize:       50,
-		GlobalRateLimitStatucCode:              429,
+		GlobalRateLimitStatusCode:              429,
 		DebugConnections:                       []string{},
 		StrictValidatePathType:                 false, // TODO: This will be true in future releases
+		GRPCBufferSizeKb:                       0,
 	}
 
 	if klog.V(5).Enabled() {

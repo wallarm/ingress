@@ -35,6 +35,7 @@ import (
 	"syscall"
 	"text/template"
 	"time"
+	"unicode"
 
 	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/eapache/channels"
@@ -87,9 +88,10 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
 	n := &NGINXController{
 		isIPV6Enabled: ing_net.IsIPv6Enabled(),
 
-		resolver:        h,
-		cfg:             config,
-		syncRateLimiter: flowcontrol.NewTokenBucketRateLimiter(config.SyncRateLimit, 1),
+		resolver:         h,
+		cfg:              config,
+		syncRateLimiter:  flowcontrol.NewTokenBucketRateLimiter(config.SyncRateLimit, 1),
+		workersReloading: false,
 
 		recorder: eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{
 			Component: "nginx-ingress-controller",
@@ -197,14 +199,16 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
 		filesToWatch = append(filesToWatch, path)
 		return nil
 	})
-
 	if err != nil {
 		klog.Fatalf("Error creating file watchers: %v", err)
 	}
 
 	for _, f := range filesToWatch {
+		// This redeclaration is necessary for the closure to get the correct value for the iteration in go versions <1.22
+		// See https://go.dev/blog/loopvar-preview
+		f := f
 		_, err = file.NewFileWatcher(f, func() {
-			klog.InfoS("File changed detected. Reloading NGINX", "path", f)
+			klog.InfoS("File change detected. Reloading NGINX", "path", f)
 			n.syncQueue.EnqueueTask(task.GetDummyObject("file-change"))
 		})
 		if err != nil {
@@ -226,6 +230,8 @@ type NGINXController struct {
 	syncStatus status.Syncer
 
 	syncRateLimiter flowcontrol.RateLimiter
+
+	workersReloading bool
 
 	// stopLock is used to enforce that only a single call to Stop send at
 	// a given time. We allow stopping through an HTTP endpoint and
@@ -271,26 +277,29 @@ func (n *NGINXController) Start() {
 	// TODO: For now, as the the IngressClass logics has changed, is up to the
 	// cluster admin to create different Leader Election IDs.
 	// Should revisit this in a future
-	electionID := n.cfg.ElectionID
 
-	setupLeaderElection(&leaderElectionConfig{
-		Client:     n.cfg.Client,
-		ElectionID: electionID,
-		OnStartedLeading: func(stopCh chan struct{}) {
-			if n.syncStatus != nil {
-				go n.syncStatus.Run(stopCh)
-			}
+	if !n.cfg.DisableLeaderElection {
+		electionID := n.cfg.ElectionID
+		setupLeaderElection(&leaderElectionConfig{
+			Client:      n.cfg.Client,
+			ElectionID:  electionID,
+			ElectionTTL: n.cfg.ElectionTTL,
+			OnStartedLeading: func(stopCh chan struct{}) {
+				if n.syncStatus != nil {
+					go n.syncStatus.Run(stopCh)
+				}
 
-			n.metricCollector.OnStartedLeading(electionID)
-			// manually update SSL expiration metrics
-			// (to not wait for a reload)
-			n.metricCollector.SetSSLExpireTime(n.runningConfig.Servers)
-			n.metricCollector.SetSSLInfo(n.runningConfig.Servers)
-		},
-		OnStoppedLeading: func() {
-			n.metricCollector.OnStoppedLeading(electionID)
-		},
-	})
+				n.metricCollector.OnStartedLeading(electionID)
+				// manually update SSL expiration metrics
+				// (to not wait for a reload)
+				n.metricCollector.SetSSLExpireTime(n.runningConfig.Servers)
+				n.metricCollector.SetSSLInfo(n.runningConfig.Servers)
+			},
+			OnStoppedLeading: func() {
+				n.metricCollector.OnStoppedLeading(electionID)
+			},
+		})
+	}
 
 	cmd := n.command.ExecCommand()
 
@@ -671,12 +680,12 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 	cfg := n.store.GetBackendConfiguration()
 	cfg.Resolver = n.resolver
 
-	content, err := n.generateTemplate(cfg, ingressCfg)
-	if err != nil {
-		return err
+	workerSerialReloads := cfg.WorkerSerialReloads
+	if workerSerialReloads && n.workersReloading {
+		return errors.New("worker reload already in progress, requeuing reload")
 	}
 
-	err = createOpentracingCfg(&cfg)
+	content, err := n.generateTemplate(cfg, ingressCfg)
 	if err != nil {
 		return err
 	}
@@ -738,7 +747,39 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 		return fmt.Errorf("%v\n%v", err, string(o))
 	}
 
+	// Reload status checking runs in a separate goroutine to avoid blocking the sync queue
+	if workerSerialReloads {
+		go n.awaitWorkersReload()
+	}
+
 	return nil
+}
+
+// awaitWorkersReload checks if the number of workers has returned to the expected count
+func (n *NGINXController) awaitWorkersReload() {
+	n.workersReloading = true
+	defer func() { n.workersReloading = false }()
+
+	expectedWorkers := n.store.GetBackendConfiguration().WorkerProcesses
+	var numWorkers string
+	klog.V(3).Infof("waiting for worker count to be equal to %s", expectedWorkers)
+	for numWorkers != expectedWorkers {
+		time.Sleep(time.Second)
+		o, err := exec.Command("/bin/sh", "-c", "pgrep worker | wc -l").Output()
+		if err != nil {
+			klog.ErrorS(err, numWorkers)
+			return
+		}
+		// cleanup any non-printable chars from shell output
+		numWorkers = strings.Map(func(r rune) rune {
+			if unicode.IsPrint(r) {
+				return r
+			}
+			return -1
+		}, string(o))
+
+		klog.V(3).Infof("Currently running nginx worker processes: %s, expected %s", numWorkers, expectedWorkers)
+	}
 }
 
 // nginxHashBucketSize computes the correct NGINX hash_bucket_size for a hash
@@ -1001,33 +1042,6 @@ func configureCertificates(rawServers []*ingress.Server) error {
 	return nil
 }
 
-const zipkinTmpl = `{
-  "service_name": "{{ .ZipkinServiceName }}",
-  "collector_host": "{{ .ZipkinCollectorHost }}",
-  "collector_port": {{ .ZipkinCollectorPort }},
-  "sample_rate": {{ .ZipkinSampleRate }}
-}`
-
-const jaegerTmpl = `{
-  "service_name": "{{ .JaegerServiceName }}",
-  "propagation_format": "{{ .JaegerPropagationFormat }}",
-  "sampler": {
-	"type": "{{ .JaegerSamplerType }}",
-	"param": {{ .JaegerSamplerParam }},
-	"samplingServerURL": "{{ .JaegerSamplerHost }}:{{ .JaegerSamplerPort }}/sampling"
-  },
-  "reporter": {
-	"endpoint": "{{ .JaegerEndpoint }}",
-	"localAgentHostPort": "{{ .JaegerCollectorHost }}:{{ .JaegerCollectorPort }}"
-  },
-  "headers": {
-	"TraceContextHeaderName": "{{ .JaegerTraceContextHeaderName }}",
-	"jaegerDebugHeader": "{{ .JaegerDebugHeader }}",
-	"jaegerBaggageHeader": "{{ .JaegerBaggageHeader }}",
-	"traceBaggageHeaderPrefix": "{{ .JaegerTraceBaggageHeaderPrefix }}"
-  }
-}`
-
 const otelTmpl = `
 exporter = "otlp"
 processor = "batch"
@@ -1050,70 +1064,6 @@ name = "{{ .OtelSampler }}" # Also: AlwaysOff, TraceIdRatioBased
 ratio = {{ .OtelSamplerRatio }}
 parent_based = {{ .OtelSamplerParentBased }}
 `
-
-func datadogOpentracingCfg(cfg *ngx_config.Configuration) (string, error) {
-	m := map[string]interface{}{
-		"service":                 cfg.DatadogServiceName,
-		"agent_host":              cfg.DatadogCollectorHost,
-		"agent_port":              cfg.DatadogCollectorPort,
-		"environment":             cfg.DatadogEnvironment,
-		"operation_name_override": cfg.DatadogOperationNameOverride,
-	}
-
-	// Omit "sample_rate" if the configuration's sample rate is unset (nil).
-	// Omitting "sample_rate" from the plugin JSON indicates to the tracer that
-	// it should use dynamic rates instead of a configured rate.
-	if cfg.DatadogSampleRate != nil {
-		m["sample_rate"] = *cfg.DatadogSampleRate
-	}
-
-	buf, err := json.Marshal(m)
-	if err != nil {
-		return "", err
-	}
-
-	return string(buf), nil
-}
-
-func opentracingCfgFromTemplate(cfg *ngx_config.Configuration, tmplName, tmplText string) (string, error) {
-	tmpl, err := template.New(tmplName).Parse(tmplText)
-	if err != nil {
-		return "", err
-	}
-
-	tmplBuf := bytes.NewBuffer(make([]byte, 0))
-	err = tmpl.Execute(tmplBuf, cfg)
-	if err != nil {
-		return "", err
-	}
-
-	return tmplBuf.String(), nil
-}
-
-func createOpentracingCfg(cfg *ngx_config.Configuration) error {
-	var configData string
-	var err error
-
-	switch {
-	case cfg.ZipkinCollectorHost != "":
-		configData, err = opentracingCfgFromTemplate(cfg, "zipkin", zipkinTmpl)
-	case cfg.JaegerCollectorHost != "" || cfg.JaegerEndpoint != "":
-		configData, err = opentracingCfgFromTemplate(cfg, "jaeger", jaegerTmpl)
-	case cfg.DatadogCollectorHost != "":
-		configData, err = datadogOpentracingCfg(cfg)
-	default:
-		configData = "{}"
-	}
-
-	if err != nil {
-		return err
-	}
-
-	// Expand possible environment variables before writing the configuration to file.
-	expanded := os.ExpandEnv(configData)
-
-	return os.WriteFile("/etc/ingress-controller/telemetry/opentracing.json", []byte(expanded), file.ReadWriteByUser)
-}
 
 func createOpentelemetryCfg(cfg *ngx_config.Configuration) error {
 	tmpl, err := template.New("otel").Parse(otelTmpl)
