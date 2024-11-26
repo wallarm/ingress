@@ -104,7 +104,7 @@ kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
     --docker-server=${DOCKERHUB_REGISTRY_SERVER} \
     --docker-username="${DOCKERHUB_USER}" \
     --docker-password="${DOCKERHUB_PASSWORD}" \
-    --docker-email=docker-pull@unexists.unexists
+    --docker-email=docker-pull@unexists.unexists || true
 
 
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then

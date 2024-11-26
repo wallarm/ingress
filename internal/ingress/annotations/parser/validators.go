@@ -44,7 +44,7 @@ var (
 	alphaNumericChars    = `\-\.\_\~a-zA-Z0-9\/:`
 	extendedAlphaNumeric = alphaNumericChars + ", "
 	regexEnabledChars    = regexp.QuoteMeta(`^$[](){}*+?|&=\`)
-	urlEnabledChars      = regexp.QuoteMeta(`:?&=`)
+	urlEnabledChars      = regexp.QuoteMeta(`,:?&=`)
 )
 
 // IsValidRegex checks if the tested string can be used as a regex, but without any weird character.
@@ -117,6 +117,20 @@ func ValidateRegex(regex *regexp.Regexp, removeSpace bool) AnnotationValidator {
 	}
 }
 
+// CommonNameAnnotationValidator checks whether the annotation value starts with
+// 'CN=' and is followed by a valid regex.
+func CommonNameAnnotationValidator(s string) error {
+	if !strings.HasPrefix(s, "CN=") {
+		return fmt.Errorf("value %s is not a valid Common Name annotation: missing prefix 'CN='", s)
+	}
+
+	if _, err := regexp.Compile(s[3:]); err != nil {
+		return fmt.Errorf("value %s is not a valid regex: %w", s, err)
+	}
+
+	return nil
+}
+
 // ValidateOptions receives an array of valid options that can be the value of annotation.
 // If no valid option is found, it will return an error
 func ValidateOptions(options []string, caseSensitive, trimSpace bool) AnnotationValidator {
@@ -176,7 +190,7 @@ func ValidateServiceName(value string) error {
 	return nil
 }
 
-// checkAnnotations will check each annotation for:
+// checkAnnotation will check each annotation for:
 // 1 - Does it contain the internal validation and docs config?
 // 2 - Does the ingress contains annotations? (validate null pointers)
 // 3 - Does it contains a validator? Should it contain a validator (not containing is a bug!)

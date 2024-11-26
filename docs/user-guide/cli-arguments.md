@@ -22,9 +22,11 @@ They are set in the container spec of the `ingress-nginx-controller` Deployment 
 | `--disable-sync-events` | Disables the creation of 'Sync' Event resources, but still logs them |
 | `--dynamic-configuration-retries` | Number of times to retry failed dynamic configuration before failing to sync an ingress. (default 15) |
 | `--election-id`                    | Election id to use for Ingress status updates. (default "ingress-controller-leader") |
+| `--election-ttl`                  | Duration a leader election is valid before it's getting re-elected, e.g. `15s`, `10m` or `1h`. (Default: 30s) |
 | `--enable-metrics`                 | Enables the collection of NGINX metrics. (default true) |
 | `--enable-ssl-chain-completion`    | Autocomplete SSL certificate chains with missing intermediate CA certificates. Certificates uploaded to Kubernetes must have the "Authority Information Access" X.509 v3 extension for this to succeed. (default false)|
 | `--enable-ssl-passthrough`         | Enable SSL Passthrough. (default false) |
+| `--disable-leader-election`        | Disable Leader Election on Nginx Controller. (default false) |
 | `--enable-topology-aware-routing`  | Enable topology aware routing feature, needs service object annotation service.kubernetes.io/topology-mode sets to auto. (default false) |
 | `--exclude-socket-metrics`         | Set of socket request metrics to exclude which won't be exported nor being calculated. The possible socket request metrics to exclude are documented in the monitoring guide e.g. 'nginx_ingress_controller_request_duration_seconds,nginx_ingress_controller_response_size'|
 | `--health-check-path`              | URL path of the health check endpoint. Configured inside the NGINX status server. All requests received on the port defined by the healthz-port parameter are forwarded internally to this path. (default "/healthz") |
@@ -41,7 +43,7 @@ They are set in the container spec of the `ingress-nginx-controller` Deployment 
 | `--maxmind-edition-ids`            | Maxmind edition ids to download GeoLite2 Databases. (default "GeoLite2-City,GeoLite2-ASN") |
 | `--maxmind-retries-timeout`        | Maxmind downloading delay between 1st and 2nd attempt, 0s - do not retry to download if something went wrong. (default 0s) |
 | `--maxmind-retries-count`          | Number of attempts to download the GeoIP DB. (default 1) |
-| `--maxmind-license-key`            | Maxmind license key to download GeoLite2 Databases. https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-geolite2-databases . |
+| `--maxmind-license-key`            | Maxmind license key to download GeoLite2 Databases. https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geolite2-databases/ . |
 | `--maxmind-mirror`            | Maxmind mirror url (example: http://geoip.local/databases. |
 | `--metrics-per-host`               | Export metrics per-host. (default true) |
 | `--monitor-max-batch-size`               | Max batch size of NGINX metrics. (default 10000)|

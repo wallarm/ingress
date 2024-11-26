@@ -10,8 +10,8 @@ AIO_VERSION=$(cat AIO_BASE)
 AIO_FILE="wallarm-${AIO_VERSION}.${AIO_ARCH}-musl.tar.gz"
 AIO_URL="https://storage.googleapis.com/meganode_storage/${AIO_VERSION%.*}/${AIO_FILE}"
 
-# ingress controller is currently based on nginx 1.21.6
-NGINX_VER=1216
+# ingress controller is currently based on nginx 1.25.5
+NGINX_VER=1255
 
 # grep on Mac OS comes from FreeBSD not GNU, and it does not have option -P. Need to install ggrep by `brew install grep`
 GREP_CMD=$(which grep)

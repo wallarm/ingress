@@ -170,7 +170,7 @@ func (fakeTemplate) Write(conf *ngx_config.TemplateConfig) ([]byte, error) {
 
 func TestCheckIngress(t *testing.T) {
 	defer func() {
-		err := filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(os.TempDir(), func(path string, info os.FileInfo, _ error) error {
 			if info.IsDir() && os.TempDir() != path {
 				return filepath.SkipDir
 			}
@@ -1292,6 +1292,74 @@ func TestMergeAlternativeBackends(t *testing.T) {
 				},
 			},
 		},
+		"alternative backend does not merge for missing upstream": {
+			&ingress.Ingress{
+				Ingress: networking.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "example",
+					},
+					Spec: networking.IngressSpec{
+						Rules: []networking.IngressRule{
+							{
+								Host: "example.com",
+								IngressRuleValue: networking.IngressRuleValue{
+									HTTP: &networking.HTTPIngressRuleValue{
+										Paths: []networking.HTTPIngressPath{
+											{
+												Path:     "/",
+												PathType: &pathTypePrefix,
+												Backend: networking.IngressBackend{
+													Service: &networking.IngressServiceBackend{
+														Name: "http-svc-canary",
+														Port: networking.ServiceBackendPort{
+															Number: 80,
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			map[string]*ingress.Backend{
+				"example-http-svc-canary-80": {
+					Name:     "example-http-svc-canary-80",
+					NoServer: true,
+					TrafficShapingPolicy: ingress.TrafficShapingPolicy{
+						Weight: 20,
+					},
+				},
+			},
+			map[string]*ingress.Server{
+				"example.com": {
+					Hostname: "example.com",
+					Locations: []*ingress.Location{
+						{
+							Path:     "/",
+							PathType: &pathTypePrefix,
+							Backend:  "example-http-svc-80",
+						},
+					},
+				},
+			},
+			map[string]*ingress.Backend{},
+			map[string]*ingress.Server{
+				"example.com": {
+					Hostname: "example.com",
+					Locations: []*ingress.Location{
+						{
+							Path:     "/",
+							PathType: &pathTypePrefix,
+							Backend:  "example-http-svc-80",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for title, tc := range testCases {
@@ -1573,7 +1641,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(_ []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 1 {
 					t.Errorf("servers count should be 1, got %d", len(servers))
 					return
@@ -1640,7 +1708,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(_ []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 1 {
 					t.Errorf("servers count should be 1, got %d", len(servers))
 					return
@@ -1700,7 +1768,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(_ []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 1 {
 					t.Errorf("servers count should be 1, got %d", len(servers))
 					return
@@ -1799,7 +1867,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(_ []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 2 {
 					t.Errorf("servers count should be 2, got %d", len(servers))
 					return
@@ -2059,7 +2127,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(_ []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 2 {
 					t.Errorf("servers count should be 2, got %d", len(servers))
 					return
@@ -2190,7 +2258,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(ingresses []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 2 {
 					t.Errorf("servers count should be 2, got %d", len(servers))
 					return
@@ -2298,7 +2366,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(ingresses []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 2 {
 					t.Errorf("servers count should be 2, got %d", len(servers))
 					return
@@ -2367,7 +2435,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(_ []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 2 {
 					t.Errorf("servers count should be 1, got %d", len(servers))
 					return
@@ -2437,7 +2505,7 @@ func TestGetBackendServers(t *testing.T) {
 					},
 				},
 			},
-			Validate: func(ingresses []*ingress.Ingress, upstreams []*ingress.Backend, servers []*ingress.Server) {
+			Validate: func(_ []*ingress.Ingress, _ []*ingress.Backend, servers []*ingress.Server) {
 				if len(servers) != 2 {
 					t.Errorf("servers count should be 2, got %d", len(servers))
 					return

@@ -1,0 +1,16 @@
+controller:
+  admissionWebhooks:
+    certManager:
+      enabled: true
+
+  image:
+    repository: wallarm/ingress-controller
+    tag: 1.0.0-dev
+    digest: null
+
+  service:
+    type: ClusterIP
+  wallarm:
+    apiHost: api.wallarm.com
+
+

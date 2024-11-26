@@ -1,0 +1,19 @@
+controller:
+  image:
+    repository: wallarm/ingress-controller
+    tag: 1.0.0-dev
+    digest: null
+
+  service:
+    type: ClusterIP
+
+  kind: Deployment
+
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
+    prometheus.io/scheme: http
+
+  wallarm:
+    apiHost: api.wallarm.com
+    prometheus.io/path: /metrics

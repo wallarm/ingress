@@ -400,7 +400,6 @@ func getFakeHostSSLCert(host string) (cert, key []byte) {
 	var err error
 
 	priv, err = rsa.GenerateKey(rand.Reader, 2048)
-
 	if err != nil {
 		klog.Fatalf("failed to generate fake private key: %v", err)
 	}
@@ -443,7 +442,7 @@ func getFakeHostSSLCert(host string) (cert, key []byte) {
 
 // fullChainCert checks if a certificate file contains issues in the intermediate CA chain
 // Returns a new certificate with the intermediate certificates.
-// If the certificate does not contains issues with the chain it return an empty byte array
+// If the certificate does not contain issues with the chain it returns an empty byte array
 func fullChainCert(in []byte) ([]byte, error) {
 	cert, err := certUtil.DecodeCertificate(in)
 	if err != nil {
@@ -524,7 +523,7 @@ func (tl *TLSListener) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, e
 	return tl.certificate, tl.err
 }
 
-// TLSConfig instanciates a TLS configuration, always providing an up to date certificate
+// TLSConfig instantiates a TLS configuration, always providing an up to date certificate
 func (tl *TLSListener) TLSConfig() *tls.Config {
 	return &tls.Config{
 		GetCertificate: tl.GetCertificate,

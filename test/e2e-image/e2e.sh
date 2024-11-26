@@ -32,7 +32,7 @@ ginkgo_args=(
   "--randomize-all"
   "--show-node-events"
   "-v"
-  "--timeout=100m"
+  "--timeout=120m"
 )
 
 if [ -n "${FOCUS}" ]; then

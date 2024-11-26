@@ -88,7 +88,7 @@ kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
   --docker-server=${DOCKERHUB_REGISTRY_SERVER} \
   --docker-username="${DOCKERHUB_USER}" \
   --docker-password="${DOCKERHUB_PASSWORD}" \
-  --docker-email=docker-pull@unexists.unexists
+  --docker-email=docker-pull@unexists.unexists || true
 
 echo -e "Starting the e2e test pod"
 
@@ -99,6 +99,7 @@ kubectl run --rm \
   --env="FOCUS=${FOCUS}" \
   --env="IS_CHROOT=${IS_CHROOT:-false}" \
   --env="ENABLE_VALIDATIONS=${ENABLE_VALIDATIONS:-false}"\
+  --env="SKIP_OPENTELEMETRY_TESTS=${SKIP_OPENTELEMETRY_TESTS:-false}"\
   --env="E2E_CHECK_LEAKS=${E2E_CHECK_LEAKS}" \
   --env="NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE}" \
   --env="WALLARM_ENABLED=${WALLARM_ENABLED:-false}" \

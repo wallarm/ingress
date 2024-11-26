@@ -65,7 +65,7 @@ otel-max-queuesize
 
 # The delay interval in milliseconds between two consecutive exports.
 otel-schedule-delay-millis
-        
+
 # How long the export can run before it is cancelled.
 otel-schedule-delay-millis
 
@@ -112,7 +112,7 @@ graph TB
     end
 
     subgraph otel
-        otc["Otel Collector"] 
+        otc["Otel Collector"]
     end
 
     subgraph observability
@@ -152,7 +152,7 @@ To install the example and collectors run:
     ```yaml
       opentelemetry:
         enabled: true
-        image: registry.k8s.io/ingress-nginx/opentelemetry:v20230527@sha256:fd7ec835f31b7b37187238eb4fdad4438806e69f413a203796263131f4f02ed0
+        image: registry.k8s.io/ingress-nginx/opentelemetry-1.25.3:v20240813-b933310d@sha256:f7604ac0547ed64d79b98d92133234e66c2c8aade3c1f4809fed5eec1fb7f922
         containerSecurityContext:
         allowPrivilegeEscalation: false
     ```
@@ -165,7 +165,7 @@ To install the example and collectors run:
       kind: ConfigMap
       data:
         enable-opentelemetry: "true"
-        opentelemetry-config: "/etc/ingress-controller/telemetry/opentelemetry.toml"
+        opentelemetry-config: "/etc/nginx/opentelemetry.toml"
         opentelemetry-operation-name: "HTTP $request_method $service_name $uri"
         opentelemetry-trust-incoming-span: "true"
         otlp-collector-host: "otel-coll-collector.otel.svc"
@@ -190,8 +190,8 @@ To install the example and collectors run:
     helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
     helm repo add grafana https://grafana.github.io/helm-charts
     helm repo update
-    # deply cert-manager needed for OpenTelemetry collector operator
-    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+    # deploy cert-manager needed for OpenTelemetry collector operator
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.3/cert-manager.yaml
     # create observability namespace
     kubectl apply -f https://raw.githubusercontent.com/esigo/nginx-example/main/observability/namespace.yaml
     # install OpenTelemetry collector operator
@@ -279,10 +279,10 @@ for common annotations and configurations:
 
 ### Annotations
 
-| Legacy                                           | OpenTelemetry                                    |
-|--------------------------------------------------|--------------------------------------------------|
-| `nginx.ingress.kubernetes.io/enable-opentracing` | `nginx.ingress.kubernetes.io/enable-opentelemetry` |
-| `opentracing-trust-incoming-span`                | `opentracing-trust-incoming-span`                  |
+| Legacy                                                        | OpenTelemetry                                                   |
+|---------------------------------------------------------------|-----------------------------------------------------------------|
+| `nginx.ingress.kubernetes.io/enable-opentracing`              | `nginx.ingress.kubernetes.io/enable-opentelemetry`              |
+| `nginx.ingress.kubernetes.io/opentracing-trust-incoming-span` | `nginx.ingress.kubernetes.io/opentelemetry-trust-incoming-span` |
 
 ### Configs
 
