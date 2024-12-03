@@ -28,6 +28,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# generate unique group name
+export NODE_GROUP_NAME="github-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+
 RED='\e[35m'
 NC='\e[0m'
 BGREEN='\e[32m'
@@ -105,6 +108,7 @@ kubectl run --rm \
   --env="WALLARM_ENABLED=${WALLARM_ENABLED:-false}" \
   --env="WALLARM_API_TOKEN=${WALLARM_API_TOKEN:-}" \
   --env="WALLARM_API_HOST=${WALLARM_API_HOST:-}" \
+  --env="NODE_GROUP_NAME=${NODE_GROUP_NAME:-}" \
   --env="HTTPBUN_IMAGE=${HTTPBUN_IMAGE}" \
   --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e","imagePullSecrets":[{"name":"dockerhub-secret"}]}}' \
   e2e --image=nginx-ingress-controller:e2e

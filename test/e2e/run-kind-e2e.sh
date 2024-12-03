@@ -60,6 +60,9 @@ SKIP_INGRESS_IMAGE_CREATION="${SKIP_INGRESS_IMAGE_CREATION:-false}"
 SKIP_E2E_IMAGE_CREATION="${SKIP_E2E_IMAGE_CREATION:=false}"
 SKIP_CLUSTER_CREATION="${SKIP_CLUSTER_CREATION:-false}"
 
+# generate unique group name
+export NODE_GROUP_NAME="github-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+
 if ! command -v kind --version &> /dev/null; then
   echo "kind is not installed. Use the package manager or visit the official site https://kind.sigs.k8s.io/"
   exit 1

@@ -16,6 +16,9 @@
 
 KIND_LOG_LEVEL="1"
 
+# generate unique group name
+export NODE_GROUP_NAME="github-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+
 if [ -n "${DEBUG}" ]; then
   set -x
   KIND_LOG_LEVEL="6"
@@ -64,6 +67,7 @@ DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
 HELM_EXTRA_ARGS="--timeout 240s"
 HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
+ --set controller.wallarm.nodeGroup=${NODE_GROUP_NAME} \
  --set controller.wallarm.enabled=true \
  --set controller.image.repository=wallarm/ingress-controller \
  --set controller.image.tag=1.0.0-dev \

@@ -14,8 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#import functions
+# import functions
 source "${PWD}/test/smoke/functions.sh"
+
+# generate unique group name
+export NODE_GROUP_NAME="github-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+echo "[test-env] random node group name: ${NODE_GROUP_NAME}..."
 
 # check if all mandatory vars was defined
 check_mandatory_vars
@@ -135,6 +139,7 @@ controller:
     token: ${WALLARM_API_TOKEN}
     apiHost: ${WALLARM_API_HOST}
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
+    nodeGroup: ${NODE_GROUP_NAME}
     fallback: "off"
     cron:
       commands:

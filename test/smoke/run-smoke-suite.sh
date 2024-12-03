@@ -8,7 +8,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-#import functions
+# import functions
 source "${PWD}/test/smoke/functions.sh"
 
 # check if all mandatory vars was defined
@@ -62,15 +62,6 @@ if ! kubectl get secret "${SMOKE_IMAGE_PULL_SECRET_NAME}" &> /dev/null; then
     --docker-email=docker-pull@unexists.unexists
 fi
 
-echo "Retrieving Wallarm Node UUID ..."
-POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
-NODE_UUID=$(kubectl exec "${POD}" -c controller -- cat /opt/wallarm/etc/wallarm/node.yaml | grep uuid | awk '{print $2}' | xargs)
-if [[ -z "${NODE_UUID}" ]]; then
-  echo "Failed to retrieve Wallarm Node UUID"
-  get_logs_and_fail
-fi
-echo "Node UUID: ${NODE_UUID}"
-
 RAND_NUM="${RANDOM}${RANDOM}${RANDOM}"
 RAND_NUM=${RAND_NUM:0:10}
 
@@ -90,7 +81,7 @@ spec:
   - command: [sleep, infinity]
     env:
     - {name: NODE_BASE_URL, value: "${NODE_BASE_URL}"}
-    - {name: NODE_UUID, value: "${NODE_UUID}"}
+    - {name: NODE_GROUP_NAME, value: "${NODE_GROUP_NAME}"}
     - {name: WALLARM_API_HOST, value: "${WALLARM_API_HOST}"}
     - {name: WALLARM_API_PRESET, value: "${WALLARM_API_PRESET}"}
     - {name: API_CA_VERIFY, value: "${WALLARM_API_CA_VERIFY}"}

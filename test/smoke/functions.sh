@@ -18,6 +18,7 @@ function check_mandatory_vars() {
       WEBHOOK_UUID
       SMOKE_REGISTRY_TOKEN
       SMOKE_REGISTRY_SECRET
+      NODE_GROUP_NAME
     )
 
     env_list=""
