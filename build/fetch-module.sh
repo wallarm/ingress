@@ -4,10 +4,11 @@ set -e
 
 TARGETS_MODULES="rootfs/modules"
 TARGETS_PAGES="rootfs/usr"
+TMP_TARGET_DIR="/tmp/opt/wallarm"
 
 AIO_VERSION=$(cat AIO_BASE)
 [ "${ARCH}" == "amd64" ] && AIO_ARCH=x86_64 || AIO_ARCH=aarch64
-AIO_FILE="wallarm-${AIO_VERSION}.${AIO_ARCH}-musl.tar.gz"
+AIO_FILE="wallarm-${AIO_VERSION}.${AIO_ARCH}-musl.sh"
 AIO_URL="https://storage.googleapis.com/meganode_storage/${AIO_VERSION%.*}/${AIO_FILE}"
 
 # ingress controller is currently based on nginx 1.25.5
@@ -15,7 +16,7 @@ NGINX_VER=1255
 
 # grep on Mac OS comes from FreeBSD not GNU, and it does not have option -P. Need to install ggrep by `brew install grep`
 GREP_CMD=$(which grep)
-STRIP_N=0
+
 if [[ "$OSTYPE" == darwin* ]]; then
   if ! command -v ggrep &> /dev/null
   then
@@ -23,22 +24,28 @@ if [[ "$OSTYPE" == darwin* ]]; then
     exit 1
   fi
   GREP_CMD=$(which ggrep)
-  STRIP_N=1
 fi
 
 
 if ! test -f "${AIO_FILE}"; then
   echo "Downloading AIO archive (${ARCH}/${AIO_ARCH})"
   curl -L -C - -o "${AIO_FILE}" "${AIO_URL}"
+  chmod +x "${AIO_FILE}"
 fi
 
+echo "Extracting AIO to (${TMP_TARGET_DIR})"
+sh -c "./${AIO_FILE} --noexec --target ${TMP_TARGET_DIR}"
+
 mkdir -p "${TARGETS_MODULES}/${ARCH}"
-echo "Extracting ngx_http_wallarm_module (${ARCH}/${AIO_ARCH})"
-tar -xvf "${AIO_FILE}" -C "${TARGETS_MODULES}/${ARCH}" --strip-components="$((4 + ${STRIP_N}))" "/opt/wallarm/modules/ingress-${NGINX_VER}/ngx_http_wallarm_module.so"
+echo "Copy ngx_http_wallarm_module (${ARCH}/${AIO_ARCH})"
+cp ${TMP_TARGET_DIR}/modules/ingress-${NGINX_VER}/ngx_http_wallarm_module.so ${TARGETS_MODULES}/${ARCH}/ngx_http_wallarm_module.so
 
 mkdir -p "${TARGETS_PAGES}"
-echo "Extracting wallarm_blocked.html page"
-tar -xvf "${AIO_FILE}" -C "${TARGETS_PAGES}" --strip-components="$((6 + ${STRIP_N}))" "/opt/wallarm/usr/share/nginx/html/wallarm_blocked.html"
+echo "Copy wallarm_blocked.html page"
+cp ${TMP_TARGET_DIR}/usr/share/nginx/html/wallarm_blocked.html ${TARGETS_PAGES}/wallarm_blocked.html
+
+echo "Clean ${TMP_TARGET_DIR}"
+rm -rf "${TMP_TARGET_DIR}"
 
 # image rm is needed to be able to pull two samely tagged images for different platforms (as we execute on the same runner)
 NGINX_BASE=$(cat NGINX_BASE)
