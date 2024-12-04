@@ -5,6 +5,11 @@ on:
     branches: ['main', 'stable/**']
     types: ['opened', 'reopened', 'synchronize']
   workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build job to run'
+        required: false
+        default: 'false'
 
 
 permissions:
@@ -23,6 +28,7 @@ jobs:
       helm: ${{ steps.filter.outputs.helm }}
       smoke: ${{ steps.filter.outputs.smoke }}
       runner: ${{ steps.runner.outputs.type }}
+      force_build: ${{ github.event.inputs.force_build }}
     steps:
 
       - name: Checkout
@@ -48,6 +54,10 @@ jobs:
               - 'charts/ingress-nginx/**/*'
             smoke:
               - 'test/smoke/*'
+      
+      - name: Set force build output
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: echo "force_build=${{ github.event.inputs.force_build }}" >> $GITHUB_OUTPUT
 
 
 
@@ -55,7 +65,7 @@ jobs:
     name: Build images
     runs-on: ${{ matrix.RUNNER }}
     if: |
-      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true' || needs.changes.outputs.smoke == 'true')
+      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.helm == 'true' || needs.changes.outputs.smoke == 'true') || needs.changes.outputs.force_build == 'true'
     needs:
       - changes
     strategy:
@@ -122,7 +132,7 @@ jobs:
       - build
       - changes
     if: |
-      (needs.changes.outputs.helm == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.smoke == 'true')
+      (needs.changes.outputs.helm == 'true' || needs.changes.outputs.go == 'true' || needs.changes.outputs.smoke == 'true') || needs.changes.outputs.force_build == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -212,7 +222,7 @@ jobs:
     needs:
       - build
       - changes
-    if: needs.changes.outputs.helm == 'true'
+    if: needs.changes.outputs.helm == 'true' || needs.changes.outputs.force_build == 'true'
     env:
       ARCH: amd64
     strategy:
@@ -279,7 +289,7 @@ jobs:
     needs:
       - build
       - changes
-    if: needs.changes.outputs.go == 'true'
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.force_build == 'true'
     env:
       ARCH: amd64
     steps:
@@ -337,7 +347,7 @@ jobs:
     needs:
       - changes
       - build
-    if: needs.changes.outputs.go == 'true'
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.force_build == 'true'
     env:
       ARCH: amd64
     strategy:
@@ -407,7 +417,7 @@ jobs:
       - changes
       - build
     if: |
-      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true')
+      (needs.changes.outputs.base == 'true' || needs.changes.outputs.go == 'true') || needs.changes.outputs.force_build == 'true'
     env:
       ARCH: amd64
     steps:
