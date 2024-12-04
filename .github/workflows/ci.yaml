@@ -231,6 +231,7 @@ jobs:
           path: kubernetes-ci
           secrets: |
             kv-gitlab-ci/data/github/ingress api_token ;
+            kv-gitlab-ci/data/github/ingress user_token ;
             kv-gitlab-ci/data/github/shared/dockerhub-creds user | DOCKERHUB_USER ;
             kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
 
