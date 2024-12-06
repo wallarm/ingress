@@ -103,7 +103,7 @@ jobs:
 
   sign:
     name: Sign images
-    runs-on: self-hosted-amd64-1cpu
+    runs-on: self-hosted-amd64-4cpu
     needs:
       - changes
       - build
