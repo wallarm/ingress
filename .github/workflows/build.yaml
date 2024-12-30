@@ -24,7 +24,7 @@ jobs:
       controller: ${{ steps.filter.outputs.controller }}
     steps:
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v3.0.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v3.0.2
 
       - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v2.10.2
         id: filter
@@ -58,16 +58,16 @@ jobs:
             kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
 
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v3.0.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v3.0.2
 
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v2.0.0
+        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v2.0.0
         with:
           version: latest
           use: false
 
       - name: Docker login
-        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
         with:
           username: ${{ steps.secrets.outputs.DOCKERHUB_USER }}
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
@@ -127,7 +127,7 @@ jobs:
             kv-gitlab-ci/data/github/shared/dockerhub-creds password | DOCKERHUB_PASSWORD ;
 
       - name: Docker login
-        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
         with:
           username: ${{ steps.secrets.outputs.DOCKERHUB_USER }}
           password: ${{ steps.secrets.outputs.DOCKERHUB_PASSWORD }}
@@ -154,7 +154,7 @@ jobs:
           echo "sbom=${SBOM_SPDX}" >> $GITHUB_OUTPUT
           
       - name: Upload SBOM
-        uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b
         with:
           retention-days: 30
           name: ${{ steps.sign.outputs.sbom }}
