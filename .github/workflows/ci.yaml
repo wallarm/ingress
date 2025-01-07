@@ -454,4 +454,4 @@ jobs:
           image: "wallarm/ingress-controller:1.0.0-dev"
           fail-build: true
           output-format: 'table'
-          severity-cutoff: 'critical'
+          severity-cutoff: 'high'
