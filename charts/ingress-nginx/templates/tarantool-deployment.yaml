@@ -65,6 +65,9 @@ spec:
             {{- toYaml (index .Values "controller" "wallarm" "tarantool" "extraEnvs") | nindent 12 }}
           {{- end }}
           securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+          - mountPath: /opt/wallarm/etc/wallarm
+            name: wallarm
           livenessProbe:
             tcpSocket:
               port: {{ template "ingress-nginx.wallarmTarantoolPort" . }}

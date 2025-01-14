@@ -972,7 +972,7 @@ controller:
       ## The image name and tag for the helper image
       ##
       image: docker.io/wallarm/node-helpers
-      tag: 5.3.0-rc0
+      tag: 5.3.0-wstore
     tarantool:
       kind: Deployment
       service:
