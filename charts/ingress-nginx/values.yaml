@@ -978,7 +978,7 @@ controller:
       service:
         annotations: {}
       replicaCount: 1
-      arena: "1.0"
+      arena: "2.0"
       livenessProbe:
         failureThreshold: 3
         initialDelaySeconds: 10
