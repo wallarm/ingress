@@ -33,7 +33,7 @@ spec:
       annotations:
       {{- if .Values.controller.wallarm.enabled }}
         wallarm-enabled: "true"
-        checksum/cron: {{ .Values.controller.wallarm.cron | toJson | sha256sum }}
+        checksum/wcli: {{ .Values.controller.wallarm.wcli | toJson | sha256sum }}
         {{- if not .Values.controller.wallarm.existingSecret.enabled }}
         checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
         {{- end }}
@@ -201,7 +201,7 @@ spec:
         {{- toYaml .Values.controller.extraContainers | nindent 8 }}
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
-        {{ include "ingress-nginx.wallarmCronContainer" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmWcliContainer" . | nindent 8 }}
         {{ include "ingress-nginx.wallarmCollectdContainer" . | nindent 8 }}
         {{- if .Values.controller.wallarm.apiFirewall.enabled }}
         {{ include "ingress-nginx.wallarmapiFirewallContainer" . | nindent 8 }}

@@ -1040,8 +1040,8 @@ controller:
         # externalTrafficPolicy: ""
         # nodePort: ""
     ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following variables:
-    ## init, cron, and collectd. Otherwise, HPA will not work properly.
-    ## Note: init.resources, and cron.resources are shared between 2 pods:
+    ## init, wcli, and collectd. Otherwise, HPA will not work properly.
+    ## Note: init.resources, and wcli.resources are shared between 2 pods:
     ## wallarm-ingress-controller and wallarm-ingress-controller-wstore.
     ## Means that in case of values changing - BOTH pods (controller and wstore) will be redeployed.
     init:
@@ -1054,7 +1054,7 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
-    cron:
+    wcli:
       ### General log level
       logLevel: warn
       ### Per-job log levels

@@ -196,8 +196,8 @@ Create the name of the controller service account to use
 
 {{- define "ingress-nginx.wallarmPostanalyticsPort" -}}3313{{- end -}}
 {{- define "ingress-nginx.wallarmPostanalyticsName" -}}{{ .Values.controller.name }}-wallarm-wstore{{- end -}}
-{{- define "ingress-nginx.wallarmPostanalyticsCronConfig" -}}{{ template "ingress-nginx.wallarmPostanalyticsName" . }}-cron{{- end -}}
-{{- define "ingress-nginx.wallarmControllerCronConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-cron{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsWcliConfig" -}}{{ template "ingress-nginx.wallarmPostanalyticsName" . }}-wcli{{- end -}}
+{{- define "ingress-nginx.wallarmControllerWcliConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-wcli{{- end -}}
 {{- define "ingress-nginx.wallarmSecret" -}}{{ .Values.controller.name }}-secret{{- end -}}
 
 {{- define "wallarm.credentials" -}}
@@ -265,10 +265,10 @@ Create the name of the controller service account to use
 {{ toYaml .Values.controller.wallarm.init.resources | indent 4 }}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmCronContainer" -}}
-- name: cron
-{{- if .Values.controller.wallarm.cron.image }}
-  {{- with .Values.controller.wallarm.cron.image }}
+{{- define "ingress-nginx.wallarmWcliContainer" -}}
+- name: wcli
+{{- if .Values.controller.wallarm.wcli.image }}
+  {{- with .Values.controller.wallarm.wcli.image }}
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
@@ -282,8 +282,8 @@ Create the name of the controller service account to use
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-{{- if .Values.controller.wallarm.cron.extraEnvs }}
-  {{- toYaml .Values.controller.wallarm.cron.extraEnvs | nindent 2 }}
+{{- if .Values.controller.wallarm.wcli.extraEnvs }}
+  {{- toYaml .Values.controller.wallarm.wcli.extraEnvs | nindent 2 }}
 {{- end }}
   volumeMounts:
   - mountPath: {{ include "wallarm.path" . }}
@@ -298,7 +298,7 @@ Create the name of the controller service account to use
     readOnly: true
   securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
   resources:
-{{ toYaml .Values.controller.wallarm.cron.resources | indent 4 }}
+{{ toYaml .Values.controller.wallarm.wcli.resources | indent 4 }}
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmTokenVolume" -}}
@@ -512,8 +512,8 @@ Extra modules.
 Wcli arguments building
 */}}
 {{- define "ingress-nginx.wcli-args" -}}
-"-log-level", "{{ .Values.controller.wallarm.cron.logLevel }}",{{ " " }}
-{{- with .Values.controller.wallarm.cron.commands -}}
+"-log-level", "{{ .Values.controller.wallarm.wcli.logLevel }}",{{ " " }}
+{{- with .Values.controller.wallarm.wcli.commands -}}
 {{- range $name, $value := . -}}
 "job:{{ $name }}", "-log-level", "{{ $value.logLevel }}",{{ " " }}
 {{- end -}}

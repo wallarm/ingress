@@ -25,7 +25,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cron: {{ .Values.controller.wallarm.cron | toJson | sha256sum }}
+        checksum/wcli: {{ .Values.controller.wallarm.wcli | toJson | sha256sum }}
       {{- if not .Values.controller.wallarm.existingSecret.enabled }}
         checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
       {{- end }}
@@ -47,7 +47,7 @@ spec:
         {{ $_ := set .Values "register_mode" "post_analytic" }}
         {{ include "ingress-nginx.wallarmInitContainer.init" . | nindent 8 }}
       containers:
-        {{ include "ingress-nginx.wallarmCronContainer" . | nindent 8 }}
+        {{ include "ingress-nginx.wallarmWcliContainer" . | nindent 8 }}
         - name: wstore
         {{- if .Values.controller.wallarm.postanalytics.image }}
           {{- with .Values.controller.wallarm.postanalytics.image }}

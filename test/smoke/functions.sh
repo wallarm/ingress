@@ -104,9 +104,9 @@ function get_logs() {
     echo -e "#######################################\n"
 
     echo "#################################"
-    echo "###### Cron container logs ######"
+    echo "###### Wcli container logs ######"
     echo "#################################"
-    kubectl logs -l "app.kubernetes.io/component=controller" -c cron --tail=-1
+    kubectl logs -l "app.kubernetes.io/component=controller" -c wcli --tail=-1
     echo -e "#################################\n"
 
     echo "###################################"
@@ -134,9 +134,9 @@ function get_logs() {
     echo -e "############################################################\n"
 
     echo "##################################################"
-    echo "###### WSTORE Pod - Cron container logs  ######"
+    echo "###### WSTORE Pod - Wcli container logs  ######"
     echo "##################################################"
-    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-wstore" -c cron --tail=-1
+    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-wstore" -c wcli --tail=-1
     echo -e "##################################################\n"
 
     echo "######################################################"

@@ -14,10 +14,10 @@ controller:
       extraEnvs:
         - name: EXTRA_ADDNODE_KEY
           value: EXTRA_ADDNODE_VAL
-    cron:
+    wcli:
       extraEnvs:
-        - name: EXTRA_CRON_KEY
-          value: EXTRA_CRON_VAL
+        - name: EXTRA_WCLI_KEY
+          value: EXTRA_WCLI_VAL
     collectd:
       extraEnvs:
         - name: EXTRA_COLLECTD_KEY
