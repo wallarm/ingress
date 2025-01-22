@@ -194,9 +194,9 @@ Create the name of the controller service account to use
 {{- end -}}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmTarantoolPort" -}}3313{{- end -}}
-{{- define "ingress-nginx.wallarmTarantoolName" -}}{{ .Values.controller.name }}-wallarm-tarantool{{- end -}}
-{{- define "ingress-nginx.wallarmTarantoolCronConfig" -}}{{ template "ingress-nginx.wallarmTarantoolName" . }}-cron{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsPort" -}}3313{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsName" -}}{{ .Values.controller.name }}-wallarm-wstore{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsCronConfig" -}}{{ template "ingress-nginx.wallarmPostanalyticsName" . }}-cron{{- end -}}
 {{- define "ingress-nginx.wallarmControllerCronConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-cron{{- end -}}
 {{- define "ingress-nginx.wallarmSecret" -}}{{ .Values.controller.name }}-secret{{- end -}}
 
@@ -221,10 +221,10 @@ Create the name of the controller service account to use
   value: {{ .Chart.Version | quote }}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
-- name: addnode
-{{- if .Values.controller.wallarm.addnode.image }}
-  {{- with .Values.controller.wallarm.addnode.image }}
+{{- define "ingress-nginx.wallarmInitContainer.init" -}}
+- name: init
+{{- if .Values.controller.wallarm.init.image }}
+  {{- with .Values.controller.wallarm.init.image }}
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
@@ -246,8 +246,8 @@ Create the name of the controller service account to use
   - name: WALLARM_LABELS
     value: "group={{ .Values.controller.wallarm.nodeGroup }}"
 {{- end }}
-{{- if .Values.controller.wallarm.addnode.extraEnvs }}
-  {{- toYaml .Values.controller.wallarm.addnode.extraEnvs | nindent 2 }}
+{{- if .Values.controller.wallarm.init.extraEnvs }}
+  {{- toYaml .Values.controller.wallarm.init.extraEnvs | nindent 2 }}
 {{- end }}
   volumeMounts:
   - mountPath: {{ include "wallarm.path" . }}
@@ -262,7 +262,7 @@ Create the name of the controller service account to use
     readOnly: true
   securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
   resources:
-{{ toYaml .Values.controller.wallarm.addnode.resources | indent 4 }}
+{{ toYaml .Values.controller.wallarm.init.resources | indent 4 }}
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmCronContainer" -}}

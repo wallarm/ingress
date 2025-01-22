@@ -68,13 +68,13 @@ function cleanup() {
 
 function describe_pods_on_exit() {
     controller_label="app.kubernetes.io/component=controller"
-    tarantool_label="app.kubernetes.io/component=controller-wallarm-tarantool"
+    wstore_label="app.kubernetes.io/component=controller-wallarm-wstore"
     workload_label="app=workload"
 
     echo "#################### Describe controller POD ####################"
     kubectl describe pod -l $controller_label
-    echo "#################### Describe Tarantool POD ####################"
-    kubectl describe pod -l $tarantool_label
+    echo "#################### Describe wstore POD ####################"
+    kubectl describe pod -l $wstore_label
     echo "#################### Describe workload POD ####################"
     kubectl describe pod -l $workload_label
 }
@@ -94,7 +94,7 @@ function get_logs() {
     echo "#################################"
     echo "###### Init container logs ######"
     echo "#################################"
-    kubectl logs -l "app.kubernetes.io/component=controller" -c addnode --tail=-1
+    kubectl logs -l "app.kubernetes.io/component=controller" -c init --tail=-1
     echo -e "#################################\n"
 
     echo "#######################################"
@@ -134,15 +134,15 @@ function get_logs() {
     echo -e "############################################################\n"
 
     echo "##################################################"
-    echo "###### TARANTOOL Pod - Cron container logs  ######"
+    echo "###### WSTORE Pod - Cron container logs  ######"
     echo "##################################################"
-    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-tarantool" -c cron --tail=-1
+    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-wstore" -c cron --tail=-1
     echo -e "##################################################\n"
 
     echo "######################################################"
-    echo "###### TARANTOOL Pod - Tarantool container logs ######"
+    echo "###### WSTORE Pod - Wstore container logs ######"
     echo "######################################################"
-    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-tarantool" -c tarantool --tail=-1
+    kubectl logs -l "app.kubernetes.io/component=controller-wallarm-wstore" -c wstore --tail=-1
     echo -e "######################################################\n"
 }
 

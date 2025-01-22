@@ -10,7 +10,7 @@ controller:
       value: EXTRA_NGINXCTR_VAL
   wallarm:
     apiHost: api.wallarm.com
-    addnode:
+    init:
       extraEnvs:
         - name: EXTRA_ADDNODE_KEY
           value: EXTRA_ADDNODE_VAL
@@ -26,10 +26,10 @@ controller:
       extraEnvs:
         - name: EXTRA_APIFW_KEY
           value: EXTRA_APIFW_VAL
-    tarantool:
+    postanalytics:
       extraEnvs:
-        - name: EXTRA_TARANTOOL_KEY
-          value: EXTRA_TARANTOOL_VAL
+        - name: EXTRA_WSTORE_KEY
+          value: EXTRA_WSTORE_VAL
     wallarm-appstructure:
       extraEnvs:
         - name: EXTRA_APPSTRUCT_KEY
