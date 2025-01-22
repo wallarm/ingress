@@ -1,0 +1,25 @@
+{{- if .Values.controller.wallarm.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+{{- if .Values.controller.wallarm.postanalytics.service.annotations }}
+  annotations: {{ toYaml .Values.controller.wallarm.postanalytics.service.annotations | nindent 4 }}
+{{- end }}
+  labels:
+    {{- include "ingress-nginx.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+  {{- if .Values.controller.wallarm.postanalytics.service.labels }}
+    {{- toYaml .Values.controller.wallarm.postanalytics.service.labels | nindent 4 }}
+  {{- end }}
+  name: {{ include "ingress-nginx.controller.fullname" . }}-wallarm-wstore
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: wstore
+      port: {{ template "ingress-nginx.wallarmPostanalyticsPort" . }}
+      protocol: TCP
+  selector:
+    {{- include "ingress-nginx.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ template "ingress-nginx.wallarmPostanalyticsName" . }}
+{{- end }}

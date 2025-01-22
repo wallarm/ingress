@@ -72,7 +72,7 @@ HELM_EXTRA_SET_ARGS="\
  --set controller.image.repository=wallarm/ingress-controller \
  --set controller.image.tag=1.0.0-dev \
  --set controller.terminationGracePeriodSeconds=0 \
- --set controller.wallarm.tarantool.terminationGracePeriodSeconds=0 \
+ --set controller.wallarm.postanalytics.terminationGracePeriodSeconds=0 \
  --set fullnameOverride=wallarm-ingress"
 
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"

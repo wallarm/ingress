@@ -194,10 +194,10 @@ Create the name of the controller service account to use
 {{- end -}}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmTarantoolPort" -}}3313{{- end -}}
-{{- define "ingress-nginx.wallarmTarantoolName" -}}{{ .Values.controller.name }}-wallarm-tarantool{{- end -}}
-{{- define "ingress-nginx.wallarmTarantoolCronConfig" -}}{{ template "ingress-nginx.wallarmTarantoolName" . }}-cron{{- end -}}
-{{- define "ingress-nginx.wallarmControllerCronConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-cron{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsPort" -}}3313{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsName" -}}{{ .Values.controller.name }}-wallarm-wstore{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsWcliConfig" -}}{{ template "ingress-nginx.wallarmPostanalyticsName" . }}-wcli{{- end -}}
+{{- define "ingress-nginx.wallarmControllerWcliConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-wcli{{- end -}}
 {{- define "ingress-nginx.wallarmSecret" -}}{{ .Values.controller.name }}-secret{{- end -}}
 
 {{- define "wallarm.credentials" -}}
@@ -221,10 +221,10 @@ Create the name of the controller service account to use
   value: {{ .Chart.Version | quote }}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmInitContainer.addNode" -}}
-- name: addnode
-{{- if .Values.controller.wallarm.addnode.image }}
-  {{- with .Values.controller.wallarm.addnode.image }}
+{{- define "ingress-nginx.wallarmInitContainer.init" -}}
+- name: init
+{{- if .Values.controller.wallarm.init.image }}
+  {{- with .Values.controller.wallarm.init.image }}
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
@@ -246,8 +246,8 @@ Create the name of the controller service account to use
   - name: WALLARM_LABELS
     value: "group={{ .Values.controller.wallarm.nodeGroup }}"
 {{- end }}
-{{- if .Values.controller.wallarm.addnode.extraEnvs }}
-  {{- toYaml .Values.controller.wallarm.addnode.extraEnvs | nindent 2 }}
+{{- if .Values.controller.wallarm.init.extraEnvs }}
+  {{- toYaml .Values.controller.wallarm.init.extraEnvs | nindent 2 }}
 {{- end }}
   volumeMounts:
   - mountPath: {{ include "wallarm.path" . }}
@@ -262,13 +262,13 @@ Create the name of the controller service account to use
     readOnly: true
   securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
   resources:
-{{ toYaml .Values.controller.wallarm.addnode.resources | indent 4 }}
+{{ toYaml .Values.controller.wallarm.init.resources | indent 4 }}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmCronContainer" -}}
-- name: cron
-{{- if .Values.controller.wallarm.cron.image }}
-  {{- with .Values.controller.wallarm.cron.image }}
+{{- define "ingress-nginx.wallarmWcliContainer" -}}
+- name: wcli
+{{- if .Values.controller.wallarm.wcli.image }}
+  {{- with .Values.controller.wallarm.wcli.image }}
   image: "{{ .repository }}:{{ .tag }}"
   {{- end }}
 {{- else }}
@@ -282,8 +282,8 @@ Create the name of the controller service account to use
     valueFrom:
       fieldRef:
         fieldPath: metadata.name
-{{- if .Values.controller.wallarm.cron.extraEnvs }}
-  {{- toYaml .Values.controller.wallarm.cron.extraEnvs | nindent 2 }}
+{{- if .Values.controller.wallarm.wcli.extraEnvs }}
+  {{- toYaml .Values.controller.wallarm.wcli.extraEnvs | nindent 2 }}
 {{- end }}
   volumeMounts:
   - mountPath: {{ include "wallarm.path" . }}
@@ -298,7 +298,7 @@ Create the name of the controller service account to use
     readOnly: true
   securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
   resources:
-{{ toYaml .Values.controller.wallarm.cron.resources | indent 4 }}
+{{ toYaml .Values.controller.wallarm.wcli.resources | indent 4 }}
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmTokenVolume" -}}
@@ -512,8 +512,8 @@ Extra modules.
 Wcli arguments building
 */}}
 {{- define "ingress-nginx.wcli-args" -}}
-"-log-level", "{{ .Values.controller.wallarm.cron.logLevel }}",{{ " " }}
-{{- with .Values.controller.wallarm.cron.commands -}}
+"-log-level", "{{ .Values.controller.wallarm.wcli.logLevel }}",{{ " " }}
+{{- with .Values.controller.wallarm.wcli.commands -}}
 {{- range $name, $value := . -}}
 "job:{{ $name }}", "-log-level", "{{ $value.logLevel }}",{{ " " }}
 {{- end -}}

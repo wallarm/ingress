@@ -968,32 +968,34 @@ controller:
       ##
       secretName: wallarm-api-token
     fallback: "on"
+    ## The image name and tag for the helper image
+    ##
     helpers:
-      ## The image name and tag for the helper image
-      ##
       image: docker.io/wallarm/node-helpers
-      tag: 5.3.0-rc0
-    tarantool:
+      tag: 5.3.0-wstore
+    ## Configuration for post-analytics module
+    ##
+    postanalytics:
       kind: Deployment
       service:
         annotations: {}
       replicaCount: 1
-      arena: "1.0"
+      arena: "2.0"
       livenessProbe:
         failureThreshold: 3
         initialDelaySeconds: 10
         periodSeconds: 10
         successThreshold: 1
         timeoutSeconds: 1
-      ## Additional annotations for Tarantool pod
+      ## Additional annotations for Wstore pod
       ##
       podAnnotations: {}
-      ## Additional labels for Tarantool pod
+      ## Additional labels for Wstore pod
       ##
       podLabels: {}
       resources: {}
       terminationGracePeriodSeconds: 30
-      ## Configuration for Tarantool pod assigment
+      ## Configuration for Wstore pod assigment
       ##
       affinity: {}
       tolerations: []
@@ -1038,11 +1040,11 @@ controller:
         # externalTrafficPolicy: ""
         # nodePort: ""
     ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following variables:
-    ## addnode, cron, and collectd. Otherwise, HPA will not work properly.
-    ## Note: addnode.resources, and cron.resources are shared between 2 pods:
-    ## wallarm-ingress-controller and wallarm-ingress-controller-tarantool.
-    ## Means that in case of values changing - BOTH pods (controller and tarantool) will be redeployed.
-    addnode:
+    ## init, wcli, and collectd. Otherwise, HPA will not work properly.
+    ## Note: init.resources, and wcli.resources are shared between 2 pods:
+    ## wallarm-ingress-controller and wallarm-ingress-controller-wstore.
+    ## Means that in case of values changing - BOTH pods (controller and wstore) will be redeployed.
+    init:
       resources: {}
       # -- Additional environment variables to set
       extraEnvs: []
@@ -1052,7 +1054,7 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
-    cron:
+    wcli:
       ### General log level
       logLevel: warn
       ### Per-job log levels

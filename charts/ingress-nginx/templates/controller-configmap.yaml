@@ -16,7 +16,7 @@ data:
   allow-snippet-annotations: "{{ .Values.controller.allowSnippetAnnotations }}"
 {{- if .Values.controller.wallarm.enabled }}
   enable-wallarm: "{{ .Values.controller.wallarm.enabled }}"
-  wallarm-upstream-service: "{{ include "ingress-nginx.controller.fullname" . }}-wallarm-tarantool"
+  wallarm-upstream-service: "{{ include "ingress-nginx.controller.fullname" . }}-wallarm-wstore"
   wallarm-metrics-port: "{{ .Values.controller.wallarm.metrics.port }}"
   wallarm-apifw-enabled: "{{ .Values.controller.wallarm.apiFirewall.enabled }}"
   wallarm-apifw-port: "{{ .Values.controller.wallarm.apiFirewall.config.mainPort }}"
