@@ -26,7 +26,7 @@ controller:
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "5.3.0-rc0"
+    tag: "5.3.0-1"
     pullPolicy: IfNotPresent
     runAsNonRoot: true
     # www-data -> uid 101
@@ -972,7 +972,7 @@ controller:
       ## The image name and tag for the helper image
       ##
       image: docker.io/wallarm/node-helpers
-      tag: 5.3.0-rc0
+      tag: 5.3.0
     tarantool:
       kind: Deployment
       service:
