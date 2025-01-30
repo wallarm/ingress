@@ -3,7 +3,7 @@ This document describes how to run smoke tests against wallarm-ingress installat
 Routines described in the document create local test environment and run smoke tests by performing the following actions:
 * Build ingress controller image
 * Create local Kubernetes cluster using kind
-* Download helper images: ruby, python, collectd and tarantool
+* Download helper images: ruby, python, collectd and wstore
 * Download image with pytest and smoke tests
 * Deploy Helm chart
 * Deploy test workload with Httpbin
