@@ -1,0 +1,419 @@
+default:
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/common-runner:v0.3.2
+  tags: [infra-c05r1-amd]
+
+stages:
+  - build
+  - test
+  - sign
+  - publish
+
+variables:
+  X_CI_BUILD_KIND:
+    description: "What we want to run, usually 'develop' or 'smokeonly' flow"
+    value: 'develop'
+    options:
+      - 'develop'
+      - 'production'
+      - 'chart'
+      - 'smokeonly'
+      - 'vulnscan'
+  ARCH:
+    description: default architecture (mandatory var in test scripts)
+    value: amd64
+  WALLARM_API_PRESET:
+    description: "Wallarm api preset"
+    value: audit
+    options:
+      - audit
+      - eu1
+      - us1
+
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^stable\/.*$/
+      changes:
+        - TAG
+      variables:
+        X_CI_BUILD_KIND: "production"
+        REGISTRY: docker.io/wallarm
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^stable\/.*$/ || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      variables:
+        X_CI_BUILD_KIND: "develop"
+        REGISTRY: $CI_REGISTRY_IMAGE
+        TAG: $CI_COMMIT_SHORT_SHA
+    - if: $CI_COMMIT_TAG =~ /^[0-9]+.[0-9]+.[0-9]+\+upstream*$/
+      variables:
+        X_CI_BUILD_KIND: "chart"
+        CHART_TYPE: "release"
+    - if: $CI_COMMIT_TAG =~ /^[0-9]+.[0-9]+.[0-9]+-rc*$/
+      variables:
+        X_CI_BUILD_KIND: "chart"
+        CHART_TYPE: "release-candidate"
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == "smoke"
+      variables:
+        X_CI_BUILD_KIND: "smokeonly"
+        REGISTRY: docker.io/wallarm
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == "vulnscan"
+      variables:
+        X_CI_BUILD_KIND: "vulnscan"
+        REGISTRY: docker.io/wallarm
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+
+
+.x-vault-login: &x_vault_login
+  - | # login to (new) vault-common.i.gcp.wallarm.space
+    [ "$ARCH" = "arm64" ] && VAULT_PATH=kubernetes-infra-ci || VAULT_PATH=kubernetes
+    export VAULT_ADDR=https://vault-common.i.gcp.wallarm.space
+    vault write -field=token \
+        "auth/${VAULT_PATH}/login" \
+        role=gitlab-runner \
+        jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) > ${HOME}/.vault-token
+    chmod 600 ~/.vault-token
+
+.x-docker-login-private: &x_docker_login_private
+  - | # GitLab Container Registry
+    docker login "${CI_REGISTRY}" \
+        -u "${CI_REGISTRY_USER}" \
+        -p "${CI_REGISTRY_PASSWORD}"
+  - | # GitLab Dependency Proxy
+    docker login "${CI_DEPENDENCY_PROXY_SERVER}" \
+        -u "${CI_DEPENDENCY_PROXY_USER}" \
+        -p "${CI_DEPENDENCY_PROXY_PASSWORD}"
+
+.x-docker-login-public: &x_docker_login_public
+  - | # DockerHub
+    docker login \
+        -u "${X_CREDS_DOCKERHUB_WALLARMCICD_USER}" \
+        -p "${X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD}"
+
+.x-get-node-credentials: &x_get_node_credentials |-
+    export WALLARM_API_HOST=$(vault kv get -field=api_host -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export WALLARM_API_TOKEN=$(vault kv get -field=user_token -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export CLIENT_ID=$(vault kv get -field=client_id -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export USER_TOKEN=$(vault kv get -field=user_token -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export USER_UUID=$(vault kv get -field=user_uuid -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+
+    export ALLURE_PROJECT_ID=$(vault kv get -field=allure_project_id -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export ALLURE_TOKEN=$(vault kv get -field=allure_server_token -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export ALLURE_ENDPOINT=$(vault kv get -field=allure_server_url -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export WEBHOOK_UUID=$(vault kv get -field=webhook_uuid -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+    export WEBHOOK_API_KEY=$(vault kv get -field=webhook_api_key -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
+
+.x-sign-images: &x_sign_images
+  - |
+    export COSIGN_PASSWORD=$(vault kv get -field=password -mount="node-team" pipelines/cosign)
+    export COSIGN_PRIVATE=$(vault kv get -field=private_key -mount="node-team" pipelines/cosign)
+
+    export IMAGE_NAME=${REGISTRY}/${IMAGE}:${TAG}
+    docker pull -q ${IMAGE_NAME}
+    export IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE_NAME)
+    export IMAGE_URI=$(echo $IMAGE_DIGEST | sed -e 's/\@sha256:/:sha256-/')
+
+.x-get-github-token: &x_get_github_token
+  - |
+    export GITHUB_TOKEN=$(vault kv get -field=token -mount="node-team" "pipelines/common/github_token")
+
+.x-get-gitlab-credentials: &x_get_gitlab_credentials
+  - |
+    export GITLAB_TOKEN=$(vault kv get -field=token_secret -mount="node-team" pipelines/gl_version_repo_creds)
+    export GITLAB_TOKEN_NAME=$(vault kv get -field=token_name -mount="node-team" pipelines/gl_version_repo_creds)
+    export GITLAB_HOST=$(vault kv get -field=host -mount="node-team" pipelines/gl_version_repo_creds)
+    export GITLAB_REPO=$(vault kv get -field=repo -mount="node-team" pipelines/gl_version_repo_creds)
+
+.before-build:
+  before_script:
+    - *x_docker_login_private
+    - *x_docker_login_public
+
+.before-test:
+  before_script:
+    - *x_docker_login_private
+    - *x_vault_login
+    - *x_get_node_credentials
+
+.before-sign-docker:
+  before_script:
+    - *x_vault_login
+    - *x_docker_login_public
+    - *x_sign_images
+
+.before-helm-publish:
+  before_script:
+    - *x_vault_login
+    - *x_get_github_token
+
+.before-update-versions:
+  before_script:
+    - *x_vault_login
+    - *x_get_gitlab_credentials
+
+
+
+### DEV & PROD jobs
+
+IMAGE_BUILD_IC:
+  stage: build
+  tags: [infra-c2r4-dind-amd]
+  rules:
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production)$/
+  extends:
+    - .before-build
+  variables:
+    PLATFORMS: amd64 arm64
+    BUILDX_PLATFORMS: linux/amd64,linux/arm64
+  script: |
+    echo "Calculated node version: ${TAG}"
+    echo "Building for registry: $REGISTRY"
+
+    echo "Enabling docker buildx..."
+    docker buildx create --name multi-arch --platform $BUILDX_PLATFORMS --driver docker-container --use
+
+    echo "Building ingress and ingress-chroot images (multi-platform)..."
+    make release
+
+IMAGE_BUILD_E2E:
+  stage: build
+  tags: [infra-c2r4-dind-amd]
+  rules:
+    - if: $X_CI_BUILD_KIND == "develop"
+  extends:
+    - .before-build
+  script: |
+    echo "Calculated node version: ${TAG}"
+    echo "Building for registry: $REGISTRY"
+
+    echo "Building e2e test image (amd64)..."
+    make -C test/e2e-image image
+    echo "Pushing built E2E test image to private registry..."
+    LOCAL_E2E_IMAGE="${REGISTRY}/nginx-ingress-controller-e2e:${TAG}"
+    docker image tag nginx-ingress-controller:e2e $LOCAL_E2E_IMAGE
+    docker push $LOCAL_E2E_IMAGE
+
+.SMOKE_BASE:
+  extends:
+    - .before-test
+  variables:
+    KIND_CLUSTER_NAME: kind-$K8S
+    KUBECONFIG: $HOME/.kube/kind-config-$K8S
+    SKIP_CLUSTER_CREATION: true
+    SKIP_IMAGE_CREATION: true
+    DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
+    DOCKERHUB_PASSWORD: $X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD
+    SMOKE_REGISTRY_TOKEN: $X_CREDS_GITLAB_READONLY_USER
+    SMOKE_REGISTRY_SECRET: $X_CREDS_GITLAB_READONLY_PASSWORD
+    ALLURE_UPLOAD_REPORT: true
+    ALLURE_GENERATE_REPORT: true
+    ALLURE_ENVIRONMENT_K8S: $K8S
+    ALLURE_ENVIRONMENT_ARCH: $ARCH
+  script: |
+    [ -z "$TAG" ] && export TAG=$(cat TAG) && export REGISTRY=docker.io/wallarm
+    docker pull ${REGISTRY}/ingress-controller:${TAG}
+
+    kind create cluster --image=kindest/node:v$K8S
+    make kind-smoke-test
+
+SMOKE:
+  stage: test
+  needs: [IMAGE_BUILD_IC]
+  tags: [$RUNNER]
+  rules:
+    - if: $X_CI_BUILD_KIND == "develop"
+  extends:
+    - .SMOKE_BASE
+  parallel:
+    matrix:
+      - ARCH: amd64
+        RUNNER: infra-c2r4-dind-amd
+        K8S: [1.26.15, 1.30.0]
+      - ARCH: arm64
+        RUNNER: infra-c2r4-dind-arm
+        K8S: [1.26.15, 1.30.0]
+
+SMOKE_ONLY:
+  stage: test
+  tags: [$RUNNER]
+  rules:
+    - if: $X_CI_BUILD_KIND == "smokeonly"
+  extends:
+    - .SMOKE_BASE
+  parallel:
+    matrix:
+      - ARCH: amd64
+        RUNNER: infra-c2r4-dind-amd
+        K8S: [1.26.15, 1.30.0]
+
+E2E_UPSTREAM:
+  stage: test
+  tags: [infra-c4r8-dind-amd]
+  timeout: 2h
+  needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
+  rules:
+    - if: $X_CI_BUILD_KIND == "develop"
+  extends:
+    - .before-test
+  variables:
+    K8S: 1.26.15
+    KIND_CLUSTER_NAME: kind
+    SKIP_CLUSTER_CREATION: "true"
+    SKIP_INGRESS_IMAGE_CREATION: "true"
+    SKIP_E2E_IMAGE_CREATION: "true"
+    DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
+    DOCKERHUB_PASSWORD: $X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD
+  script: |
+    docker pull ${REGISTRY}/ingress-controller:${TAG}
+    docker pull ${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
+
+    kind create cluster --image=kindest/node:v$K8S --config test/e2e/kind.yaml
+
+    kind get kubeconfig > $HOME/.kube/kind-config-kind
+    make kind-e2e-test
+
+E2E_WALLARM:
+  stage: test
+  tags: [$RUNNER]
+  timeout: 2h
+  needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
+  rules:
+    - if: $X_CI_BUILD_KIND == "develop"
+  parallel:
+    matrix:
+      - ARCH: amd64
+        RUNNER: infra-c4r8-dind-amd
+        K8S: [1.26.15, 1.27.13, 1.28.9, 1.29.4, 1.30.0]
+  extends:
+    - .before-test
+  variables:
+    KIND_CLUSTER_NAME: kind
+    SKIP_CLUSTER_CREATION: "true"
+    SKIP_INGRESS_IMAGE_CREATION: "true"
+    SKIP_E2E_IMAGE_CREATION: "true"
+    WALLARM_ENABLED: "true"
+    DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
+    DOCKERHUB_PASSWORD: $X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD
+  script: |
+    docker pull ${REGISTRY}/ingress-controller:${TAG}
+    docker pull ${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
+
+    kind create cluster --image=kindest/node:v$K8S --config test/e2e/kind.yaml
+
+    kind get kubeconfig > $HOME/.kube/kind-config-kind
+    make E2E_NODES=7 kind-e2e-test
+
+CHART_TESTING:
+  stage: test
+  tags: [infra-c2r4-dind-amd]
+  needs: [IMAGE_BUILD_IC]
+  rules:
+    - if: $X_CI_BUILD_KIND == "develop"
+  extends:
+    - .before-test
+  variables:
+    K8S: 1.26.15
+    KIND_CLUSTER_NAME: kind
+    SKIP_CLUSTER_CREATION: "true"
+    SKIP_IMAGE_CREATION: "true"
+    CT_MODE: install
+    DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
+    DOCKERHUB_PASSWORD: $X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD
+  script: |
+    docker pull ${REGISTRY}/ingress-controller:${TAG}
+
+    kind create cluster --image=kindest/node:v$K8S --config test/e2e/kind.yaml
+    kind get kubeconfig > $HOME/.kube/kind-config-$KIND_CLUSTER_NAME
+    export CT_CONFIG="${CI_PROJECT_DIR}/kind-config-ct-${KIND_CLUSTER_NAME}"
+
+    make kind-e2e-chart-tests
+
+SCAN_ARTIFACT:
+  stage: test
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner-helper-images/security_scanners:1.0.32
+  needs:
+    - job: IMAGE_BUILD_IC
+      optional: true
+  rules:
+    - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan)$/
+  extends:
+    - .before-build
+  script: |
+    [ -z "$TAG" ] && export TAG=$(cat TAG) && export REGISTRY=docker.io/wallarm
+    echo "Scanning image with tag ${TAG}..."
+
+    docker-scout cves "${REGISTRY}/ingress-controller:${TAG}" --exit-code --only-severity critical,high
+
+
+
+### PROD related jobs
+
+SIGN_DOCKER:
+  stage: publish
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
+  needs: [IMAGE_BUILD_IC]
+  rules:
+    - if: $X_CI_BUILD_KIND == "production"
+  parallel:
+    matrix:
+      - IMAGE: [ingress-controller, ingress-controller-chroot]
+  extends:
+    - .before-sign-docker
+  script:
+    - |
+      SBOM_SPDX="${CI_PROJECT_DIR}/sbom_${TAG}_spdx.json"
+      syft -o spdx-json $IMAGE_NAME > $SBOM_SPDX
+
+      cosign attach sbom --sbom $SBOM_SPDX $IMAGE_DIGEST
+      cosign sign --yes --key env://COSIGN_PRIVATE "$IMAGE_URI.sbom"
+      cosign sign --recursive --yes --key env://COSIGN_PRIVATE $IMAGE_DIGEST
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - $CI_PROJECT_DIR/*.json
+
+HELM_PUBLISH:
+  stage: publish
+  rules:
+   - if: $X_CI_BUILD_KIND == "chart"
+  extends:
+    - .before-helm-publish
+  variables:
+    GITHUB_REPOSITORY: wallarm/helm-charts
+    CHARTS_DIR: charts
+    CHARTS_URL: https://charts.wallarm.com
+    LINTING: off
+    BRANCH: main
+    TARGET_DIR: wallarm-ingress
+    INDEX_DIR: .
+  # Git tags used for (final) releases are long (include two versions) and we only need first part for helm chart version, so we crop it
+  # Git tags used for RC contain only one version and there is no need to change them, so we pass them as is
+  script: |
+    if [[ $CHART_TYPE =~ "release-candidate" ]]; then
+      CHART_VERSION=$CI_COMMIT_TAG
+    else
+      CHART_VERSION=$(echo $CI_COMMIT_TAG | sed 's/[+-].*$//g')
+    fi
+    export CHART_VERSION
+    echo "CHART_VERSION=$CHART_VERSION" >> chart.env
+
+    echo "Chart type: $CHART_TYPE"
+    echo "Publishing Helm chart version: $CHART_VERSION"
+
+    .gitlab/chart-publish.sh
+  artifacts:
+    reports:
+      dotenv: chart.env
+
+UPDATE_VERSION:
+  stage: publish
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
+  needs: [HELM_PUBLISH]
+  rules:
+    - if: $X_CI_BUILD_KIND == "chart" && $CHART_TYPE == "release"
+  extends:
+    - .before-update-versions
+  variables:
+    COMPONENT_NAME: wallarm-ingress-controller
+    COMPONENT_VERSION: $CHART_VERSION
+  script: |
+    .gitlab/update-version.sh
