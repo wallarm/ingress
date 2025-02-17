@@ -344,6 +344,7 @@ SCAN_ARTIFACT:
 
 SIGN_DOCKER:
   stage: publish
+  tags: [infra-c1r2-dind-amd]
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
   needs: [IMAGE_BUILD_IC]
   rules:
