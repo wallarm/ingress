@@ -43,11 +43,11 @@ workflow:
         X_CI_BUILD_KIND: "develop"
         REGISTRY: $CI_REGISTRY_IMAGE
         TAG: $CI_COMMIT_SHORT_SHA
-    - if: $CI_COMMIT_TAG =~ /^[0-9]+.[0-9]+.[0-9]+\+upstream*$/
+    - if: $CI_COMMIT_TAG =~ /^([0-9]+.[0-9]+.[0-9]+\+upstream).*$/
       variables:
         X_CI_BUILD_KIND: "chart"
         CHART_TYPE: "release"
-    - if: $CI_COMMIT_TAG =~ /^[0-9]+.[0-9]+.[0-9]+-rc*$/
+    - if: $CI_COMMIT_TAG =~ /^([0-9]+.[0-9]+.[0-9]+-rc).*$/
       variables:
         X_CI_BUILD_KIND: "chart"
         CHART_TYPE: "release-candidate"
