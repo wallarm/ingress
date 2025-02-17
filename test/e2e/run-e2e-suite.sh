@@ -95,12 +95,20 @@ kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
 
 echo -e "Starting the e2e test pod"
 
+if [ "$REGISTRY" = "wallarm" ]; then
+  E2E_IMAGE=nginx-ingress-controller:e2e
+else
+  E2E_IMAGE=${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
+fi
+
 kubectl run --rm \
   --attach \
   --restart=Never \
   --env="E2E_NODES=${E2E_NODES}" \
   --env="FOCUS=${FOCUS}" \
   --env="IS_CHROOT=${IS_CHROOT:-false}" \
+  --env="REGISTRY=${REGISTRY:-wallarm}" \
+  --env="TAG=${TAG:-1.0.0-dev}" \
   --env="ENABLE_VALIDATIONS=${ENABLE_VALIDATIONS:-false}"\
   --env="SKIP_OPENTELEMETRY_TESTS=${SKIP_OPENTELEMETRY_TESTS:-false}"\
   --env="E2E_CHECK_LEAKS=${E2E_CHECK_LEAKS}" \
@@ -111,7 +119,7 @@ kubectl run --rm \
   --env="NODE_GROUP_NAME=${NODE_GROUP_NAME:-}" \
   --env="HTTPBUN_IMAGE=${HTTPBUN_IMAGE}" \
   --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e","imagePullSecrets":[{"name":"dockerhub-secret"}]}}' \
-  e2e --image=nginx-ingress-controller:e2e
+  e2e --image=$E2E_IMAGE
 
 # Get the junit-reports stored in the configMaps created during e2etests
 echo "Getting the report file out now.."

@@ -47,8 +47,9 @@ if ! command -v kind --version &> /dev/null; then
 fi
 
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
-export TAG=1.0.0-dev
+export TAG=${TAG:-1.0.0-dev}
 export ARCH=${ARCH:-amd64}
+export REGISTRY=${REGISTRY:=wallarm}
 
 # Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
 CT_IMAGE="quay.io/dmitriev/chart-testing:3.7.1"
@@ -64,13 +65,16 @@ DOCKERHUB_SECRET_NAME="dockerhub-secret"
 DOCKERHUB_USER="${DOCKERHUB_USER:-fake_user}"
 DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
 
-HELM_EXTRA_ARGS="--timeout 240s"
+CT_CONFIG="${CT_CONFIG:-$HOME/.kube/kind-config-ct-$KIND_CLUSTER_NAME}"
+
+HELM_EXTRA_ARGS="${HELM_EXTRA_ARGS:---timeout 240s}"
 HELM_EXTRA_SET_ARGS="\
+ --set controller.wallarm.enabled=true \
+ --set controller.wallarm.apiHost=${WALLARM_API_HOST} \
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
  --set controller.wallarm.nodeGroup=${NODE_GROUP_NAME} \
- --set controller.wallarm.enabled=true \
- --set controller.image.repository=wallarm/ingress-controller \
- --set controller.image.tag=1.0.0-dev \
+ --set controller.image.repository=${REGISTRY}/ingress-controller \
+ --set controller.image.tag=${TAG} \
  --set controller.terminationGracePeriodSeconds=0 \
  --set controller.wallarm.tarantool.terminationGracePeriodSeconds=0 \
  --set fullnameOverride=wallarm-ingress"
@@ -107,16 +111,31 @@ if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   make -C "${CURDIR}" clean-image build image
 fi
 
+if [[ "${CI:-}" == "true" ]]; then
+  KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{print $1}')
+  for NODE in $KIND_WORKERS; do
+      docker exec "${NODE}" bash -c "cat >> /etc/containerd/config.toml <<EOF
+[plugins.\"io.containerd.grpc.v1.cri\".registry.configs.\"registry-1.docker.io\".auth]
+  username = \"$DOCKERHUB_USER\"
+  password = \"$DOCKERHUB_PASSWORD\"
+[plugins.\"io.containerd.grpc.v1.cri\".registry.configs.\"$CI_REGISTRY\".auth]
+  username = \"$CI_REGISTRY_USER\"
+  password = \"$CI_REGISTRY_PASSWORD\"
+EOF
+systemctl restart containerd"
+  done
+fi
+
 KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{printf (NR>1?",":"") $1}')
 export KIND_WORKERS
 
 echo "[dev-env] copying docker images to cluster..."
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" wallarm/ingress-controller:${TAG}
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" ${REGISTRY}/ingress-controller:${TAG}
 
 if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] deploying cert-manager..."
   # Download cmctl. Cannot validate checksum as OS & platform may vary.
-  curl --fail --location "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_linux_amd64.tar.gz" | tar --extract --gzip cmctl
+  curl --fail --location "https://github.com/cert-manager/cmctl/releases/download/v2.1.1/cmctl_$(uname -s)_$([ $(uname -m) = "x86_64" ] && echo amd64 || echo arm64).tar.gz" | tar --extract --gzip cmctl
 
   kubectl create namespace cert-manager
   kubectl -n cert-manager create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
@@ -136,12 +155,13 @@ if [ "${SKIP_CERT_MANAGER_CREATION:-false}" = "false" ]; then
 fi
 
 echo "[dev-env] running helm chart e2e tests..."
+kind get kubeconfig --internal --name $KIND_CLUSTER_NAME > $CT_CONFIG
 docker run \
     --rm \
     --interactive \
-    --network host \
+    --network kind \
     --name ct \
-    --volume "${KUBECONFIG}":/root/.kube/config \
+    --volume "${CT_CONFIG}":/root/.kube/config \
     --volume "${CURDIR}":/workdir \
     --workdir /workdir \
     ${CT_IMAGE} ct install \

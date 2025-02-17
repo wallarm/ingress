@@ -60,6 +60,7 @@ cmd/plugin/release/*.tar.gz
 cmd/plugin/release/LICENSE
 tmp/
 test/junitreports/
-wallarm-*.tar.gz
+wallarm-*.*
+cmctl
 allure_report
 tests/__snapshot__
