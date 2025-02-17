@@ -288,3 +288,6 @@ release: ensure-buildx clean
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
 		-t $(REGISTRY)/ingress-controller-chroot:$(TAG) rootfs -f rootfs/Dockerfile-chroot
+
+sign:
+	.gitlab/image-sign.sh
