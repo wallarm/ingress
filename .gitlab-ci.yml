@@ -107,11 +107,6 @@ workflow:
     export COSIGN_PASSWORD=$(vault kv get -field=password -mount="node-team" pipelines/cosign)
     export COSIGN_PRIVATE=$(vault kv get -field=private_key -mount="node-team" pipelines/cosign)
 
-    export IMAGE_NAME=${REGISTRY}/${IMAGE}:${TAG}
-    docker pull -q ${IMAGE_NAME}
-    export IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE_NAME)
-    export IMAGE_URI=$(echo $IMAGE_DIGEST | sed -e 's/\@sha256:/:sha256-/')
-
 .x-get-github-token: &x_get_github_token
   - |
     export GITHUB_TOKEN=$(vault kv get -field=token -mount="node-team" "pipelines/common/github_token")
@@ -359,13 +354,7 @@ SIGN_DOCKER:
   extends:
     - .before-sign-docker
   script:
-    - |
-      SBOM_SPDX="${CI_PROJECT_DIR}/sbom_${TAG}_spdx.json"
-      syft -o spdx-json $IMAGE_NAME > $SBOM_SPDX
-
-      cosign attach sbom --sbom $SBOM_SPDX $IMAGE_DIGEST
-      cosign sign --yes --key env://COSIGN_PRIVATE "$IMAGE_URI.sbom"
-      cosign sign --recursive --yes --key env://COSIGN_PRIVATE $IMAGE_DIGEST
+    - make sign
   artifacts:
     expire_in: 30 days
     paths:
