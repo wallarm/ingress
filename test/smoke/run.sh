@@ -32,7 +32,7 @@ if ! [ -z $DEBUG ]; then
 fi
 
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
-export TAG=1.0.0-dev
+export TAG=${TAG:=1.0.0-dev}
 export ARCH=${ARCH:-amd64}
 
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
