@@ -699,10 +699,10 @@ type Configuration struct {
 	// By default this is enabled
 	EnableWallarm bool `json:"enable-wallarm"`
 
-	// Name of Wallarm Tarantool service in form "name"
+	// Name of Wallarm Wstore service in form "name"
 	WallarmUpstreamService string `json:"wallarm-upstream-service"`
 
-	// The number of reconnection attempts to Tarantool upstream.
+	// The number of reconnection attempts to Wstore upstream.
 	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectattempts
 	WallarmUpstreamConnectAttempts int `json:"wallarm-upstream-connect-attempts"`
 
