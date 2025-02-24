@@ -703,16 +703,16 @@ type Configuration struct {
 	WallarmUpstreamService string `json:"wallarm-upstream-service"`
 
 	// The number of reconnection attempts to Wstore upstream.
-	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectattempts
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmwstoreconnectattempts
 	WallarmUpstreamConnectAttempts int `json:"wallarm-upstream-connect-attempts"`
 
 	// Wallarm prometheus metrics port
 	// By default 18080
 	WallarmMetricsPort int `json:"wallarm-metrics-port"`
 
-	// A delay in reconnecting to Tarantool after a number of failed attempts exceeds
+	// A delay in reconnecting to wStore after a number of failed attempts exceeds
 	// the threshold value set in WallarmUpstreamConnectAttempts
-	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmtarantoolconnectinterval
+	// https://docs.wallarm.com/en/admin-en/configure-parameters-en.html#wallarmwstoreconnectinterval
 	WallarmUpstreamReconnectInterval string `json:"wallarm-upstream-reconnect-interval"`
 
 	// The time limit of a single request processing in milliseconds

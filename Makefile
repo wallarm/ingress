@@ -122,7 +122,7 @@ build:  ## Build ingress controller, debug tool and pre-stop hook.
 		REPO_INFO=$(REPO_INFO) \
 		TAG=$(TAG) \
 		build/build.sh
-	build/fetch-module.sh \
+	    build/fetch-module.sh \
 		ARCH=$(ARCH)
 
 .PHONY: clean
