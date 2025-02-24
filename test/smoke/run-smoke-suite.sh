@@ -65,7 +65,9 @@ PYTEST_PROCESSES="${PYTEST_PROCESSES:-10}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
-NODE_VERSION=$(< "${CURDIR}/AIO_BASE" awk -F'[-.]' '{print $1"."$2"."$3}')
+AIO_BASE=$(cat ${CURDIR}/AIO_BASE)
+AIO_VERSION=${AIO_VERSION:-$AIO_BASE}
+NODE_VERSION=$(awk -F'[-.]' '{print $1"."$2"."$3}' <<< "$AIO_VERSION")
 echo "[test-env] AiO Node version: ${NODE_VERSION}"
 
 if [[ "${CI:-false}" == "false" ]]; then

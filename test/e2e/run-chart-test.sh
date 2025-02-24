@@ -50,6 +50,7 @@ fi
 export TAG=${TAG:-1.0.0-dev}
 export ARCH=${ARCH:-amd64}
 export REGISTRY=${REGISTRY:=wallarm}
+export HELM_ARGS=${HELM_ARGS:-}
 
 # Uses a custom chart-testing image to avoid timeouts waiting for namespace deletion.
 CT_IMAGE="quay.io/dmitriev/chart-testing:3.7.1"
@@ -75,6 +76,7 @@ HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.nodeGroup=${NODE_GROUP_NAME} \
  --set controller.image.repository=${REGISTRY}/ingress-controller \
  --set controller.image.tag=${TAG} \
+ ${HELM_ARGS} \
  --set controller.terminationGracePeriodSeconds=0 \
  --set controller.wallarm.postanalytics.terminationGracePeriodSeconds=0 \
  --set fullnameOverride=wallarm-ingress"

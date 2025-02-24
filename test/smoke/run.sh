@@ -34,6 +34,7 @@ fi
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
 export TAG=${TAG:=1.0.0-dev}
 export ARCH=${ARCH:-amd64}
+export HELM_ARGS=${HELM_ARGS:-}
 
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-smoke-test}
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
@@ -129,7 +130,7 @@ fi
 trap describe_pods_on_exit ERR
 
 echo "[test-env] installing Helm chart using TAG=${TAG} ..."
-cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-nginx" --wait --values -
+cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-nginx" --wait ${HELM_ARGS} --values -
 fullnameOverride: wallarm-ingress
 imagePullSecrets:
   - name: ${DOCKERHUB_SECRET_NAME}

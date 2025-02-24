@@ -5,8 +5,10 @@ set -e
 TARGETS_MODULES="rootfs/modules"
 TARGETS_PAGES="rootfs/usr"
 TMP_TARGET_DIR="/tmp/opt/wallarm"
+AIO_BASE=$(cat AIO_BASE)
 
-AIO_VERSION=$(cat AIO_BASE)
+# Use pre-set variable (e.g. from upstream), or rely on the version from text file instead when not set
+AIO_VERSION=${AIO_VERSION:-$AIO_BASE}
 [ "${ARCH}" == "amd64" ] && AIO_ARCH=x86_64 || AIO_ARCH=aarch64
 AIO_FILE="wallarm-${AIO_VERSION}.${AIO_ARCH}-musl.sh"
 AIO_URL="https://storage.googleapis.com/meganode_storage/${AIO_VERSION%.*}/${AIO_FILE}"
