@@ -202,7 +202,6 @@ spec:
       {{- end }}
       {{- if .Values.controller.wallarm.enabled }}
         {{ include "ingress-nginx.wallarmWcliContainer" . | nindent 8 }}
-        {{ include "ingress-nginx.wallarmCollectdContainer" . | nindent 8 }}
         {{- if .Values.controller.wallarm.apiFirewall.enabled }}
         {{ include "ingress-nginx.wallarmapiFirewallContainer" . | nindent 8 }}
         {{- end }}

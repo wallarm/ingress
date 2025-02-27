@@ -18,10 +18,6 @@ controller:
       extraEnvs:
         - name: EXTRA_WCLI_KEY
           value: EXTRA_WCLI_VAL
-    collectd:
-      extraEnvs:
-        - name: EXTRA_COLLECTD_KEY
-          value: EXTRA_COLLECTD_VAL
     apiFirewall:
       extraEnvs:
         - name: EXTRA_APIFW_KEY

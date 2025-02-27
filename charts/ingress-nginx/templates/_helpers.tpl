@@ -310,29 +310,6 @@ Create the name of the controller service account to use
         path: token
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmCollectdContainer" -}}
-- name: collectd
-{{- if .Values.controller.wallarm.collectd.image }}
-  {{- with .Values.controller.wallarm.collectd.image }}
-  image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
-{{- end }}
-  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["collectd"]
-{{- if .Values.controller.wallarm.collectd.extraEnvs }}
-  env:
-  {{- toYaml .Values.controller.wallarm.collectd.extraEnvs | nindent 2 }}
-{{- end }}
-  volumeMounts:
-    - name: wallarm
-      mountPath: {{ include "wallarm.path" . }}
-  securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
-  resources:
-{{ toYaml .Values.controller.wallarm.collectd.resources | indent 4 }}
-{{- end -}}
-
 {{- define "ingress-nginx.wallarmapiFirewallContainer" -}}
 - name: api-firewall
 {{- if .Values.controller.wallarm.apiFirewall.image }}
