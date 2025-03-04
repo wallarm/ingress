@@ -99,17 +99,17 @@ spec:
     - {name: NODE_VERSION, value: "${NODE_VERSION:-}"}
     - name: ALLURE_LAUNCH_TAGS
       value: >
-        USER:${GITHUB_ACTOR:-local},
-        WORKFLOW:${GITHUB_WORKFLOW:-local},
-        RUN_ID:${GITHUB_RUN_ID:-local},
-        BRANCH:${GITHUB_REF_NAME:-local},
-        JOB:${GITHUB_JOB:-local},
+        USER:${GITLAB_USER_LOGIN:-local},
+        WORKFLOW:${CI_PIPELINE_SOURCE:-local},
+        RUN_ID:${CI_PIPELINE_ID:-local},
+        BRANCH:${CI_COMMIT_REF_NAME:-local},
+        JOB:${CI_JOB_NAME:-local},
         K8S:${ALLURE_ENVIRONMENT_K8S:-},
         ARCH:${ALLURE_ENVIRONMENT_ARCH:-},
-        GITHUB_REPO:${GITHUB_REPOSITORY:-}
+        REPO:${CI_PROJECT_PATH:-}
     - name: ALLURE_LAUNCH_NAME
       value: >
-        ${GITHUB_WORKFLOW:-local}-${GITHUB_RUN_ID:-local}-${GITHUB_JOB:-local}-
+        ${CI_PIPELINE_SOURCE:-local}-${CI_PIPELINE_ID:-local}-${CI_JOB_NAME:-local}-
         ${ALLURE_ENVIRONMENT_K8S:-}-${ALLURE_ENVIRONMENT_ARCH:-}
     image: "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
     imagePullPolicy: IfNotPresent
