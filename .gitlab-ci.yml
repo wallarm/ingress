@@ -204,7 +204,7 @@ IMAGE_BUILD_E2E:
     ALLURE_ENVIRONMENT_K8S: $K8S
     ALLURE_ENVIRONMENT_ARCH: $ARCH
   script: |
-    [ -z "$TAG" ] && export TAG=$(cat TAG) && export REGISTRY=docker.io/wallarm
+    [ -z "$TAG" ] && export TAG="$(cat TAG)" && export REGISTRY=docker.io/wallarm
     docker pull ${REGISTRY}/ingress-controller:${TAG}
 
     kind create cluster --image=kindest/node:v$K8S
@@ -333,7 +333,7 @@ SCAN_ARTIFACT:
   extends:
     - .before-build
   script: |
-    [ -z "$TAG" ] && export TAG=$(cat TAG) && export REGISTRY=docker.io/wallarm
+    [ -z "$TAG" ] && export TAG="$(cat TAG)" && export REGISTRY=docker.io/wallarm
     echo "Scanning image with tag ${TAG}..."
 
     docker-scout cves "${REGISTRY}/ingress-controller:${TAG}" --exit-code --only-severity critical,high
