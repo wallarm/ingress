@@ -18,9 +18,9 @@ if [ $FOUND != "null" ]; then
     exit 0
 fi
 
-jq -r '.body."'"$COMPONENT_NAME"'" += ["'"$COMPONENT_VERSION"'"]' latest.json > latest.new.json
-VERSIONS=$(jq -r '.body."'"$COMPONENT_NAME"'" | sort_by(.|split(".")|map(tonumber))' latest.new.json)
-jq -r '.body."'"$COMPONENT_NAME"'" = '"$VERSIONS" latest.new.json > latest.json
+jq '.body."'"$COMPONENT_NAME"'" += ["'"$COMPONENT_VERSION"'"]' latest.json > latest.new.json
+VERSIONS=$(jq '.body."'"$COMPONENT_NAME"'" | sort_by( split("[^0-9]+") | map(tonumber? // 0) )' latest.new.json)
+jq --argjson versions "$VERSIONS" '.body["'"$COMPONENT_NAME"'"] = $versions' latest.new.json > latest.json
 git add latest.json
 COMMIT_MESSAGE="Bump ${COMPONENT_NAME} version to ${COMPONENT_VERSION}"
 git commit -m "${COMMIT_MESSAGE}"
