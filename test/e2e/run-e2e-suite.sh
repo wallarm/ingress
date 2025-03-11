@@ -29,7 +29,7 @@ set -o nounset
 set -o pipefail
 
 # generate unique group name
-export NODE_GROUP_NAME="github-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+export NODE_GROUP_NAME="gitlab-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
 
 RED='\e[35m'
 NC='\e[0m'

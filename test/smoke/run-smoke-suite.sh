@@ -4,6 +4,29 @@ if [[ -n "${DEBUG}" ]]; then
   set -x
 fi
 
+function wait_for_node() {
+  POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
+  WAIT_TIMEOUT_SECONDS=60
+
+  for i in $(seq 1 $WAIT_TIMEOUT_SECONDS); do
+      printf '.'
+      
+      status="$(kubectl exec ${POD} -- curl -I -o /dev/null -w %{http_code} 127.0.0.1?sqli=union+select+1 || true)"
+      if [[ "$status" -eq 403 ]]; then
+          # If the attack was blocked, then wallarm-node started and enabled protection
+          printf '\nINFO: wallarm-node started OK and enabled protection after %s seconds\n' "$i"
+          return 0
+      fi
+      sleep 1
+
+  done
+
+  printf '\n'
+  printf 'ERROR: wallarm-node failed to start within %s seconds\n' "$WAIT_TIMEOUT_SECONDS"
+  return 1
+
+}
+
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -37,13 +60,13 @@ WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 WALLARM_API_HOST="${WALLARM_API_HOST}"
 WALLARM_API_PRESET="${WALLARM_API_PRESET}"
 NODE_BASE_URL="${NODE_BASE_URL:-http://wallarm-ingress-controller.default.svc}"
-PYTEST_ARGS=$(echo "${PYTEST_ARGS:---allure-features=Node}" | xargs)
-PYTEST_WORKERS="${PYTEST_WORKERS:-10}"
+PYTEST_PARAMS=$(echo "${PYTEST_PARAMS:---allure-features=Node}" | xargs)
+PYTEST_PROCESSES="${PYTEST_PROCESSES:-10}"
 #TODO We need it here just to don't let test fail. Remove this variable when test will be fixed.
 HOSTNAME_OLD_NODE="smoke-tests-old-node"
 
 NODE_VERSION=$(< "${CURDIR}/AIO_BASE" awk -F'[-.]' '{print $1"."$2"."$3}')
-echo "AiO Node version: ${NODE_VERSION}"
+echo "[test-env] AiO Node version: ${NODE_VERSION}"
 
 if [[ "${CI:-false}" == "false" ]]; then
   trap 'kubectl delete pod pytest --now  --ignore-not-found' EXIT ERR
@@ -62,10 +85,7 @@ if ! kubectl get secret "${SMOKE_IMAGE_PULL_SECRET_NAME}" &> /dev/null; then
     --docker-email=docker-pull@unexists.unexists
 fi
 
-RAND_NUM="${RANDOM}${RANDOM}${RANDOM}"
-RAND_NUM=${RAND_NUM:0:10}
-
-echo "Deploying pytest pod ..."
+echo "[test-env] Deploying pytest pod ..."
 
 kubectl apply -f - << EOF
 apiVersion: v1
@@ -97,20 +117,17 @@ spec:
     - {name: ALLURE_TOKEN, value: "${ALLURE_TOKEN:-}"}
     - {name: ALLURE_RESULTS, value: "${ALLURE_RESULTS}"}
     - {name: NODE_VERSION, value: "${NODE_VERSION:-}"}
+    - {name: PYTEST_PARAMS, value: "${PYTEST_PARAMS}"}
+    - {name: PYTEST_PROCESSES, value: "${PYTEST_PROCESSES}"}
+    - {name: ALLURE_TESTPLAN_PATH, value: "./testplan.json"}
+    - {name: RUN_TESTS_RC_FILE, value: "run_tests_rc"}
+    - {name: DIST, value: "worksteal"}
     - name: ALLURE_LAUNCH_TAGS
-      value: >
-        USER:${GITLAB_USER_LOGIN:-local},
-        WORKFLOW:${CI_PIPELINE_SOURCE:-local},
-        RUN_ID:${CI_PIPELINE_ID:-local},
-        BRANCH:${CI_COMMIT_REF_NAME:-local},
-        JOB:${CI_JOB_NAME:-local},
-        K8S:${ALLURE_ENVIRONMENT_K8S:-},
-        ARCH:${ALLURE_ENVIRONMENT_ARCH:-},
-        REPO:${CI_PROJECT_PATH:-}
+      value: "USR:${GITLAB_USER_NAME}, SRC:${CI_PIPELINE_SOURCE}, GITLAB_REPO:${CI_PROJECT_NAME}"
     - name: ALLURE_LAUNCH_NAME
       value: >
-        ${CI_PIPELINE_SOURCE:-local}-${CI_PIPELINE_ID:-local}-${CI_JOB_NAME:-local}-
-        ${ALLURE_ENVIRONMENT_K8S:-}-${ALLURE_ENVIRONMENT_ARCH:-}
+        ${CI_COMMIT_REF_NAME} #${CI_COMMIT_SHORT_SHA} on ${WALLARM_API_PRESET} ${CI_PIPELINE_ID} 
+        ${ALLURE_ENVIRONMENT_K8S}-${ALLURE_ENVIRONMENT_ARCH}
     image: "${SMOKE_IMAGE_NAME}:${SMOKE_IMAGE_TAG}"
     imagePullPolicy: IfNotPresent
     name: pytest
@@ -121,15 +138,34 @@ spec:
     hostPath: {path: /allure_report, type: DirectoryOrCreate}
 EOF
 
-echo "Waiting for all pods ready ..."
+echo "[test-env] Waiting for all pods ready ..."
 kubectl wait --for=condition=Ready pods --all --timeout=300s
 
-echo "Run smoke tests ..."
-GITHUB_VARS=$(env | awk -F '=' '/^GITHUB_/ {vars = vars $1 "=" $2 " ";} END {print vars}')
-RUN_TESTS=$([ "$ALLURE_UPLOAD_REPORT" = "true" ] && echo "allurectl watch --job-uid ${RAND_NUM} -- pytest" || echo "pytest")
+wait_for_node || get_logs_and_fail
 
-EXEC_CMD="env $GITHUB_VARS $RUN_TESTS -n ${PYTEST_WORKERS} ${PYTEST_ARGS}"
-# shellcheck disable=SC2086
-kubectl exec pytest ${EXEC_ARGS} -- ${EXEC_CMD} || get_logs_and_fail
+sleep 10 # wait node to export first attack
+
+echo "[test-env] Run smoke tests ..."
+
+GITLAB_VARS=()
+while IFS= read -r line; do
+  [[ -n "$line" ]] && GITLAB_VARS+=("$line")
+done < <(printenv | grep -E '^(GITLAB_|ALLURE_)')
+
+EXEC_CMD=(
+  env
+  "${GITLAB_VARS[@]}"
+  /usr/local/bin/test-entrypoint.sh
+)
+
+if [ "$ALLURE_UPLOAD_REPORT" = "true" ]; then
+  EXEC_CMD+=(ci)
+else
+  EXEC_CMD+=(pytest ${PYTEST_PARAMS})
+fi
+
+# Execute with proper array handling
+kubectl exec pytest "${EXEC_ARGS[@]}" -- "${EXEC_CMD[@]}" || get_logs_and_fail
+
 extra_debug_logs
 clean_allure_report

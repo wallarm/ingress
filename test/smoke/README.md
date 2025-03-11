@@ -38,10 +38,10 @@ USER_TOKEN=...
 
 
 # Pytest arguments. Double quotes here must be used here
-# PYTEST_ARGS="--allure-features=Node"
+# PYTEST_PARAMS="--allure-features=Node"
 
 # Number of pytest workers. This variable is optional and set to 10 by default
-# PYTEST_WORKERS=10
+# PYTEST_PROCESSES=10
 
 # Location of Pytest Docker image
 # SMOKE_IMAGE_NAME=dkr.wallarm.com/tests/smoke-tests

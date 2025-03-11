@@ -17,7 +17,7 @@
 KIND_LOG_LEVEL="1"
 
 # generate unique group name
-export NODE_GROUP_NAME="github-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+export NODE_GROUP_NAME="gitlab-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
 
 if [ -n "${DEBUG}" ]; then
   set -x
