@@ -60,13 +60,9 @@ ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
 
-<<<<<<< HEAD
 MAC_OS = $(shell uname -s)
 
 REGISTRY ?= wallarm
-=======
-REGISTRY ?= us-central1-docker.pkg.dev/k8s-staging-images/ingress-nginx
->>>>>>> helm-chart-4.11.5
 
 BASE_IMAGE ?= $(shell cat NGINX_BASE)
 
