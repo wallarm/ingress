@@ -66,7 +66,7 @@ if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   docker tag "${REGISTRY}/ingress-controller:${TAG}" "${DEV_IMAGE}"
 fi
 
-export K8S_VERSION=${K8S_VERSION:-v1.29.2@sha256:51a1434a5397193442f0be2a297b488b6c919ce8a3931be0ce822606ea5ca245}
+export K8S_VERSION=${K8S_VERSION:-v1.32.3@sha256:b36e76b4ad37b88539ce5e07425f77b29f73a8eaaebf3f1a8bc9c764401d118c}
 
 KIND_CLUSTER_NAME="ingress-nginx-dev"
 
