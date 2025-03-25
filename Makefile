@@ -60,9 +60,13 @@ ifneq ($(PLATFORM),)
 	PLATFORM_FLAG="--platform"
 endif
 
+<<<<<<< HEAD
 MAC_OS = $(shell uname -s)
 
 REGISTRY ?= wallarm
+=======
+REGISTRY ?= us-central1-docker.pkg.dev/k8s-staging-images/ingress-nginx
+>>>>>>> helm-chart-4.11.5
 
 BASE_IMAGE ?= $(shell cat NGINX_BASE)
 
@@ -114,7 +118,7 @@ clean-chroot-image: ## Removes local image
 
 .PHONY: build
 build:  ## Build ingress controller, debug tool and pre-stop hook.
-	E2E_IMAGE=golang:$(GO_VERSION)-alpine3.20 USE_SHELL=/bin/sh build/run-in-docker.sh \
+	E2E_IMAGE=golang:$(GO_VERSION)-alpine3.21 USE_SHELL=/bin/sh build/run-in-docker.sh \
 		MAC_OS=$(MAC_OS) \
 		PKG=$(PKG) \
 		ARCH=$(ARCH) \
@@ -245,9 +249,10 @@ misspell:  ## Check for spelling errors.
 run-ingress-controller: ## Run the ingress controller locally using a kubectl proxy connection.
 	@build/run-ingress-controller.sh
 
-.PHONY: ensure-buildx
-ensure-buildx:
-	./hack/init-buildx.sh
+.PHONY: builder
+builder:
+	docker buildx create --name $(BUILDER) --bootstrap --use || :
+	docker buildx inspect $(BUILDER)
 
 .PHONY: show-version
 show-version:
@@ -257,7 +262,7 @@ PLATFORMS ?= amd64
 BUILDX_PLATFORMS ?= linux/amd64
 
 .PHONY: release # Build a multi-arch docker image
-release: ensure-buildx clean
+release: builder clean
 	echo "Building binaries..."
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; ARCH=$(PLATFORM) make build;)
 

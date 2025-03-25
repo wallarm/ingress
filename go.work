@@ -1,9 +1,0 @@
-go 1.23.1
-
-toolchain go1.23.3
-
-use (
-	.
-	./images/kube-webhook-certgen/rootfs
-	./magefiles
-)
