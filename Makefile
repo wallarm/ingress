@@ -245,10 +245,9 @@ misspell:  ## Check for spelling errors.
 run-ingress-controller: ## Run the ingress controller locally using a kubectl proxy connection.
 	@build/run-ingress-controller.sh
 
-.PHONY: builder
-builder:
-	docker buildx create --name $(BUILDER) --bootstrap --use || :
-	docker buildx inspect $(BUILDER)
+.PHONY: ensure-buildx
+ensure-buildx:
+	./hack/init-buildx.sh
 
 .PHONY: show-version
 show-version:
@@ -258,7 +257,7 @@ PLATFORMS ?= amd64
 BUILDX_PLATFORMS ?= linux/amd64
 
 .PHONY: release # Build a multi-arch docker image
-release: builder clean
+release: ensure-buildx clean
 	echo "Building binaries..."
 	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; ARCH=$(PLATFORM) make build;)
 
