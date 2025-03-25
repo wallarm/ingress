@@ -23,7 +23,7 @@ variables:
     value: amd64
   WALLARM_API_PRESET:
     description: "Wallarm api preset"
-    value: audit
+    value: us1
     options:
       - audit
       - eu1
@@ -107,10 +107,6 @@ workflow:
     export COSIGN_PASSWORD=$(vault kv get -field=password -mount="node-team" pipelines/cosign)
     export COSIGN_PRIVATE=$(vault kv get -field=private_key -mount="node-team" pipelines/cosign)
 
-.x-get-github-token: &x_get_github_token
-  - |
-    export GITHUB_TOKEN=$(vault kv get -field=token -mount="node-team" "pipelines/common/github_token")
-
 .x-get-gitlab-credentials: &x_get_gitlab_credentials
   - |
     export GITLAB_TOKEN=$(vault kv get -field=token_secret -mount="node-team" pipelines/gl_version_repo_creds)
@@ -138,14 +134,17 @@ workflow:
 .before-helm-publish:
   before_script:
     - *x_vault_login
-    - *x_get_github_token
 
 .before-update-versions:
   before_script:
     - *x_vault_login
     - *x_get_gitlab_credentials
 
-
+.update_kind: &update-kind
+  - LATEST_KIND_VERSION=$(curl -s https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq -r .tag_name)
+  - curl -Lo ./kind_latest https://kind.sigs.k8s.io/dl/${LATEST_KIND_VERSION}/kind-linux-${ARCH} 
+  - chmod +x ./kind_latest
+  - sudo mv ./kind_latest /usr/local/bin/kind
 
 ### DEV & PROD jobs
 
@@ -191,8 +190,6 @@ IMAGE_BUILD_E2E:
   extends:
     - .before-test
   variables:
-    KIND_CLUSTER_NAME: kind-$K8S
-    KUBECONFIG: $HOME/.kube/kind-config-$K8S
     SKIP_CLUSTER_CREATION: true
     SKIP_IMAGE_CREATION: true
     DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
@@ -201,14 +198,26 @@ IMAGE_BUILD_E2E:
     SMOKE_REGISTRY_SECRET: $X_CREDS_GITLAB_READONLY_PASSWORD
     ALLURE_UPLOAD_REPORT: true
     ALLURE_GENERATE_REPORT: true
-    ALLURE_ENVIRONMENT_K8S: $K8S
     ALLURE_ENVIRONMENT_ARCH: $ARCH
-  script: |
-    [ -z "$TAG" ] && export TAG="$(cat TAG)" && export REGISTRY=docker.io/wallarm
-    docker pull ${REGISTRY}/ingress-controller:${TAG}
-
-    kind create cluster --image=kindest/node:v$K8S
-    make kind-smoke-test
+  script:
+    - *update-kind
+    - |
+      if [ $K8S = "latest" ]; then 
+        export K8S=$(curl https://registry.hub.docker.com/v2/repositories/kindest/node/tags/?page_size=1  | jq -r  .results[].name);
+      fi
+    - kind --version
+    - |
+      export KIND_CLUSTER_NAME=kind-$K8S
+      export KUBECONFIG=$HOME/.kube/kind-config-$K8S
+      export ALLURE_ENVIRONMENT_K8S=$K8S
+    - |
+      if [ -n "$TAG" ]; then 
+        export TAG="$(cat TAG)" 
+        export REGISTRY=docker.io/wallarm; 
+      fi
+    - docker pull ${REGISTRY}/ingress-controller:${TAG}
+    - kind create cluster --image=kindest/node:$K8S
+    - make kind-smoke-test
 
 SMOKE:
   stage: test
@@ -222,10 +231,10 @@ SMOKE:
     matrix:
       - ARCH: amd64
         RUNNER: infra-c2r4-dind-amd
-        K8S: [1.26.15, 1.30.0]
+        K8S: [v1.26.15, latest]
       - ARCH: arm64
         RUNNER: infra-c2r4-dind-arm
-        K8S: [1.26.15, 1.30.0]
+        K8S: [v1.26.15, latest]
 
 SMOKE_ONLY:
   stage: test
@@ -238,7 +247,7 @@ SMOKE_ONLY:
     matrix:
       - ARCH: amd64
         RUNNER: infra-c2r4-dind-amd
-        K8S: [1.26.15, 1.30.0]
+        K8S: [v1.26.15, latest]
 
 E2E_UPSTREAM:
   stage: test
@@ -368,7 +377,6 @@ HELM_PUBLISH:
   extends:
     - .before-helm-publish
   variables:
-    GITHUB_REPOSITORY: wallarm/helm-charts
     CHARTS_DIR: charts
     CHARTS_URL: https://charts.wallarm.com
     LINTING: off

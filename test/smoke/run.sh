@@ -18,7 +18,7 @@
 source "${PWD}/test/smoke/functions.sh"
 
 # generate unique group name
-export NODE_GROUP_NAME="github-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+export NODE_GROUP_NAME="gitlab-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
 echo "[test-env] random node group name: ${NODE_GROUP_NAME}..."
 
 # check if all mandatory vars was defined
@@ -54,6 +54,7 @@ if [ "${DOCKERHUB_USER:-false}" = "false" ]; then
 fi
 
 DOCKERHUB_SECRET_NAME="dockerhub-secret"
+CI_REGISTRY_SECRET_NAME="ci-registry-secret"
 DOCKERHUB_USER="${DOCKERHUB_USER:-fake_user}"
 DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
 
@@ -110,7 +111,6 @@ kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
     --docker-password="${DOCKERHUB_PASSWORD}" \
     --docker-email=docker-pull@unexists.unexists || true
 
-
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   echo "[test-env] building controller image..."
   make -C "${DIR}"/../../ clean-image build image
@@ -152,6 +152,7 @@ controller:
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
+
   config:
     worker-processes: "1"
     enable-real-ip: true

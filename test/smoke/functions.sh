@@ -77,6 +77,7 @@ function describe_pods_on_exit() {
     kubectl describe pod -l $wstore_label
     echo "#################### Describe workload POD ####################"
     kubectl describe pod -l $workload_label
+    get_logs
 }
 
 function clean_allure_report() {
@@ -115,6 +116,7 @@ function get_logs() {
     kubectl logs -l "app.kubernetes.io/component=controller" -c api-firewall --tail=-1 || true
     echo -e "####################################\n"
 
+    export POD=$(kubectl get pod -l "app.kubernetes.io/component=controller" -o=name | cut -d/ -f 2)
     echo "####################################################"
     echo "###### List directory /opt/wallarm/etc/wallarm #####"
     echo "####################################################"
@@ -158,5 +160,3 @@ function extra_debug_logs {
   kubectl get pods
 
 }
-
-
