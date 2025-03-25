@@ -45,13 +45,16 @@ build: ensure-buildx
 # push the cross built image
 push: OUTPUT=--push
 push: build
-	docker buildx build \
-		--builder $(BUILDER) \
-		--platform $(PLATFORMS) \
-		rootfs \
-		--tag $(IMAGE):$(TAG) \
-		--push
 
-.PHONY: clean
-clean:
-	docker buildx rm $(BUILDER) || :
+# enable buildx
+ensure-buildx:
+# this is required for cloudbuild
+ifeq ("$(wildcard $(INIT_BUILDX))","")
+	@curl -sSL https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/hack/init-buildx.sh | bash
+else
+	@exec $(INIT_BUILDX)
+endif
+	@echo "done"
+
+.PHONY: build push ensure-buildx
+
