@@ -38,11 +38,11 @@ export NGINX_SUBSTITUTIONS=e12e965ac1837ca709709f9a26f572a54d83430e
 # Check for recent changes: https://github.com/SpiderLabs/ModSecurity-nginx/compare/v1.0.3...master
 export MODSECURITY_VERSION=v1.0.3
 
-# Check for recent changes: https://github.com/SpiderLabs/ModSecurity/compare/v3.0.8...v3/master
-export MODSECURITY_LIB_VERSION=v3.0.12
+# Check for recent changes: https://github.com/SpiderLabs/ModSecurity/compare/v3.0.14...v3/master
+export MODSECURITY_LIB_VERSION=v3.0.14
 
-# Check for recent changes: https://github.com/coreruleset/coreruleset/compare/v3.3.5...v4.0/main
-export OWASP_MODSECURITY_CRS_VERSION=v4.4.0
+# Check for recent changes: https://github.com/coreruleset/coreruleset/compare/v4.10.0...main
+export OWASP_MODSECURITY_CRS_VERSION=v4.10.0
 
 # Check for recent changes: https://github.com/openresty/lua-nginx-module/compare/v0.10.26``...master
 export LUA_NGX_VERSION=v0.10.26
@@ -101,13 +101,14 @@ export LUA_RESTY_IPMATCHER_VERSION=3e93c53eb8c9884efe939ef070486a0e507cc5be
 # Check for recent changes: https://github.com/ElvinEfendi/lua-resty-global-throttle/compare/v0.2.0...main
 export LUA_RESTY_GLOBAL_THROTTLE_VERSION=v0.2.0
 
-# Check for recent changes:  https://github.com/microsoft/mimalloc/compare/v2.1.7...master
+# Check for recent changes: https://github.com/microsoft/mimalloc/compare/v2.1.7...master
 export MIMALOC_VERSION=v2.1.7
 
-# Check on https://github.com/open-telemetry/opentelemetry-cpp
-export OPENTELEMETRY_CPP_VERSION="v1.11.0"
-# Check on https://github.com/open-telemetry/opentelemetry-proto
-export OPENTELEMETRY_PROTO_VERSION="v1.1.0"
+# Check for recent changes: https://github.com/open-telemetry/opentelemetry-cpp/compare/v1.18.0...main
+export OPENTELEMETRY_CPP_VERSION=v1.18.0
+
+# Check for recent changes: https://github.com/open-telemetry/opentelemetry-proto/compare/v1.5.0...main
+export OPENTELEMETRY_PROTO_VERSION=v1.5.0
 
 # Check for recent changes: https://github.com/openresty/echo-nginx-module/compare/v0.63...master
 export ECHO_NGINX_VERSION=0.63
@@ -187,10 +188,6 @@ apk add \
   protobuf-dev
 
 # apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
-
-# There is some bug with some platforms and git, so force HTTP/1.1
-git config --global http.version HTTP/1.1
-git config --global http.postBuffer 157286400
 
 mkdir -p /etc/nginx
 
@@ -426,6 +423,21 @@ Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-980-CORRELATION.conf
 Include /etc/nginx/owasp-modsecurity-crs/rules/RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
 " > /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 
+# NGINX compiles a small test program to check if an added module works as expected.
+#
+# ModSecurity-nginx provides 'printf("hello");' as a test, but newer versions of GCC,
+# as included in Alpine 3.21, do not allow implicit declaration of function 'printf':
+#
+#   objs/autotest.c:7:5: error: implicit declaration of function 'printf' [-Wimplicit-function-declaration]
+#
+# For this reason we replace 'printf("hello");' by 'msc_init();', which is always available.
+#
+# This fix is taken from a PR, that has been proposed to the ModSecurity-nginx project:
+#
+#   https://github.com/owasp-modsecurity/ModSecurity-nginx/pull/275
+#
+sed -i "s/ngx_feature_test='printf(\"hello\");'/ngx_feature_test='msc_init();'/" $BUILD_PATH/ModSecurity-nginx/config
+
 # build nginx
 cd "$BUILD_PATH/nginx-$NGINX_VERSION"
 
@@ -524,7 +536,8 @@ make
 make modules
 make install
 
-export OPENTELEMETRY_CONTRIB_COMMIT=e11348bb400d5472bf1da5d6128bead66fa111ff
+# Check for recent changes: https://github.com/open-telemetry/opentelemetry-cpp-contrib/compare/8933841f0a7f8737f61404cf0a64acf6b079c8a5...main
+export OPENTELEMETRY_CONTRIB_COMMIT=8933841f0a7f8737f61404cf0a64acf6b079c8a5
 cd "$BUILD_PATH"
 
 git clone https://github.com/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
@@ -624,7 +637,7 @@ adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-
 
 for dir in "${writeDirs[@]}"; do
   mkdir -p ${dir};
-  chown -R www-data.www-data ${dir};
+  chown -R www-data:www-data ${dir};
 done
 
 rm -rf /etc/nginx/owasp-modsecurity-crs/.git
