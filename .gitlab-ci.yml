@@ -211,7 +211,7 @@ IMAGE_BUILD_E2E:
       export KUBECONFIG=$HOME/.kube/kind-config-$K8S
       export ALLURE_ENVIRONMENT_K8S=$K8S
     - |
-      if [ -n "$TAG" ]; then 
+      if [ -z "$TAG" ]; then 
         export TAG="$(cat TAG)" 
         export REGISTRY=docker.io/wallarm; 
       fi
