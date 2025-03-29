@@ -107,6 +107,10 @@ workflow:
     export COSIGN_PASSWORD=$(vault kv get -field=password -mount="node-team" pipelines/cosign)
     export COSIGN_PRIVATE=$(vault kv get -field=private_key -mount="node-team" pipelines/cosign)
 
+.x-get-github-token: &x_get_github_token
+  - |
+    export GITHUB_TOKEN=$(vault kv get -field=token -mount="node-team" "pipelines/common/github_token")
+
 .x-get-gitlab-credentials: &x_get_gitlab_credentials
   - |
     export GITLAB_TOKEN=$(vault kv get -field=token_secret -mount="node-team" pipelines/gl_version_repo_creds)
@@ -134,6 +138,7 @@ workflow:
 .before-helm-publish:
   before_script:
     - *x_vault_login
+    - *x_get_github_token
 
 .before-update-versions:
   before_script:
@@ -377,6 +382,7 @@ HELM_PUBLISH:
   extends:
     - .before-helm-publish
   variables:
+    GITHUB_REPOSITORY: wallarm/helm-charts
     CHARTS_DIR: charts
     CHARTS_URL: https://charts.wallarm.com
     LINTING: off
