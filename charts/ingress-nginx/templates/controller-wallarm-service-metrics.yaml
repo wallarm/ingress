@@ -13,7 +13,7 @@ metadata:
     {{- toYaml .Values.controller.wallarm.metrics.service.labels | nindent 4 }}
   {{- end }}
   name: {{ include "ingress-nginx.controller.fullname" . }}-wallarm-metrics
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ include "ingress-nginx.namespace" . }}
 spec:
   type: {{ .Values.controller.wallarm.metrics.service.type }}
 {{- if .Values.controller.wallarm.metrics.service.clusterIP }}

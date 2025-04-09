@@ -12,7 +12,7 @@ metadata:
     {{- toYaml .Values.controller.wallarm.postanalytics.service.labels | nindent 4 }}
   {{- end }}
   name: {{ include "ingress-nginx.controller.fullname" . }}-wallarm-wstore
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ include "ingress-nginx.namespace" . }}
 spec:
   type: ClusterIP
   ports:
