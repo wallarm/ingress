@@ -1,1 +1,1 @@
-6.1.0-ragel-poc
+6.1.0-ragel
