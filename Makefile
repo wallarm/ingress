@@ -44,7 +44,7 @@ E2E_NODES ?= 7
 # run e2e test suite with tests that check for memory leaks? (default is false)
 E2E_CHECK_LEAKS ?=
 
-REPO_INFO ?= $(shell git config --get remote.origin.url)
+REPO_INFO ?= https://github.com/wallarm/ingress
 COMMIT_SHA ?= git-$(shell git rev-parse --short HEAD)
 BUILD_ID ?= "UNSET"
 
