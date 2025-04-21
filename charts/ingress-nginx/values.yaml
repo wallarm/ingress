@@ -1171,6 +1171,10 @@ controller:
 # -- Rollback limit
 ##
 revisionHistoryLimit: 10
+## NGINX schema validation
+##
+validation:
+  enableCel: false         # turn the CEL policy on/off
 ## Default 404 backend
 ##
 defaultBackend:

@@ -1,0 +1,59 @@
+{{- /* Disable with .Values.validation.enableCel */ -}}
+{{- if and (.Values.validation.enableCel) (semverCompare ">=1.30-0" .Capabilities.KubeVersion.Version) }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: ingress-safety-net
+spec:
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["networking.k8s.io"]
+      apiVersions: ["v1"]
+      resources: ["ingresses"]
+      operations: ["CREATE","UPDATE"]
+  validations:
+  - expression: "!object.spec.rules.all(r, r.host.startsWith(\"*\"))"
+    message: "Wildcard hosts are forbidden"
+  - expression: |
+      object.spec.rules.all(r1,
+        object.spec.rules.all(r2,
+          r1 == r2 || r1.host != r2.host))
+    message: "Hosts in an Ingress must be unique"
+  - expression: "object.spec.rules.all(r, r.http.paths.all(p, has(p.backend.service.name) && has(p.backend.service.port)))"
+    message: "Each path needs a service name and port"
+  - expression: "object.spec.rules.all(r, r.http.paths.all(p, p.path.startsWith('/')))"
+    message: "Ingress path must start with ‘/’"
+  - expression: |
+      !(object.metadata.annotations.exists(k,
+        k.startsWith("nginx.ingress.kubernetes.io/") &&
+        !(k in [
+          "nginx.ingress.kubernetes.io/proxy-buffer-size",
+          "nginx.ingress.kubernetes.io/proxy-read-timeout",
+          "nginx.ingress.kubernetes.io/ssl-redirect",
+          "nginx.ingress.kubernetes.io/enable-modsecurity"
+        ])))
+    message: "Unrecognised nginx‑ingress annotation"
+  - expression: |
+      object.metadata.annotations.exists(k,
+        k == "nginx.ingress.kubernetes.io/proxy-buffer-size") ?
+      object.metadata.annotations["nginx.ingress.kubernetes.io/proxy-buffer-size"].matches("^[0-9]+[kKmM]?$")
+      : true
+    message: "proxy-buffer-size must be a number optionally followed by K or M"
+  - expression: |
+      object.metadata.annotations.exists(k,
+        k == "nginx.ingress.kubernetes.io/proxy-read-timeout") ?
+      (
+        object.metadata.annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"].matches("^[0-9]+$") &&
+        int(object.metadata.annotations["nginx.ingress.kubernetes.io/proxy-read-timeout"]) <= 3600
+      )
+      : true
+    message: "proxy-read-timeout must be 1‑3600 seconds"
+  - expression: |
+      object.metadata.annotations.exists(k,
+        k == "nginx.ingress.kubernetes.io/ssl-redirect") ?
+      (
+        object.metadata.annotations["nginx.ingress.kubernetes.io/ssl-redirect"] in ["true","false"]
+      )
+      : true
+    message: "ssl-redirect must be \"true\" or \"false\""
+{{- end }}
