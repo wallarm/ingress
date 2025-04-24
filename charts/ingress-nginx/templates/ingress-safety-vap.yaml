@@ -24,15 +24,12 @@ spec:
   - expression: "object.spec.rules.all(r, r.http.paths.all(p, p.path.startsWith('/')))"
     message: "Ingress path must start with ‘/’"
   - expression: |
-      !(object.metadata.annotations.exists(k,
-        k.startsWith("nginx.ingress.kubernetes.io/") &&
-        !(k in [
-          "nginx.ingress.kubernetes.io/proxy-buffer-size",
-          "nginx.ingress.kubernetes.io/proxy-read-timeout",
-          "nginx.ingress.kubernetes.io/ssl-redirect",
-          "nginx.ingress.kubernetes.io/enable-modsecurity"
-        ])))
-    message: "Unrecognised nginx‑ingress annotation"
+      !object.metadata.annotations.exists(k,
+        k in [
+          "nginx.ingress.kubernetes.io/server-snippet",
+          "nginx.ingress.kubernetes.io/configuration-snippet"
+        ])
+    message: "Dangerous nginx-ingress snippet annotation is forbidden"
   - expression: |
       object.metadata.annotations.exists(k,
         k == "nginx.ingress.kubernetes.io/proxy-buffer-size") ?
