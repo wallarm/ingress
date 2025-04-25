@@ -352,6 +352,8 @@ Create the name of the controller service account to use
       value: "{{ .Values.controller.wallarm.apiFirewall.maxConnectionsPerIp }}"
     - name: APIFW_MAX_REQUESTS_PER_CONN
       value: "{{ .Values.controller.wallarm.apiFirewall.maxRequestsPerConnection }}"
+    - name: APIFW_API_MODE_MAX_ERRORS_IN_RESPONSE
+      value: "{{ .Values.controller.wallarm.apiFirewall.maxErrorsInResponse }}"
     - name: APIFW_API_MODE_DEBUG_PATH_DB
       value: "{{ include "wallarm-apifw.path" . }}/2/wallarm_api.db"
 {{- if .Values.controller.wallarm.apiFirewall.extraEnvs }}
