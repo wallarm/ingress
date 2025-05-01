@@ -29,9 +29,26 @@ variables:
       - eu1
       - us1
 
+  ### For doc purposes only ###
+  ## Variables used implicitly, only in upstream-triggered pipeline
+  # AIO_VERSION:
+  #   description: AIO version to extract the nginx module from, and is also used as appVersion in chart; do not confuse with TAG, which in dynamically calculated
+
 
 workflow:
   rules:
+    - if: $AIO_VERSION =~ /^([0-9]+.[0-9]+.[0-9]+-rc).*$/
+      variables:
+        X_CI_BUILD_KIND: "upstream" # supposed to be triggered by AIO rc
+        REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
+        HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION # only override tag here, registry in use is still PUBLIC (chart default)
+        CHART_TYPE: "release-candidate"
+    - if: $AIO_VERSION
+      variables:
+        X_CI_BUILD_KIND: "upstream" # supposed to be triggered by AIO (final) releases
+        REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
+        HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION # only override tag here, registry in use is still PUBLIC (chart default)
+        CHART_TYPE: "release"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^stable\/.*$/
       changes:
         - TAG
@@ -157,14 +174,18 @@ IMAGE_BUILD_IC:
   stage: build
   tags: [infra-c2r4-dind-amd]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|production)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production|upstream)$/
   extends:
     - .before-build
   variables:
     PLATFORMS: amd64 arm64
     BUILDX_PLATFORMS: linux/amd64,linux/arm64
   script: |
-    echo "Calculated node version: ${TAG}"
+    if [[ ! -z $AIO_VERSION ]]; then
+      .gitlab/calculate-version.sh
+      source version.env && export TAG
+    fi
+    echo "Calculated node version: ${TAG:-from TAG}"
     echo "Building for registry: $REGISTRY"
 
     echo "Enabling docker buildx..."
@@ -172,16 +193,23 @@ IMAGE_BUILD_IC:
 
     echo "Building ingress and ingress-chroot images (multi-platform)..."
     make release
+  artifacts:
+    reports:
+      dotenv: version.env
 
 IMAGE_BUILD_E2E:
   stage: build
   tags: [infra-c2r4-dind-amd]
   rules:
-    - if: $X_CI_BUILD_KIND == "develop"
+    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
   extends:
     - .before-build
   script: |
-    echo "Calculated node version: ${TAG}"
+    if [[ ! -z $AIO_VERSION ]]; then
+      .gitlab/calculate-version.sh
+      source version.env && export TAG
+    fi
+    echo "Calculated node version: ${TAG:-from TAG}"
     echo "Building for registry: $REGISTRY"
 
     echo "Building e2e test image (amd64)..."
@@ -203,11 +231,12 @@ IMAGE_BUILD_E2E:
     SMOKE_REGISTRY_SECRET: $X_CREDS_GITLAB_READONLY_PASSWORD
     ALLURE_UPLOAD_REPORT: true
     ALLURE_GENERATE_REPORT: true
+    ALLURE_ENVIRONMENT_K8S: $K8S
     ALLURE_ENVIRONMENT_ARCH: $ARCH
   script:
     - *update-kind
     - |
-      if [ $K8S = "latest" ]; then 
+      if [ $K8S = "latest" ]; then
         export K8S=$(curl https://registry.hub.docker.com/v2/repositories/kindest/node/tags/?page_size=1  | jq -r  .results[].name);
       fi
     - kind --version
@@ -216,9 +245,9 @@ IMAGE_BUILD_E2E:
       export KUBECONFIG=$HOME/.kube/kind-config-$K8S
       export ALLURE_ENVIRONMENT_K8S=$K8S
     - |
-      if [ -z "$TAG" ]; then 
-        export TAG="$(cat TAG)" 
-        export REGISTRY=docker.io/wallarm; 
+      if [ -n "$TAG" ]; then
+        export TAG="$(cat TAG)"
+        export REGISTRY=docker.io/wallarm
       fi
     - docker pull ${REGISTRY}/ingress-controller:${TAG}
     - kind create cluster --image=kindest/node:$K8S
@@ -229,7 +258,7 @@ SMOKE:
   needs: [IMAGE_BUILD_IC]
   tags: [$RUNNER]
   rules:
-    - if: $X_CI_BUILD_KIND == "develop"
+    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
   extends:
     - .SMOKE_BASE
   parallel:
@@ -260,7 +289,7 @@ E2E_UPSTREAM:
   timeout: 2h
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
-    - if: $X_CI_BUILD_KIND == "develop"
+    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
   extends:
     - .before-test
   variables:
@@ -286,7 +315,7 @@ E2E_WALLARM:
   timeout: 2h
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
-    - if: $X_CI_BUILD_KIND == "develop"
+    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
   parallel:
     matrix:
       - ARCH: amd64
@@ -316,7 +345,7 @@ CHART_TESTING:
   tags: [infra-c2r4-dind-amd]
   needs: [IMAGE_BUILD_IC]
   rules:
-    - if: $X_CI_BUILD_KIND == "develop"
+    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
   extends:
     - .before-test
   variables:
@@ -339,11 +368,8 @@ CHART_TESTING:
 SCAN_ARTIFACT:
   stage: test
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner-helper-images/security_scanners:1.0.32
-  needs:
-    - job: IMAGE_BUILD_IC
-      optional: true
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan|upstream)$/
   extends:
     - .before-build
   script: |
@@ -356,20 +382,25 @@ SCAN_ARTIFACT:
 
 ### PROD related jobs
 
-SIGN_DOCKER:
-  stage: publish
+PUBL_SIGN_DOCKER:
+  stage: sign
   tags: [infra-c1r2-dind-amd]
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
-  needs: [IMAGE_BUILD_IC]
   rules:
-    - if: $X_CI_BUILD_KIND == "production"
+    - if: $X_CI_BUILD_KIND =~ /^(production|upstream)$/
   parallel:
     matrix:
       - IMAGE: [ingress-controller, ingress-controller-chroot]
   extends:
     - .before-sign-docker
   script:
-    - make sign
+    - |
+      if [[ ! -z $AIO_VERSION ]]; then
+        echo "Will push ${CI_REGISTRY_IMAGE}/${IMAGE}:${TAG} (private) to wallarm/${IMAGE}:${TAG} (public)..."
+        docker buildx imagetools create -t wallarm/${IMAGE}:${TAG} ${CI_REGISTRY_IMAGE}/${IMAGE}:${TAG}
+      fi
+
+      [[ $CHART_TYPE == "release" ]] && make sign
   artifacts:
     expire_in: 30 days
     paths:
@@ -378,7 +409,7 @@ SIGN_DOCKER:
 HELM_PUBLISH:
   stage: publish
   rules:
-   - if: $X_CI_BUILD_KIND == "chart"
+   - if: $X_CI_BUILD_KIND =~ /^(chart|upstream)$/
   extends:
     - .before-helm-publish
   variables:
@@ -389,13 +420,28 @@ HELM_PUBLISH:
     BRANCH: main
     TARGET_DIR: wallarm-ingress
     INDEX_DIR: .
+  ## Original flow (with CHART_TYPE pre-set by CI based on git tag)
   # Git tags used for (final) releases are long (include two versions) and we only need first part for helm chart version, so we crop it
   # Git tags used for RC contain only one version and there is no need to change them, so we pass them as is
+  ## New flow (upstream triggered, CHART_TYPE empty in CI)
+  # Use upstream-set vars (TAG and AIO_VERSION) to set CHART_TYPE and set docker image versions in the chart (using TAG "as is")
   script: |
-    if [[ $CHART_TYPE =~ "release-candidate" ]]; then
-      CHART_VERSION=$CI_COMMIT_TAG
+    echo "Testing IC image version calc: $IMAGE_VERSION"
+
+    if [[ $X_CI_BUILD_KIND == "chart" ]]; then
+      echo "Classic(tag) chart publishing flow..."
+      if [[ $CHART_TYPE =~ "release-candidate" ]]; then
+        CHART_VERSION=$CI_COMMIT_TAG
+      else
+        CHART_VERSION=$(echo $CI_COMMIT_TAG | sed 's/[+-].*$//g')
+      fi
     else
-      CHART_VERSION=$(echo $CI_COMMIT_TAG | sed 's/[+-].*$//g')
+      echo "Upstream-based chart publishing flow..."
+      CHART_VERSION=$TAG
+      curl -Lo /usr/bin/yq https://github.com/mikefarah/yq/releases/download/v4.2.0/yq_linux_amd64 && chmod +x /usr/bin/yq
+      yq e -i '.appVersion = "'$AIO_VERSION'"' charts/ingress-nginx/Chart.yaml
+      yq e -i '.controller.wallarm.helpers.tag = "'$TAG'"' charts/ingress-nginx/values.yaml
+      yq e -i '.controller.image.tag = "'$TAG'"' charts/ingress-nginx/values.yaml
     fi
     export CHART_VERSION
     echo "CHART_VERSION=$CHART_VERSION" >> chart.env
@@ -413,7 +459,7 @@ UPDATE_VERSION:
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
   needs: [HELM_PUBLISH]
   rules:
-    - if: $X_CI_BUILD_KIND == "chart" && $CHART_TYPE == "release"
+    - if: $CHART_TYPE == "release"
   extends:
     - .before-update-versions
   variables:

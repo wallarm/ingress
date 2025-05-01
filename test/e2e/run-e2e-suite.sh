@@ -117,6 +117,7 @@ kubectl run --rm \
   --env="WALLARM_API_TOKEN=${WALLARM_API_TOKEN:-}" \
   --env="WALLARM_API_HOST=${WALLARM_API_HOST:-}" \
   --env="NODE_GROUP_NAME=${NODE_GROUP_NAME:-}" \
+  --env="HELM_ARGS=${HELM_ARGS:-}" \
   --env="HTTPBUN_IMAGE=${HTTPBUN_IMAGE}" \
   --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e","imagePullSecrets":[{"name":"dockerhub-secret"}]}}' \
   e2e --image=$E2E_IMAGE

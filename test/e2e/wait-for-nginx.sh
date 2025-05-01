@@ -57,12 +57,13 @@ if [[ ! -z "$NAMESPACE_OVERLAY" && -d "$DIR/namespace-overlays/$NAMESPACE_OVERLA
         --set controller.image.chroot="${IS_CHROOT}" \
         --set controller.image.repository="${REGISTRY}/ingress-controller" \
         --set controller.image.tag="${TAG}" \
+        ${HELM_ARGS} \
         --set controller.wallarm.enabled="${WALLARM_ENABLED}" \
         --set controller.wallarm.token="${WALLARM_API_TOKEN}" \
         --set controller.wallarm.apiHost="${WALLARM_API_HOST}" \
         --set controller.wallarm.fallback="off"
 else
-    cat << EOF | helm install nginx-ingress ${DIR}/charts/ingress-nginx --namespace=$NAMESPACE --values -
+    cat << EOF | helm install nginx-ingress ${DIR}/charts/ingress-nginx --namespace=$NAMESPACE ${HELM_ARGS} --values -
 # TODO: remove the need to use fullnameOverride
 fullnameOverride: nginx-ingress
 controller:
