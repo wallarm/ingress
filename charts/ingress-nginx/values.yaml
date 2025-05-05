@@ -1060,7 +1060,7 @@ controller:
       #         name: secret-resource
     wcli:
       ### General log level
-      logLevel: warn
+      logLevel: info
       ### Per-job log levels
       commands:
         apispec:
