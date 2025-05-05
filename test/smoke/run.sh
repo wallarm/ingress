@@ -144,7 +144,7 @@ controller:
     fallback: "off"
     wcli:
       commands:
-        detectCredStuffing:
+        credstuff:
           logLevel: DEBUG
         syncNode:
           logLevel: DEBUG
