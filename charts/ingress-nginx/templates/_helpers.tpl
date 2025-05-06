@@ -504,10 +504,13 @@ Wcli arguments building
 "job:{{ $jobName }}",{{ " " }}
 {{- range $key, $val := $jobCfg }}
 {{- $flag := include "wallarm.kebabcase" $key -}}
-{{- if eq $flag "tarantool-throttle-options" }}
+{{- if ne $flag "log-level" }}
+  {{- $kind := kindOf $val -}}
+  {{- if or (eq $kind "map") (eq $kind "slice") }}
 "-{{ $flag }}", {{ $val | toJson | quote }},{{ " " }}
-{{- else if ne $flag "log-level" }}
+  {{- else }}
 "-{{ $flag }}", {{ $val | quote }},{{ " " }}
+  {{- end }}
 {{- end }}
 {{- end }}
 "-log-level", "{{ $jobCfg.logLevel | default $.Values.controller.wallarm.wcli.logLevel }}",{{ " " }}
