@@ -275,7 +275,7 @@ Create the name of the controller service account to use
   image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
 {{- end }}
   imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["wcli", "run", {{ include "ingress-nginx.wcli-args" . }}]
+  args: ["wcli", "run", {{ include "ingress-nginx.wcli-args" . | trimSuffix ", " | replace "\n" "" }}]
   env:
   {{- include "wallarm.credentials" . | nindent 2 }}
   - name: WALLARM_NODE_NAME
@@ -488,13 +488,29 @@ Extra modules.
 {{- end -}}
 
 {{/*
+Convert camelCase to kebab‑case
+*/}}
+{{- define "wallarm.kebabcase" -}}
+{{- regexReplaceAll "([a-z0-9])([A-Z])" . "${1}-${2}" | lower -}}
+{{- end }}
+
+{{/*
 Wcli arguments building
 */}}
 {{- define "ingress-nginx.wcli-args" -}}
 "-log-level", "{{ .Values.controller.wallarm.wcli.logLevel }}",{{ " " }}
-{{- with .Values.controller.wallarm.wcli.commands -}}
-{{- range $name, $value := . -}}
-"job:{{ $name }}", "-log-level", "{{ $value.logLevel }}",{{ " " }}
-{{- end -}}
-{{- end -}}
+{{- with .Values.controller.wallarm.wcli.commands }}
+{{- range $jobName, $jobCfg := . }}
+"job:{{ $jobName }}",{{ " " }}
+{{- range $key, $val := $jobCfg }}
+{{- $flag := include "wallarm.kebabcase" $key -}}
+{{- if eq $flag "tarantool-throttle-options" }}
+"-{{ $flag }}", {{ $val | toJson | quote }},{{ " " }}
+{{- else if ne $flag "log-level" }}
+"-{{ $flag }}", {{ $val | quote }},{{ " " }}
+{{- end }}
+{{- end }}
+"-log-level", "{{ $jobCfg.logLevel | default $.Values.controller.wallarm.wcli.logLevel }}",{{ " " }}
+{{- end }}
+{{- end }}
 {{- end -}}
