@@ -14,7 +14,7 @@ variables:
     value: 'develop'
     options:
       - 'develop'
-      - 'production'
+      - 'production-local'
       - 'chart'
       - 'smokeonly'
       - 'vulnscan'
@@ -30,7 +30,7 @@ variables:
       - us1
 
   ### For doc purposes only ###
-  ## Variables used implicitly, only in upstream-triggered pipeline
+  ## Variables used implicitly, only in upstream-triggered pipelines (KINDs production|release-candidate)
   # AIO_VERSION:
   #   description: AIO version to extract the nginx module from, and is also used as appVersion in chart; do not confuse with TAG, which in dynamically calculated
 
@@ -39,13 +39,11 @@ workflow:
   rules:
     - if: $AIO_VERSION =~ /^([0-9]+.[0-9]+.[0-9]+-rc).*$/
       variables:
-        X_CI_BUILD_KIND: "upstream" # supposed to be triggered by AIO rc
         REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
         HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION # only override tag here, registry in use is still PUBLIC (chart default)
         CHART_TYPE: "release-candidate"
     - if: $AIO_VERSION
       variables:
-        X_CI_BUILD_KIND: "upstream" # supposed to be triggered by AIO (final) releases
         REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
         HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION # only override tag here, registry in use is still PUBLIC (chart default)
         CHART_TYPE: "release"
@@ -53,7 +51,7 @@ workflow:
       changes:
         - TAG
       variables:
-        X_CI_BUILD_KIND: "production"
+        X_CI_BUILD_KIND: "production-local"
         REGISTRY: docker.io/wallarm
     - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^stable\/.*$/ || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
       variables:
@@ -174,7 +172,7 @@ IMAGE_BUILD_IC:
   stage: build
   tags: [infra-c2r4-dind-amd]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|production|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production-local|production|release-candidate)$/
   extends:
     - .before-build
   variables:
@@ -201,7 +199,7 @@ IMAGE_BUILD_E2E:
   stage: build
   tags: [infra-c2r4-dind-amd]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .before-build
   script: |
@@ -258,7 +256,7 @@ SMOKE:
   needs: [IMAGE_BUILD_IC]
   tags: [$RUNNER]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .SMOKE_BASE
   parallel:
@@ -289,7 +287,7 @@ E2E_UPSTREAM:
   timeout: 2h
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .before-test
   variables:
@@ -315,7 +313,7 @@ E2E_WALLARM:
   timeout: 2h
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   parallel:
     matrix:
       - ARCH: amd64
@@ -345,7 +343,7 @@ CHART_TESTING:
   tags: [infra-c2r4-dind-amd]
   needs: [IMAGE_BUILD_IC]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .before-test
   variables:
@@ -369,7 +367,7 @@ SCAN_ARTIFACT:
   stage: test
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner-helper-images/security_scanners:1.0.32
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan|production|release-candidate)$/
   extends:
     - .before-build
   script: |
@@ -387,7 +385,7 @@ PUBL_SIGN_DOCKER:
   tags: [infra-c1r2-dind-amd]
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(production|upstream)$/
+    - if: $X_CI_BUILD_KIND =~ /^(production-local|production|release-candidate)$/
   parallel:
     matrix:
       - IMAGE: [ingress-controller, ingress-controller-chroot]
@@ -409,7 +407,7 @@ PUBL_SIGN_DOCKER:
 HELM_PUBLISH:
   stage: publish
   rules:
-   - if: $X_CI_BUILD_KIND =~ /^(chart|upstream)$/
+   - if: $X_CI_BUILD_KIND =~ /^(chart|production|release-candidate)$/
   extends:
     - .before-helm-publish
   variables:
