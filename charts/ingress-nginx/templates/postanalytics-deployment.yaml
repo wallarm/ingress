@@ -25,7 +25,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/wcli: {{ .Values.controller.wallarm.wcli | toJson | sha256sum }}
+        checksum/wcli: {{ .Values.controller.wallarm.wcliPostanalytics | toJson | sha256sum }}
       {{- if not .Values.controller.wallarm.existingSecret.enabled }}
         checksum/token: {{ .Values.controller.wallarm.token | sha256sum }}
       {{- end }}
@@ -47,7 +47,37 @@ spec:
         {{ $_ := set .Values "register_mode" "post_analytic" }}
         {{ include "ingress-nginx.wallarmInitContainer.init" . | nindent 8 }}
       containers:
-        {{ include "ingress-nginx.wallarmWcliContainer" . | nindent 8 }}
+        - name: wcli
+        {{- if .Values.controller.wallarm.wcliPostanalytics.image }}
+          {{- with .Values.controller.wallarm.wcliPostanalytics.image }}
+          image: "{{ .repository }}:{{ .tag }}"
+          {{- end }}
+        {{- else }}
+          image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
+        {{- end }}
+          imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
+          args: ["wcli", "run", {{ include "ingress-nginx.wcli-args" .Values.controller.wallarm.wcliPostanalytics | trimSuffix ", " | replace "\n" "" }}]
+          env:
+          {{- include "wallarm.credentials" . | nindent 10 }}
+          - name: WALLARM_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        {{- if .Values.controller.wallarm.wcliPostanalytics.extraEnvs }}
+          {{- toYaml .Values.controller.wallarm.wcliPostanalytics.extraEnvs | nindent 10 }}
+        {{- end }}
+          volumeMounts:
+          - mountPath: {{ include "wallarm.path" . }}
+            name: wallarm
+          - mountPath: {{ include "wallarm-acl.path" . }}
+            name: wallarm-acl
+          - mountPath: /secrets/wallarm/token
+            name: wallarm-token
+            subPath: token
+            readOnly: true
+          securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
+          resources:
+        {{ toYaml .Values.controller.wallarm.wcliPostanalytics.resources | indent 12 }}
         - name: wstore
         {{- if .Values.controller.wallarm.postanalytics.image }}
           {{- with .Values.controller.wallarm.postanalytics.image }}
