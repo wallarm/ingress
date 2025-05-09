@@ -14,7 +14,11 @@ controller:
       extraEnvs:
         - name: EXTRA_ADDNODE_KEY
           value: EXTRA_ADDNODE_VAL
-    wcli:
+    wcliController:
+      extraEnvs:
+        - name: EXTRA_WCLI_KEY
+          value: EXTRA_WCLI_VAL
+    wcliPostanalytics:
       extraEnvs:
         - name: EXTRA_WCLI_KEY
           value: EXTRA_WCLI_VAL
