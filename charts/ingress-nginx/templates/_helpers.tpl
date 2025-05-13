@@ -517,3 +517,18 @@ Wcli arguments building
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{- define "ingress-nginx.wallarmWstoreTlsVariables" -}}
+- name: WALLARM_WSTORE__SERVICE__TLS__ENABLED
+  value: "{{ .Values.controller.wallarm.postanalytics.tls.enabled }}"
+- name: WALLARM_WSTORE__SERVICE__TLS__CERT_FILE
+  value: "{{ .Values.controller.wallarm.postanalytics.tls.certFile }}"
+- name: WALLARM_WSTORE__SERVICE__TLS__KEY_FILE
+  value: "{{ .Values.controller.wallarm.postanalytics.tls.keyFile }}"
+- name: WALLARM_WSTORE__SERVICE__TLS__CA_CERT_FILE
+  value: "{{ .Values.controller.wallarm.postanalytics.tls.caCertFile }}"
+- name: WALLARM_WSTORE__SERVICE__TLS__MUTUAL_TLS__ENABLED
+  value: "{{ .Values.controller.wallarm.postanalytics.tls.mutualTLS.enabled }}"
+- name: WALLARM_WSTORE__SERVICE__TLS__MUTUAL_TLS__CLIENT_CA_CERT_FILE
+  value: "{{ .Values.controller.wallarm.postanalytics.tls.mutualTLS.clientCACertFile }}"
+{{- end -}}

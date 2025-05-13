@@ -1006,6 +1006,15 @@ controller:
       topologySpreadConstraints: []
       nodeSelector:
         kubernetes.io/os: linux
+      ## TLS configuration settings (optional)
+      tls:
+        enabled: false
+      #   certFile: "/root/test-tls-certs/server.crt"
+      #   keyFile: "/root/test-tls-certs/server.key"
+      #   caCertFile: "/root/test-tls-certs/ca.crt"
+      #   mutualTLS:
+      #     enabled: false
+      #     clientCACertFile: "/root/test-tls-certs/ca.crt"
       # -- Additional environment variables to set
       extraEnvs: []
       # extraEnvs:
@@ -1014,6 +1023,8 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      extraVolumes: []
+      extraVolumeMounts: []
     wallarm-appstructure:
       resources: {}
       # -- Additional environment variables to set
