@@ -265,42 +265,6 @@ Create the name of the controller service account to use
 {{ toYaml .Values.controller.wallarm.init.resources | indent 4 }}
 {{- end -}}
 
-{{- define "ingress-nginx.wallarmWcliContainer" -}}
-- name: wcli
-{{- if .Values.controller.wallarm.wcli.image }}
-  {{- with .Values.controller.wallarm.wcli.image }}
-  image: "{{ .repository }}:{{ .tag }}"
-  {{- end }}
-{{- else }}
-  image: "{{ .Values.controller.wallarm.helpers.image }}:{{ .Values.controller.wallarm.helpers.tag }}"
-{{- end }}
-  imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
-  args: ["wcli", "run", {{ include "ingress-nginx.wcli-args" . | trimSuffix ", " | replace "\n" "" }}]
-  env:
-  {{- include "wallarm.credentials" . | nindent 2 }}
-  - name: WALLARM_NODE_NAME
-    valueFrom:
-      fieldRef:
-        fieldPath: metadata.name
-{{- if .Values.controller.wallarm.wcli.extraEnvs }}
-  {{- toYaml .Values.controller.wallarm.wcli.extraEnvs | nindent 2 }}
-{{- end }}
-  volumeMounts:
-  - mountPath: {{ include "wallarm.path" . }}
-    name: wallarm
-  - mountPath: {{ include "wallarm-acl.path" . }}
-    name: wallarm-acl
-  - mountPath: {{ include "wallarm-apifw.path" . }}
-    name: wallarm-apifw
-  - mountPath: /secrets/wallarm/token
-    name: wallarm-token
-    subPath: token
-    readOnly: true
-  securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 4 }}
-  resources:
-{{ toYaml .Values.controller.wallarm.wcli.resources | indent 4 }}
-{{- end -}}
-
 {{- define "ingress-nginx.wallarmTokenVolume" -}}
 - name: wallarm-token
   secret:
@@ -498,8 +462,8 @@ Convert camelCase to kebab‑case
 Wcli arguments building
 */}}
 {{- define "ingress-nginx.wcli-args" -}}
-"-log-level", "{{ .Values.controller.wallarm.wcli.logLevel }}",{{ " " }}
-{{- with .Values.controller.wallarm.wcli.commands }}
+"-log-level", "{{ .logLevel }}",{{ " " }}
+{{- with .commands }}
 {{- range $jobName, $jobCfg := . }}
 "job:{{ $jobName }}",{{ " " }}
 {{- range $key, $val := $jobCfg }}
@@ -513,7 +477,7 @@ Wcli arguments building
   {{- end }}
 {{- end }}
 {{- end }}
-"-log-level", "{{ $jobCfg.logLevel | default $.Values.controller.wallarm.wcli.logLevel }}",{{ " " }}
+"-log-level", "{{ $jobCfg.logLevel | default .logLevel }}",{{ " " }}
 {{- end }}
 {{- end }}
 {{- end -}}

@@ -1055,8 +1055,8 @@ controller:
         # externalTrafficPolicy: ""
         # nodePort: ""
     ## If HPA is used, the resources.requests.{cpu,memory} must be set in the following variables:
-    ## init and wcli. Otherwise, HPA will not work properly.
-    ## Note: init.resources, and wcli.resources are shared between 2 pods:
+    ## init, wcliController and wcliPostanalytics. Otherwise, HPA will not work properly.
+    ## Note: init.resources is shared between 2 pods:
     ## wallarm-ingress-controller and wallarm-ingress-controller-wstore.
     ## Means that in case of values changing - BOTH pods (controller and wstore) will be redeployed.
     init:
@@ -1069,13 +1069,41 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
-    wcli:
+    ## Wcli instance from ingress controller pod
+    wcliController:
       ### General log level
       logLevel: WARN
       ### Per-job log levels
       commands:
         apispec:
           logLevel: INFO
+        envexp:
+          logLevel: INFO
+        ipfeed:
+          logLevel: INFO
+        iplist:
+          logLevel: INFO
+        metricsexp:
+          logLevel: INFO
+        register:
+          logLevel: INFO
+        syncnode:
+          logLevel: INFO
+      resources: {}
+      # -- Additional environment variables to set
+      extraEnvs: []
+      # extraEnvs:
+      #   - name: FOO
+      #     valueFrom:
+      #       secretKeyRef:
+      #         key: FOO
+      #         name: secret-resource
+    ## Wcli instance from postanalytics pod
+    wcliPostanalytics:
+      ### General log level
+      logLevel: WARN
+      ### Per-job log levels
+      commands:
         blkexp:
           logLevel: INFO
         botexp:
@@ -1088,21 +1116,13 @@ controller:
           logLevel: INFO
         envexp:
           logLevel: INFO
-        ipfeed:
-          logLevel: INFO
-        iplist:
-          logLevel: INFO
         jwtexp:
-          logLevel: INFO
-        metricsexp:
           logLevel: INFO
         mrksync:
           logLevel: INFO
         register:
           logLevel: INFO
         reqexp:
-          logLevel: INFO
-        syncnode:
           logLevel: INFO
       resources: {}
       # -- Additional environment variables to set

@@ -142,7 +142,7 @@ controller:
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
     nodeGroup: ${NODE_GROUP_NAME}
     fallback: "off"
-    wcli:
+    wcliController:
       commands:
         detectCredStuffing:
           logLevel: DEBUG
