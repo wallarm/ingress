@@ -60,13 +60,19 @@ spec:
           env:
             - name: SLAB_ALLOC_ARENA
               value: "{{ .Values.controller.wallarm.postanalytics.arena }}"
+          {{- if .Values.controller.wallarm.postanalytics.tls.enabled }}
+            {{ include "ingress-nginx.wallarmWstoreTlsVariables" . | nindent 12 }}
+          {{- end }}
           {{- if (index .Values "controller" "wallarm" "postanalytics" "extraEnvs") }}
             {{- toYaml (index .Values "controller" "wallarm" "postanalytics" "extraEnvs") | nindent 12 }}
           {{- end }}
           securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
-          - mountPath: /opt/wallarm/etc/wallarm
-            name: wallarm
+            - mountPath: /opt/wallarm/etc/wallarm
+              name: wallarm
+          {{- if .Values.controller.wallarm.postanalytics.extraVolumeMounts }}
+            {{- toYaml .Values.controller.wallarm.postanalytics.extraVolumeMounts | nindent 12 }}
+          {{- end }}
           livenessProbe:
             tcpSocket:
               port: {{ template "ingress-nginx.wallarmPostanalyticsPort" . }}
@@ -123,5 +129,8 @@ spec:
         - name: wallarm-apifw
           emptyDir: {}
         {{- include "ingress-nginx.wallarmTokenVolume" . | nindent 8 }}
+      {{- if .Values.controller.wallarm.postanalytics.extraVolumes }}
+        {{ toYaml .Values.controller.wallarm.postanalytics.extraVolumes | nindent 8 }}
+      {{- end }}
 {{- end }}
 {{- end }}
