@@ -141,15 +141,7 @@ controller:
     apiHost: ${WALLARM_API_HOST}
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
     nodeGroup: ${NODE_GROUP_NAME}
-    fallback: "off"
-    wcliController:
-      commands:
-        detectCredStuffing:
-          logLevel: DEBUG
-        syncNode:
-          logLevel: DEBUG
-        syncIpLists:
-          logLevel: DEBUG
+    fallback: "off"    
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
