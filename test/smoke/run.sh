@@ -144,7 +144,11 @@ controller:
     fallback: "off" 
     postanalytics:
       tls:
-        enabled: false   
+        enabled: false
+      extraEnvs:
+        - name: WALLARM_LOG_LEVEL
+          value: DEBUG
+       
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
