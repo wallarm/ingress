@@ -141,7 +141,10 @@ controller:
     apiHost: ${WALLARM_API_HOST}
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
     nodeGroup: ${NODE_GROUP_NAME}
-    fallback: "off"    
+    fallback: "off" 
+    postanalytics:
+      tls:
+        enabled: false   
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
