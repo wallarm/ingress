@@ -23,7 +23,7 @@ variables:
     value: amd64
   WALLARM_API_PRESET:
     description: "Wallarm api preset"
-    value: audit
+    value: eu1
     options:
       - audit
       - eu1
