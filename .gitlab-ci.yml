@@ -276,7 +276,7 @@ E2E_WALLARM:
   parallel:
     matrix:
       - ARCH: amd64
-        RUNNER: infra-c4r8-dind-amd
+        RUNNER: infra-c6r12-dind-amd
         K8S: [1.26.15, 1.27.13, 1.28.9, 1.29.4, 1.30.0]
   extends:
     - .before-test
