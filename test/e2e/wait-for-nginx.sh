@@ -57,6 +57,7 @@ if [[ ! -z "$NAMESPACE_OVERLAY" && -d "$DIR/namespace-overlays/$NAMESPACE_OVERLA
         --set controller.image.chroot="${IS_CHROOT}" \
         --set controller.image.repository="${REGISTRY}/ingress-controller" \
         --set controller.image.tag="${TAG}" \
+        --set controller.image.pullPolicy="IfNotPresent" \
         --set controller.wallarm.enabled="${WALLARM_ENABLED}" \
         --set controller.wallarm.token="${WALLARM_API_TOKEN}" \
         --set controller.wallarm.apiHost="${WALLARM_API_HOST}" \
@@ -74,6 +75,7 @@ controller:
     fallback: "off"
   image:
     repository: ${REGISTRY}/ingress-controller
+    pullPolicy: IfNotPresent
     chroot: ${IS_CHROOT}
     tag: ${TAG}
     digest:
@@ -83,11 +85,11 @@ controller:
   config:
     worker-processes: "1"
   readinessProbe:
-    initialDelaySeconds: 3
-    periodSeconds: 1
+    initialDelaySeconds: 30
+    periodSeconds: 5
   livenessProbe:
-    initialDelaySeconds: 3
-    periodSeconds: 1
+    initialDelaySeconds: 30
+    periodSeconds: 5
   service:
     type: NodePort
   electionID: ingress-controller-leader

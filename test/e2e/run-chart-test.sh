@@ -67,7 +67,7 @@ DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
 
 CT_CONFIG="${CT_CONFIG:-$HOME/.kube/kind-config-ct-$KIND_CLUSTER_NAME}"
 
-HELM_EXTRA_ARGS="${HELM_EXTRA_ARGS:---timeout 240s}"
+HELM_EXTRA_ARGS="${HELM_EXTRA_ARGS:---timeout 360s}"
 HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.enabled=true \
  --set controller.wallarm.apiHost=${WALLARM_API_HOST} \
@@ -75,6 +75,7 @@ HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.nodeGroup=${NODE_GROUP_NAME} \
  --set controller.image.repository=${REGISTRY}/ingress-controller \
  --set controller.image.tag=${TAG} \
+ --set controller.image.pullPolicy=IfNotPresent \
  --set controller.terminationGracePeriodSeconds=0 \
  --set controller.wallarm.tarantool.terminationGracePeriodSeconds=0 \
  --set fullnameOverride=wallarm-ingress"
