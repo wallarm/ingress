@@ -44,7 +44,7 @@ export WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 export SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
-K8S_VERSION=${K8S_VERSION:-v1.25.8}
+K8S_VERSION=${K8S_VERSION:-v1.30.13}
 
 
 # This will prevent the secret for index.docker.io from being used if the DOCKERHUB_USER is not set.
