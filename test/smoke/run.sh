@@ -44,7 +44,7 @@ export WALLARM_API_CA_VERIFY="${WALLARM_API_CA_VERIFY:-true}"
 export SMOKE_IMAGE_NAME="${SMOKE_IMAGE_NAME:-dkr.wallarm.com/tests/smoke-tests}"
 export SMOKE_IMAGE_TAG="${SMOKE_IMAGE_TAG:-latest}"
 
-K8S_VERSION=${K8S_VERSION:-v1.25.8}
+K8S_VERSION=${K8S_VERSION:-v1.30.13}
 
 
 # This will prevent the secret for index.docker.io from being used if the DOCKERHUB_USER is not set.
@@ -141,15 +141,16 @@ controller:
     apiHost: ${WALLARM_API_HOST}
     apiCaVerify: ${WALLARM_API_CA_VERIFY}
     nodeGroup: ${NODE_GROUP_NAME}
-    fallback: "off"
-    wcliController:
-      commands:
-        detectCredStuffing:
-          logLevel: DEBUG
-        syncNode:
-          logLevel: DEBUG
-        syncIpLists:
-          logLevel: DEBUG
+    fallback: "off" 
+    postanalytics:
+      tls:
+        enabled: false
+      extraEnvs:
+        - name: WALLARM_LOG_LEVEL
+          value: DEBUG
+        - name: WALLARM_WSTORE__SERVICE__ADDRESS
+          value: "[::]:3313"
+       
   image:
     repository: ${REGISTRY}/ingress-controller
     tag: ${TAG}
