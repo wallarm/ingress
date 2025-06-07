@@ -232,9 +232,11 @@ spec:
             subPath: token
             readOnly: true
           securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
+{{- with .Values.controller.wallarm.wcliController.resources }}
           resources:
-        {{ toYaml .Values.controller.wallarm.wcliController.resources | indent 12 }}
-        {{- if .Values.controller.wallarm.apiFirewall.enabled }}
+{{ toYaml . | nindent 12 }}
+{{- end }}
+        {{ if .Values.controller.wallarm.apiFirewall.enabled }}
         {{ include "ingress-nginx.wallarmapiFirewallContainer" . | nindent 8 }}
         {{- end }}
       {{- end }}
