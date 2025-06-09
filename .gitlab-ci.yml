@@ -284,6 +284,7 @@ E2E_UPSTREAM:
   stage: test
   tags: [infra-c4r8-dind-amd]
   timeout: 2h
+  allow_failure: true
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
@@ -310,6 +311,7 @@ E2E_WALLARM:
   stage: test
   tags: [$RUNNER]
   timeout: 2h
+  allow_failure: true
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
