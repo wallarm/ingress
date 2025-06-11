@@ -147,6 +147,7 @@ workflow:
 .before-sign-docker:
   before_script:
     - *x_vault_login
+    - *x_docker_login_private
     - *x_docker_login_public
     - *x_sign_images
 

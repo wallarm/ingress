@@ -4,7 +4,7 @@ set -o errexit
 set -o pipefail
 
 
-IMAGE_NAME=${REGISTRY}/${IMAGE}:${TAG}
+IMAGE_NAME=docker.io/wallarm/${IMAGE}:${TAG}
 echo "Will be signing: ${IMAGE_NAME}..."
 docker pull -q ${IMAGE_NAME}
 
