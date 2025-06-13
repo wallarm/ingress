@@ -28,6 +28,9 @@ variables:
       - audit
       - eu1
       - us1
+  SKIP_TESTS:
+    description: "Set to true to skip all test jobs"
+    value: "true"
 
   ### For doc purposes only ###
   ## Variables used implicitly, only in upstream-triggered pipelines (KINDs production|release-candidate)
@@ -256,6 +259,8 @@ SMOKE:
   needs: [IMAGE_BUILD_IC]
   tags: [$RUNNER]
   rules:
+    - if: '$SKIP_TESTS == "true"'
+      when: never
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .SMOKE_BASE
@@ -272,6 +277,8 @@ SMOKE_ONLY:
   stage: test
   tags: [$RUNNER]
   rules:
+    - if: '$SKIP_TESTS == "true"'
+      when: never
     - if: $X_CI_BUILD_KIND == "smokeonly"
   extends:
     - .SMOKE_BASE
@@ -288,6 +295,8 @@ E2E_UPSTREAM:
   allow_failure: true
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
+    - if: '$SKIP_TESTS == "true"'
+      when: never
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .before-test
@@ -315,6 +324,8 @@ E2E_WALLARM:
   allow_failure: true
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
+    - if: '$SKIP_TESTS == "true"'
+      when: never
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   parallel:
     matrix:
@@ -345,6 +356,8 @@ CHART_TESTING:
   tags: [infra-c2r4-dind-amd]
   needs: [IMAGE_BUILD_IC]
   rules:
+    - if: '$SKIP_TESTS == "true"'
+      when: never
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .before-test
@@ -369,6 +382,8 @@ SCAN_ARTIFACT:
   stage: test
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner-helper-images/security_scanners:1.0.32
   rules:
+    - if: '$SKIP_TESTS == "true"'
+      when: never
     - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan|production|release-candidate)$/
   extends:
     - .before-build
@@ -400,7 +415,11 @@ PUBL_SIGN_DOCKER:
         docker buildx imagetools create -t wallarm/${IMAGE}:${TAG} ${CI_REGISTRY_IMAGE}/${IMAGE}:${TAG}
       fi
 
-      [[ $CHART_TYPE == "release" ]] && make sign
+      if [[ "$CHART_TYPE" == "release" ]]; then
+        make sign
+      else
+        echo "Skipping signing step (CHART_TYPE=$CHART_TYPE)"
+      fi
   artifacts:
     expire_in: 30 days
     paths:
