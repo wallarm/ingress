@@ -30,7 +30,7 @@ variables:
       - us1
   SKIP_TESTS:
     description: "Set to true to skip all test jobs"
-    value: "true"
+    value: "false"
 
   ### For doc purposes only ###
   ## Variables used implicitly, only in upstream-triggered pipelines (KINDs production|release-candidate)
