@@ -287,6 +287,9 @@ SMOKE_ONLY:
       - ARCH: amd64
         RUNNER: infra-c2r4-dind-amd
         K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
+      - ARCH: arm64
+        RUNNER: infra-c2r4-dind-arm
+        K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
 
 E2E_UPSTREAM:
   stage: test
