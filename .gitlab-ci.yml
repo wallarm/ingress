@@ -1,6 +1,6 @@
 default:
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/common-runner:v0.3.2
-  tags: [infra-c05r1-amd]
+  tags: [node-c05r1-stable-amd]
 
 stages:
   - build
@@ -174,7 +174,7 @@ workflow:
 
 IMAGE_BUILD_IC:
   stage: build
-  tags: [infra-c2r4-dind-amd]
+  tags: [node-c2r4-stable-dind-amd]
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production-local|production|release-candidate)$/
   extends:
@@ -201,7 +201,7 @@ IMAGE_BUILD_IC:
 
 IMAGE_BUILD_E2E:
   stage: build
-  tags: [infra-c2r4-dind-amd]
+  tags: [node-c2r4-stable-dind-amd]
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
@@ -267,10 +267,10 @@ SMOKE:
   parallel:
     matrix:
       - ARCH: amd64
-        RUNNER: infra-c2r4-dind-amd
+        RUNNER: node-c4r8-stable-dind-amd
         K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
       - ARCH: arm64
-        RUNNER: infra-c2r4-dind-arm
+        RUNNER: node-c4r8-stable-dind-arm
         K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
 
 SMOKE_ONLY:
@@ -285,15 +285,15 @@ SMOKE_ONLY:
   parallel:
     matrix:
       - ARCH: amd64
-        RUNNER: infra-c2r4-dind-amd
+        RUNNER: node-c4r8-stable-dind-amd
         K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
       - ARCH: arm64
-        RUNNER: infra-c2r4-dind-arm
+        RUNNER: node-c4r8-stable-dind-arm
         K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
 
 E2E_UPSTREAM:
   stage: test
-  tags: [infra-c4r8-dind-amd]
+  tags: [node-c6r12-stable-dind-amd]
   timeout: 2h
   allow_failure: true
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
@@ -333,7 +333,7 @@ E2E_WALLARM:
   parallel:
     matrix:
       - ARCH: amd64
-        RUNNER: infra-c6r12-dind-amd
+        RUNNER: node-c6r12-stable-dind-amd
         K8S: [1.26.15, 1.30.0]
   extends:
     - .before-test
@@ -356,7 +356,7 @@ E2E_WALLARM:
 
 CHART_TESTING:
   stage: test
-  tags: [infra-c2r4-dind-amd]
+  tags: [node-c4r8-stable-dind-amd]
   needs: [IMAGE_BUILD_IC]
   rules:
     - if: '$SKIP_TESTS == "true"'
@@ -402,7 +402,6 @@ SCAN_ARTIFACT:
 
 PUBL_SIGN_DOCKER:
   stage: sign
-  tags: [infra-c1r2-dind-amd]
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(production-local|production|release-candidate)$/
