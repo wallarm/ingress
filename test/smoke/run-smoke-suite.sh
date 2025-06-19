@@ -48,9 +48,9 @@ echo "AiO Node version: ${NODE_VERSION}"
 if [[ "${CI:-false}" == "false" ]]; then
   trap 'kubectl delete pod pytest --now  --ignore-not-found' EXIT ERR
   # Colorize pytest output if run locally
-  EXEC_ARGS="--tty --stdin"
+  EXEC_ARGS="-it"
 else
-  EXEC_ARGS="--tty"
+  EXEC_ARGS="-t"
 fi
 
 if ! kubectl get secret "${SMOKE_IMAGE_PULL_SECRET_NAME}" &> /dev/null; then
@@ -80,6 +80,13 @@ spec:
   containers:
   - command: [sleep, infinity]
     env:
+    - {name: CI, value: "true"}
+    - {name: GITLAB_CI, value: "true"}
+    - {name: CI_PIPELINE_ID, value: "${CI_PIPELINE_ID}"}
+    - {name: CI_PIPELINE_URL, value: "${CI_PIPELINE_URL}"}
+    - {name: CI_JOB_ID, value: "${CI_JOB_ID}"}
+    - {name: CI_JOB_URL, value: "${CI_JOB_URL}"}
+    - {name: CI_SERVER_URL, value: "${CI_SERVER_URL}"}
     - {name: NODE_BASE_URL, value: "${NODE_BASE_URL}"}
     - {name: NODE_GROUP_NAME, value: "${NODE_GROUP_NAME}"}
     - {name: WALLARM_API_HOST, value: "${WALLARM_API_HOST}"}

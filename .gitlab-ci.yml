@@ -23,7 +23,7 @@ variables:
     value: amd64
   WALLARM_API_PRESET:
     description: "Wallarm api preset"
-    value: audit
+    value: eu1
     options:
       - audit
       - eu1
@@ -145,7 +145,11 @@ workflow:
     - *x_vault_login
     - *x_get_gitlab_credentials
 
-
+.update_kind: &update-kind
+  - LATEST_KIND_VERSION=$(curl -s https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq -r .tag_name)
+  - curl -s -Lo ./kind_latest https://kind.sigs.k8s.io/dl/${LATEST_KIND_VERSION}/kind-linux-${ARCH}
+  - chmod +x ./kind_latest
+  - sudo mv ./kind_latest /usr/local/bin/kind
 
 ### DEV & PROD jobs
 
@@ -203,12 +207,24 @@ IMAGE_BUILD_E2E:
     ALLURE_GENERATE_REPORT: true
     ALLURE_ENVIRONMENT_K8S: $K8S
     ALLURE_ENVIRONMENT_ARCH: $ARCH
-  script: |
-    [ -z "$TAG" ] && export TAG="$(cat TAG)" && export REGISTRY=docker.io/wallarm
-    docker pull ${REGISTRY}/ingress-controller:${TAG}
-
-    kind create cluster --image=kindest/node:v$K8S
-    make kind-smoke-test
+  script:
+    - *update-kind
+    - |
+      export KINDEST_NODE_IMAGE=kindest/node:$(curl -s "https://registry.hub.docker.com/v2/repositories/kindest/node/tags?page_size=1000" \
+      | jq -r --arg k "${K8S}." '.results[].name | select(startswith($k))' | sort -V | tail -n 1)
+    - kind --version
+    - |
+      export KIND_CLUSTER_NAME=kind-$K8S
+      export KUBECONFIG=$HOME/.kube/kind-config-$K8S
+      export ALLURE_ENVIRONMENT_K8S=$K8S
+    - |
+      if [ -z "$TAG" ]; then
+        export TAG="$(cat TAG)"
+        export REGISTRY=docker.io/wallarm
+      fi
+    - docker pull -q ${REGISTRY}/ingress-controller:${TAG}
+    - kind create cluster --image=$KINDEST_NODE_IMAGE
+    - make kind-smoke-test
 
 SMOKE:
   stage: test
@@ -222,10 +238,10 @@ SMOKE:
     matrix:
       - ARCH: amd64
         RUNNER: infra-c2r4-dind-amd
-        K8S: [1.26.15, 1.30.0]
+        K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
       - ARCH: arm64
         RUNNER: infra-c2r4-dind-arm
-        K8S: [1.26.15, 1.30.0]
+        K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
 
 SMOKE_ONLY:
   stage: test
@@ -238,7 +254,7 @@ SMOKE_ONLY:
     matrix:
       - ARCH: amd64
         RUNNER: infra-c2r4-dind-amd
-        K8S: [1.26.15, 1.30.0]
+        K8S: [v1.26, v1.30] # v1.30 is the latest supported version, v1.26 is the oldest supported version, check README.md Supported Versions table
 
 E2E_UPSTREAM:
   stage: test
@@ -250,7 +266,7 @@ E2E_UPSTREAM:
   extends:
     - .before-test
   variables:
-    K8S: 1.26.15
+    K8S: 1.30.0
     KIND_CLUSTER_NAME: kind
     SKIP_CLUSTER_CREATION: "true"
     SKIP_INGRESS_IMAGE_CREATION: "true"
@@ -258,8 +274,8 @@ E2E_UPSTREAM:
     DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
     DOCKERHUB_PASSWORD: $X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD
   script: |
-    docker pull ${REGISTRY}/ingress-controller:${TAG}
-    docker pull ${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
+    docker pull -q ${REGISTRY}/ingress-controller:${TAG}
+    docker pull -q ${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
 
     kind create cluster --image=kindest/node:v$K8S --config test/e2e/kind.yaml
 
@@ -276,8 +292,8 @@ E2E_WALLARM:
   parallel:
     matrix:
       - ARCH: amd64
-        RUNNER: infra-c4r8-dind-amd
-        K8S: [1.26.15, 1.27.13, 1.28.9, 1.29.4, 1.30.0]
+        RUNNER: infra-c6r12-dind-amd
+        K8S: [1.26.15, 1.30.0]
   extends:
     - .before-test
   variables:
@@ -289,8 +305,8 @@ E2E_WALLARM:
     DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
     DOCKERHUB_PASSWORD: $X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD
   script: |
-    docker pull ${REGISTRY}/ingress-controller:${TAG}
-    docker pull ${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
+    docker pull -q ${REGISTRY}/ingress-controller:${TAG}
+    docker pull -q ${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
 
     kind create cluster --image=kindest/node:v$K8S --config test/e2e/kind.yaml
 
@@ -306,7 +322,7 @@ CHART_TESTING:
   extends:
     - .before-test
   variables:
-    K8S: 1.26.15
+    K8S: 1.30.0
     KIND_CLUSTER_NAME: kind
     SKIP_CLUSTER_CREATION: "true"
     SKIP_IMAGE_CREATION: "true"
@@ -314,7 +330,7 @@ CHART_TESTING:
     DOCKERHUB_USER: $X_CREDS_DOCKERHUB_WALLARMCICD_USER
     DOCKERHUB_PASSWORD: $X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD
   script: |
-    docker pull ${REGISTRY}/ingress-controller:${TAG}
+    docker pull -q ${REGISTRY}/ingress-controller:${TAG}
 
     kind create cluster --image=kindest/node:v$K8S --config test/e2e/kind.yaml
     kind get kubeconfig > $HOME/.kube/kind-config-$KIND_CLUSTER_NAME
