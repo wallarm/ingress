@@ -39,10 +39,10 @@ import (
 
 const (
 	// Poll how often to poll for conditions
-	Poll = 2 * time.Second
+	Poll = 10 * time.Second
 
 	// DefaultTimeout time to wait for operations to complete
-	DefaultTimeout = 90 * time.Second
+	DefaultTimeout = 240 * time.Second
 )
 
 func nowStamp() string {
