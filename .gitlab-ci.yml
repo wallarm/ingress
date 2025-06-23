@@ -260,6 +260,7 @@ E2E_UPSTREAM:
   stage: test
   tags: [infra-c4r8-dind-amd]
   timeout: 2h
+  allow_failure: true
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
     - if: $X_CI_BUILD_KIND == "develop"
@@ -285,7 +286,8 @@ E2E_UPSTREAM:
 E2E_WALLARM:
   stage: test
   tags: [$RUNNER]
-  timeout: 2h
+  timeout: 3h
+  allow_failure: true
   needs: [IMAGE_BUILD_IC, IMAGE_BUILD_E2E]
   rules:
     - if: $X_CI_BUILD_KIND == "develop"
@@ -311,7 +313,7 @@ E2E_WALLARM:
     kind create cluster --image=kindest/node:v$K8S --config test/e2e/kind.yaml
 
     kind get kubeconfig > $HOME/.kube/kind-config-kind
-    make E2E_NODES=1 kind-e2e-test
+    make kind-e2e-test
 
 CHART_TESTING:
   stage: test

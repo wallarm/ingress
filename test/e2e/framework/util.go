@@ -39,7 +39,7 @@ import (
 
 const (
 	// Poll how often to poll for conditions
-	Poll = 2 * time.Second
+	Poll = 10 * time.Second
 
 	// DefaultTimeout time to wait for operations to complete
 	DefaultTimeout = 300 * time.Second
