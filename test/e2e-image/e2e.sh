@@ -31,7 +31,7 @@ ginkgo_args=(
   "--poll-progress-after=180s"
   "--randomize-all"
   "--show-node-events"
-  "-v"
+  "-vv"
   "--timeout=120m"
 )
 

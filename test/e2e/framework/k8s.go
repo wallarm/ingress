@@ -255,7 +255,7 @@ func isPodReady(p *core.Pod) bool {
 func getIngressNGINXPod(ns string, kubeClientSet kubernetes.Interface) (*core.Pod, error) {
 	var pod *core.Pod
 	//nolint:staticcheck // TODO: will replace it since wait.Poll is deprecated
-	err := wait.Poll(1*time.Second, DefaultTimeout, func() (bool, error) {
+	err := wait.Poll(10*time.Second, 600*time.Second, func() (bool, error) {
 		l, err := kubeClientSet.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
 			LabelSelector: "app.kubernetes.io/name=wallarm-ingress,app.kubernetes.io/component=controller",
 		})
