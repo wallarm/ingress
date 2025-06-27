@@ -104,8 +104,11 @@ spec:
             {{- toYaml .Values.controller.wallarm.postanalytics.extraVolumeMounts | nindent 12 }}
           {{- end }}
           livenessProbe:
-            tcpSocket:
-              port: {{ template "ingress-nginx.wallarmPostanalyticsPort" . }}
+            exec:
+              command:
+                - sh
+                - -c
+                - nc -z localhost {{ template "ingress-nginx.wallarmPostanalyticsPort" . }}
             initialDelaySeconds: {{ .Values.controller.wallarm.postanalytics.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.controller.wallarm.postanalytics.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.controller.wallarm.postanalytics.livenessProbe.timeoutSeconds }}
