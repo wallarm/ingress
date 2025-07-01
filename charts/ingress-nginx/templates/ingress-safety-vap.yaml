@@ -23,7 +23,7 @@ spec:
     message: "Each path needs a service name and port"
   - expression: "object.spec.rules.all(r, r.http.paths.all(p, p.path.startsWith('/')))"
     message: "Ingress path must start with ‘/’"
-  {{- if (or (not (hasKey .Values.validation "forbidDangerAnnotations")) .Values.validation.forbidDangerAnnotations) }}
+  {{- if (or (not (hasKey .Values.validation "forbidDangerousAnnotations")) .Values.validation.forbidDangerousAnnotations) }}
   - expression: |
       !object.metadata.annotations.exists(k,
         k in [

@@ -1212,7 +1212,7 @@ revisionHistoryLimit: 10
 ##
 validation:
   enableCel: false         # turn the CEL policy on/off
-  forbidDangerAnnotations: false    # Set to true to enable the “dangerous snippet annotation” VAP rule
+  forbidDangerousAnnotations: false    # Set to true to enable the “dangerous snippet annotation” VAP rule
 ## Default 404 backend
 ##
 defaultBackend:
