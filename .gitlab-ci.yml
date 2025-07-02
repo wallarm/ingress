@@ -1,4 +1,7 @@
 default:
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: https://gl.wallarm.com
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/common-runner:v0.3.2
   tags: [node-c05r1-stable-amd]
 
@@ -9,6 +12,9 @@ stages:
   - publish
 
 variables:
+  VAULT_SERVER_URL: https://vault-common.i.gcp.wallarm.space
+  VAULT_AUTH_ROLE: gitlab-ci_node-team_wallarm-node
+  VAULT_AUTH_PATH: jwt-gitlab
   X_CI_BUILD_KIND:
     description: "What we want to run, usually 'develop' or 'smokeonly' flow"
     value: 'develop'
@@ -80,17 +86,6 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 
-
-.x-vault-login: &x_vault_login
-  - | # login to (new) vault-common.i.gcp.wallarm.space
-    [ "$ARCH" = "arm64" ] && VAULT_PATH=kubernetes-infra-ci || VAULT_PATH=kubernetes
-    export VAULT_ADDR=https://vault-common.i.gcp.wallarm.space
-    vault write -field=token \
-        "auth/${VAULT_PATH}/login" \
-        role=gitlab-runner \
-        jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) > ${HOME}/.vault-token
-    chmod 600 ~/.vault-token
-
 .x-docker-login-private: &x_docker_login_private
   - | # GitLab Container Registry
     docker login "${CI_REGISTRY}" \
@@ -107,35 +102,6 @@ workflow:
         -u "${X_CREDS_DOCKERHUB_WALLARMCICD_USER}" \
         -p "${X_CREDS_DOCKERHUB_WALLARMCICD_PASSWORD}"
 
-.x-get-node-credentials: &x_get_node_credentials |-
-    export WALLARM_API_HOST=$(vault kv get -field=api_host -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export WALLARM_API_TOKEN=$(vault kv get -field=user_token -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export CLIENT_ID=$(vault kv get -field=client_id -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export USER_TOKEN=$(vault kv get -field=user_token -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export USER_UUID=$(vault kv get -field=user_uuid -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-
-    export ALLURE_PROJECT_ID=$(vault kv get -field=allure_project_id -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export ALLURE_TOKEN=$(vault kv get -field=allure_server_token -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export ALLURE_ENDPOINT=$(vault kv get -field=allure_server_url -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export WEBHOOK_UUID=$(vault kv get -field=webhook_uuid -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-    export WEBHOOK_API_KEY=$(vault kv get -field=webhook_api_key -mount="node-team" "pipelines/common/smoke-test/${WALLARM_API_PRESET}")
-
-.x-sign-images: &x_sign_images
-  - |
-    export COSIGN_PASSWORD=$(vault kv get -field=password -mount="node-team" pipelines/cosign)
-    export COSIGN_PRIVATE=$(vault kv get -field=private_key -mount="node-team" pipelines/cosign)
-
-.x-get-github-token: &x_get_github_token
-  - |
-    export GITHUB_TOKEN=$(vault kv get -field=token -mount="node-team" "pipelines/common/github_token")
-
-.x-get-gitlab-credentials: &x_get_gitlab_credentials
-  - |
-    export GITLAB_TOKEN=$(vault kv get -field=token_secret -mount="node-team" pipelines/gl_version_repo_creds)
-    export GITLAB_TOKEN_NAME=$(vault kv get -field=token_name -mount="node-team" pipelines/gl_version_repo_creds)
-    export GITLAB_HOST=$(vault kv get -field=host -mount="node-team" pipelines/gl_version_repo_creds)
-    export GITLAB_REPO=$(vault kv get -field=repo -mount="node-team" pipelines/gl_version_repo_creds)
-
 .before-build:
   before_script:
     - *x_docker_login_private
@@ -144,31 +110,30 @@ workflow:
 .before-test:
   before_script:
     - *x_docker_login_private
-    - *x_vault_login
-    - *x_get_node_credentials
+  variables:
+    CLIENT_ID: $CLIENT_ID_${WALLARM_API_PRESET} # because fetching as vault secret leads to masking all id-like numbers in logs
+  secrets:
+    WALLARM_API_HOST: {vault: "pipelines/common/smoke-test/${WALLARM_API_PRESET}/api_host@node-team", file: false}
+    WALLARM_API_TOKEN: {vault: "pipelines/common/smoke-test/${WALLARM_API_PRESET}/user_token@node-team", file: false}
+
+    USER_TOKEN: {vault: "pipelines/common/smoke-test/${WALLARM_API_PRESET}/user_token@node-team", file: false}
+    USER_UUID: {vault: "pipelines/common/smoke-test/${WALLARM_API_PRESET}/user_uuid@node-team", file: false}
+
+    ALLURE_TOKEN: {vault: "pipelines/common/smoke-test/${WALLARM_API_PRESET}/allure_server_token@node-team", file: false}
+    WEBHOOK_UUID: {vault: "pipelines/common/smoke-test/${WALLARM_API_PRESET}/webhook_uuid@node-team", file: false}
+    WEBHOOK_API_KEY: {vault: "pipelines/common/smoke-test/${WALLARM_API_PRESET}/webhook_api_key@node-team", file: false}
 
 .before-sign-docker:
   before_script:
-    - *x_vault_login
     - *x_docker_login_private
     - *x_docker_login_public
-    - *x_sign_images
-
-.before-helm-publish:
-  before_script:
-    - *x_vault_login
-    - *x_get_github_token
-
-.before-update-versions:
-  before_script:
-    - *x_vault_login
-    - *x_get_gitlab_credentials
 
 .update_kind: &update-kind
   - LATEST_KIND_VERSION=$(curl -s https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | jq -r .tag_name)
   - curl -s -Lo ./kind_latest https://kind.sigs.k8s.io/dl/${LATEST_KIND_VERSION}/kind-linux-${ARCH}
   - chmod +x ./kind_latest
   - sudo mv ./kind_latest /usr/local/bin/kind
+
 
 ### DEV & PROD jobs
 
@@ -408,8 +373,9 @@ PUBL_SIGN_DOCKER:
   parallel:
     matrix:
       - IMAGE: [ingress-controller, ingress-controller-chroot]
-  extends:
-    - .before-sign-docker
+  secrets:
+    COSIGN_PASSWORD: {vault: "pipelines/cosign/password@node-team", file: false}
+    COSIGN_PRIVATE: {vault: "pipelines/cosign/private_key@node-team", file: false}
   script:
     - |
       if [[ ! -z $AIO_VERSION ]]; then
@@ -431,8 +397,8 @@ HELM_PUBLISH:
   stage: publish
   rules:
    - if: $X_CI_BUILD_KIND =~ /^(chart|production|release-candidate)$/
-  extends:
-    - .before-helm-publish
+  secrets:
+    GITHUB_TOKEN: {vault: "pipelines/common/github_token/token@node-team", file: false}
   variables:
     GITHUB_REPOSITORY: wallarm/helm-charts
     CHARTS_DIR: charts
@@ -481,8 +447,11 @@ UPDATE_VERSION:
   needs: [HELM_PUBLISH]
   rules:
     - if: $CHART_TYPE == "release"
-  extends:
-    - .before-update-versions
+  secrets:
+    GITLAB_TOKEN: {vault: "pipelines/gl_version_repo_creds/token_secret@node-team", file: false}
+    GITLAB_TOKEN_NAME: {vault: "pipelines/gl_version_repo_creds/token_name@node-team", file: false}
+    GITLAB_HOST: {vault: "pipelines/gl_version_repo_creds/host@node-team", file: false}
+    GITLAB_REPO: {vault: "pipelines/gl_version_repo_creds/repo@node-team", file: false}
   variables:
     COMPONENT_NAME: wallarm-ingress-controller
     COMPONENT_VERSION: $CHART_VERSION
