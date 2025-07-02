@@ -148,8 +148,6 @@ controller:
       extraEnvs:
         - name: WALLARM_LOG_LEVEL
           value: DEBUG
-        - name: WALLARM_WSTORE__SERVICE__ADDRESS
-          value: "[::]:3313"
        
   image:
     repository: ${REGISTRY}/ingress-controller
