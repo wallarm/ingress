@@ -977,7 +977,7 @@ controller:
     ##
     helpers:
       image: docker.io/wallarm/node-helpers
-      tag: 6.3.0-rc1
+      tag: 6.3.0-rc0
       pullPolicy: IfNotPresent
     ## Configuration for post-analytics module
     ##
