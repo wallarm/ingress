@@ -987,6 +987,7 @@ controller:
         annotations: {}
       replicaCount: 1
       arena: "2.0"
+      serviceAddress: "[::]:3313"
       livenessProbe:
         failureThreshold: 3
         initialDelaySeconds: 40
