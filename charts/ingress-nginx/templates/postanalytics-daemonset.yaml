@@ -90,6 +90,10 @@ spec:
           env:
             - name: SLAB_ALLOC_ARENA
               value: "{{ .Values.controller.wallarm.postanalytics.arena }}"
+            {{- if .Values.controller.wallarm.postanalytics.serviceAddress }}
+            - name: WALLARM_WSTORE__SERVICE__ADDRESS
+              value: "{{ .Values.controller.wallarm.postanalytics.serviceAddress }}"
+            {{- end }}
           {{- if .Values.controller.wallarm.postanalytics.tls.enabled }}
             {{ include "ingress-nginx.wallarmWstoreTlsVariables" . | nindent 12 }}
           {{- end }}
