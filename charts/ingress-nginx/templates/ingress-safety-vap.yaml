@@ -23,6 +23,7 @@ spec:
     message: "Each path needs a service name and port"
   - expression: "object.spec.rules.all(r, r.http.paths.all(p, p.path.startsWith('/')))"
     message: "Ingress path must start with ‘/’"
+  {{- if (or (not (hasKey .Values.validation "forbidDangerousAnnotations")) .Values.validation.forbidDangerousAnnotations) }}
   - expression: |
       !object.metadata.annotations.exists(k,
         k in [
@@ -30,6 +31,7 @@ spec:
           "nginx.ingress.kubernetes.io/configuration-snippet"
         ])
     message: "Dangerous nginx-ingress snippet annotation is forbidden"
+  {{- end }}
   - expression: |
       object.metadata.annotations.exists(k,
         k == "nginx.ingress.kubernetes.io/proxy-buffer-size") ?
