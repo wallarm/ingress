@@ -367,12 +367,15 @@ SCAN_ARTIFACT:
 
 PUBL_SIGN_DOCKER:
   stage: sign
+  tags: [node-c4r8-stable-dind-amd]
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(production-local|production|release-candidate)$/
   parallel:
     matrix:
       - IMAGE: [ingress-controller, ingress-controller-chroot]
+  extends:
+    - .before-sign-docker
   secrets:
     COSIGN_PASSWORD: {vault: "pipelines/cosign/password@node-team", file: false}
     COSIGN_PRIVATE: {vault: "pipelines/cosign/private_key@node-team", file: false}
