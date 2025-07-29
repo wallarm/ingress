@@ -2,7 +2,7 @@ default:
   id_tokens:
     VAULT_ID_TOKEN:
       aud: https://gl.wallarm.com
-  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/common-runner:v0.3.2
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/common:v0.5.0
   tags: [node-c05r1-stable-amd]
 
 stages:
@@ -139,6 +139,7 @@ workflow:
 
 IMAGE_BUILD_IC:
   stage: build
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
   tags: [node-c2r4-stable-dind-amd]
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production-local|production|release-candidate)$/
@@ -167,6 +168,7 @@ IMAGE_BUILD_IC:
 IMAGE_BUILD_E2E:
   stage: build
   tags: [node-c2r4-stable-dind-amd]
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
@@ -187,6 +189,7 @@ IMAGE_BUILD_E2E:
     docker push $LOCAL_E2E_IMAGE
 
 .SMOKE_BASE:
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
   extends:
     - .before-test
   variables:
@@ -201,7 +204,7 @@ IMAGE_BUILD_E2E:
     ALLURE_ENVIRONMENT_K8S: $K8S
     ALLURE_ENVIRONMENT_ARCH: $ARCH
   script:
-    - *update-kind
+    #- *update-kind
     - |
       export KINDEST_NODE_IMAGE=kindest/node:$(curl -s "https://registry.hub.docker.com/v2/repositories/kindest/node/tags?page_size=1000" \
       | jq -r --arg k "${K8S}." '.results[].name | select(startswith($k))' | sort -V | tail -n 1)
@@ -258,6 +261,7 @@ SMOKE_ONLY:
 
 E2E_UPSTREAM:
   stage: test
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
   tags: [node-c6r12-stable-dind-amd]
   timeout: 3h
   allow_failure: true
@@ -287,6 +291,7 @@ E2E_UPSTREAM:
 
 E2E_WALLARM:
   stage: test
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
   tags: [$RUNNER]
   timeout: 3h
   allow_failure: true
@@ -321,6 +326,7 @@ E2E_WALLARM:
 
 CHART_TESTING:
   stage: test
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
   tags: [node-c4r8-stable-dind-amd]
   needs: [IMAGE_BUILD_IC]
   rules:
@@ -348,7 +354,7 @@ CHART_TESTING:
 
 SCAN_ARTIFACT:
   stage: test
-  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner-helper-images/security_scanners:1.0.32
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
   rules:
     - if: '$SKIP_TESTS == "true"'
       when: never
@@ -368,7 +374,7 @@ SCAN_ARTIFACT:
 PUBL_SIGN_DOCKER:
   stage: sign
   tags: [node-c4r8-stable-dind-amd]
-  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(production-local|production|release-candidate)$/
   parallel:
@@ -446,7 +452,7 @@ HELM_PUBLISH:
 
 UPDATE_VERSION:
   stage: publish
-  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/gitlab:v0.5.0
   needs: [HELM_PUBLISH]
   rules:
     - if: $CHART_TYPE == "release"
