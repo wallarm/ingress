@@ -7,7 +7,7 @@ metadata:
 {{- end }}
   labels:
     {{- include "ingress-nginx.labels" . | nindent 4 }}
-    app.kubernetes.io/component: controller
+    app.kubernetes.io/component: {{ template "ingress-nginx.wallarmPostanalyticsName" . }}
   {{- if .Values.controller.wallarm.postanalytics.service.labels }}
     {{- toYaml .Values.controller.wallarm.postanalytics.service.labels | nindent 4 }}
   {{- end }}
