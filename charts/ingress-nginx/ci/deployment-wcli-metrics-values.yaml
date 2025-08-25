@@ -1,0 +1,24 @@
+controller:
+  image:
+    repository: wallarm/ingress-controller
+    tag: 1.0.0-dev
+    digest: null
+
+  service:
+    type: ClusterIP
+
+  wallarm:
+    enabled: true
+    apiHost: api.wallarm.com
+    wcliController:
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: false
+    wcliPostanalytics:
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: false
+
+  kind: Deployment

@@ -1,0 +1,3 @@
+{{- if .Values.controller.wallarm.enabled -}}
+{{- include "ingress-nginx.wallarmMetricsService" (dict "metricsConfig" .Values.controller.wallarm.apiFirewall.metrics "serviceSuffix" "apifw" "componentSelector" "controller" "context" .) -}}
+{{- end -}}

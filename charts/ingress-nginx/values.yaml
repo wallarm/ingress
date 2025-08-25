@@ -1101,6 +1101,55 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      ## Metrics configuration for WCLI Controller
+      metrics:
+        # -- Enable metrics collection
+        enabled: false
+        # -- Port for metrics endpoint
+        port: 9011
+        # -- Port name for metrics endpoint
+        portName: wcli-ctrl-mtrc
+        # -- Path at which the metrics endpoint is exposed (optional, defaults to /metrics if not specified)
+        endpointPath: ""
+        # -- IP address and/or port for the metrics endpoint (e.g., ":9011" or "127.0.0.1:9011")
+        # -- Note: Metrics are enabled by default in WCLI. To disable, set enabled: false which will pass an empty value
+        host: ":9011"
+        service:
+          annotations: {}
+          # prometheus.io/scrape: "true"
+          # prometheus.io/port: "9011"
+          # prometheus.io/path: "/metrics"
+          # -- Labels to be added to the metrics service resource
+          labels: {}
+          # clusterIP: ""
+          # -- List of IP addresses at which the stats-exporter service is available
+          ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+          ##
+          externalIPs: []
+          # loadBalancerIP: ""
+          loadBalancerSourceRanges: []
+          servicePort: 9011
+          type: ClusterIP
+          # externalTrafficPolicy: ""
+          # nodePort: ""
+        serviceMonitor:
+          enabled: false
+          additionalLabels: {}
+          # -- Annotations to be added to the ServiceMonitor
+          annotations: {}
+          ## The label to use to retrieve the job name from
+          ## jobLabel: "app.kubernetes.io/name"
+          namespace: ""
+          namespaceSelector: {}
+          ## Default: scrape .Release.Namespace or namespaceOverride only
+          ## To scrape all, use the following:
+          ## namespaceSelector:
+          ##   any: true
+          scrapeInterval: 30s
+          # honorLabels: true
+          targetLabels: []
+          relabelings: []
+          metricRelabelings: []
     ## Wcli instance from postanalytics pod
     wcliPostanalytics:
       ### General log level
@@ -1136,6 +1185,55 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      ## Metrics configuration for WCLI Postanalytics
+      metrics:
+        # -- Enable metrics collection
+        enabled: false
+        # -- Port for metrics endpoint
+        port: 9012
+        # -- Port name for metrics endpoint
+        portName: wcli-post-mtrc
+        # -- Path at which the metrics endpoint is exposed (optional, defaults to /metrics if not specified)
+        endpointPath: ""
+        # -- IP address and/or port for the metrics endpoint (e.g., ":9012" or "127.0.0.1:9012")
+        # -- Note: Metrics are enabled by default in WCLI. To disable, set enabled: false which will pass an empty value
+        host: ":9012"
+        service:
+          annotations: {}
+          # prometheus.io/scrape: "true"
+          # prometheus.io/port: "9012"
+          # prometheus.io/path: "/metrics"
+          # -- Labels to be added to the metrics service resource
+          labels: {}
+          # clusterIP: ""
+          # -- List of IP addresses at which the stats-exporter service is available
+          ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+          ##
+          externalIPs: []
+          # loadBalancerIP: ""
+          loadBalancerSourceRanges: []
+          servicePort: 9012
+          type: ClusterIP
+          # externalTrafficPolicy: ""
+          # nodePort: ""
+        serviceMonitor:
+          enabled: false
+          additionalLabels: {}
+          # -- Annotations to be added to the ServiceMonitor
+          annotations: {}
+          ## The label to use to retrieve the job name from
+          ## jobLabel: "app.kubernetes.io/name"
+          namespace: ""
+          namespaceSelector: {}
+          ## Default: scrape .Release.Namespace or namespaceOverride only
+          ## To scrape all, use the following:
+          ## namespaceSelector:
+          ##   any: true
+          scrapeInterval: 30s
+          # honorLabels: true
+          targetLabels: []
+          relabelings: []
+          metricRelabelings: []
     apiFirewall:
       ### Enable or disable API Firewall functionality (true|false)
       ###
@@ -1205,6 +1303,54 @@ controller:
       #       secretKeyRef:
       #         key: FOO
       #         name: secret-resource
+      ## Metrics configuration for API Firewall
+      metrics:
+        # -- Enable metrics collection
+        enabled: false
+        # -- Port for metrics endpoint
+        port: 9010
+        # -- Port name for metrics endpoint
+        portName: apifw-metrics
+        # -- Path at which the metrics endpoint is exposed
+        endpointPath: /metrics
+        # -- IP address and/or port for the metrics endpoint (e.g., ":9010" or "127.0.0.1:9010")
+        host: ":9010"
+        service:
+          annotations: {}
+          # prometheus.io/scrape: "true"
+          # prometheus.io/port: "9010"
+          # prometheus.io/path: "/metrics"
+          # -- Labels to be added to the metrics service resource
+          labels: {}
+          # clusterIP: ""
+          # -- List of IP addresses at which the stats-exporter service is available
+          ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+          ##
+          externalIPs: []
+          # loadBalancerIP: ""
+          loadBalancerSourceRanges: []
+          servicePort: 9010
+          type: ClusterIP
+          # externalTrafficPolicy: ""
+          # nodePort: ""
+        serviceMonitor:
+          enabled: false
+          additionalLabels: {}
+          # -- Annotations to be added to the ServiceMonitor
+          annotations: {}
+          ## The label to use to retrieve the job name from
+          ## jobLabel: "app.kubernetes.io/name"
+          namespace: ""
+          namespaceSelector: {}
+          ## Default: scrape .Release.Namespace or namespaceOverride only
+          ## To scrape all, use the following:
+          ## namespaceSelector:
+          ##   any: true
+          scrapeInterval: 30s
+          # honorLabels: true
+          targetLabels: []
+          relabelings: []
+          metricRelabelings: []
 
 # -- Rollback limit
 ##

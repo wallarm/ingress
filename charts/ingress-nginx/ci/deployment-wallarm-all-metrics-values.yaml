@@ -1,0 +1,53 @@
+controller:
+  image:
+    repository: wallarm/ingress-controller
+    tag: 1.0.0-dev
+    digest: null
+
+  service:
+    type: ClusterIP
+
+  wallarm:
+    enabled: true
+    apiHost: api.wallarm.com
+    # Standard Wallarm metrics
+    metrics:
+      enabled: true
+      service:
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "18080"
+      serviceMonitor:
+        enabled: false  # ServiceMonitor CRDs not available in test environment
+    # API Firewall metrics
+    apiFirewall:
+      metrics:
+        enabled: true
+        service:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "9010"
+        serviceMonitor:
+          enabled: false  # ServiceMonitor CRDs not available in test environment
+    # WCLI Controller metrics
+    wcliController:
+      metrics:
+        enabled: true
+        service:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "9011"
+        serviceMonitor:
+          enabled: false  # ServiceMonitor CRDs not available in test environment
+    # WCLI Postanalytics metrics
+    wcliPostanalytics:
+      metrics:
+        enabled: true
+        service:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "9012"
+        serviceMonitor:
+          enabled: false  # ServiceMonitor CRDs not available in test environment
+
+  kind: Deployment
