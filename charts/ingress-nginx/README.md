@@ -2,7 +2,7 @@
 
 [ingress-nginx](https://github.com/kubernetes/ingress-nginx) Ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer
 
-![Version: 4.11.5](https://img.shields.io/badge/Version-4.11.5-informational?style=flat-square) ![AppVersion: 1.11.5](https://img.shields.io/badge/AppVersion-1.11.5-informational?style=flat-square)
+![Version: 4.11.8](https://img.shields.io/badge/Version-4.11.8-informational?style=flat-square) ![AppVersion: 1.11.8](https://img.shields.io/badge/AppVersion-1.11.8-informational?style=flat-square)
 
 To use, add `ingressClassName: nginx` spec field or the `kubernetes.io/ingress.class: nginx` annotation to your Ingress resources.
 
@@ -271,11 +271,11 @@ metadata:
 | controller.admissionWebhooks.namespaceSelector | object | `{}` |  |
 | controller.admissionWebhooks.objectSelector | object | `{}` |  |
 | controller.admissionWebhooks.patch.enabled | bool | `true` |  |
-| controller.admissionWebhooks.patch.image.digest | string | `"sha256:e8825994b7a2c7497375a9b945f386506ca6a3eda80b89b74ef2db743f66a5ea"` |  |
+| controller.admissionWebhooks.patch.image.digest | string | `"sha256:c9f76a75fd00e975416ea1b73300efd413116de0de8570346ed90766c5b5cefb"` |  |
 | controller.admissionWebhooks.patch.image.image | string | `"ingress-nginx/kube-webhook-certgen"` |  |
 | controller.admissionWebhooks.patch.image.pullPolicy | string | `"IfNotPresent"` |  |
 | controller.admissionWebhooks.patch.image.registry | string | `"registry.k8s.io"` |  |
-| controller.admissionWebhooks.patch.image.tag | string | `"v1.5.2"` |  |
+| controller.admissionWebhooks.patch.image.tag | string | `"v1.6.0"` |  |
 | controller.admissionWebhooks.patch.labels | object | `{}` | Labels to be added to patch job resources |
 | controller.admissionWebhooks.patch.networkPolicy.enabled | bool | `false` | Enable 'networkPolicy' or not |
 | controller.admissionWebhooks.patch.nodeSelector."kubernetes.io/os" | string | `"linux"` |  |
@@ -343,8 +343,8 @@ metadata:
 | controller.hostname | object | `{}` | Optionally customize the pod hostname. |
 | controller.image.allowPrivilegeEscalation | bool | `false` |  |
 | controller.image.chroot | bool | `false` |  |
-| controller.image.digest | string | `"sha256:a1cbad75b0a7098bf9325132794dddf9eef917e8a7fe246749a4cea7ff6f01eb"` |  |
-| controller.image.digestChroot | string | `"sha256:ec9df3eb6b06563a079ee46045da94cbf750f7dbb16fdbcb9e3265b551ed72ad"` |  |
+| controller.image.digest | string | `"sha256:695d79381ee6af00c7f5c9fd434f50851d7d32838ad5b2c507e416cf2084fc79"` |  |
+| controller.image.digestChroot | string | `"sha256:aa8719c133a0b491586341aa19d3ec9afe61bb6210cb295e752df1daa31f2df1"` |  |
 | controller.image.image | string | `"ingress-nginx/controller"` |  |
 | controller.image.pullPolicy | string | `"IfNotPresent"` |  |
 | controller.image.readOnlyRootFilesystem | bool | `false` |  |
@@ -352,7 +352,7 @@ metadata:
 | controller.image.runAsNonRoot | bool | `true` |  |
 | controller.image.runAsUser | int | `101` |  |
 | controller.image.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| controller.image.tag | string | `"v1.11.5"` |  |
+| controller.image.tag | string | `"v1.11.8"` |  |
 | controller.ingressClass | string | `"nginx"` | For backwards compatibility with ingress.class annotation, use ingressClass. Algorithm is as follows, first ingressClassName is considered, if not present, controller looks for ingress.class annotation |
 | controller.ingressClassByName | bool | `false` | Process IngressClass per name (additionally as per spec.controller). |
 | controller.ingressClassResource | object | `{"aliases":[],"annotations":{},"controllerValue":"k8s.io/ingress-nginx","default":false,"enabled":true,"name":"nginx","parameters":{}}` | This section refers to the creation of the IngressClass resource. IngressClasses are immutable and cannot be changed after creation. We do not support namespaced IngressClasses, yet, so a ClusterRole and a ClusterRoleBinding is required. |

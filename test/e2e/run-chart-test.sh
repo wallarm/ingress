@@ -86,7 +86,7 @@ export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
 if [ "${SKIP_CLUSTER_CREATION:-false}" = "false" ]; then
   echo "[dev-env] creating Kubernetes cluster with kind"
 
-  export K8S_VERSION=${K8S_VERSION:-v1.32.3@sha256:b36e76b4ad37b88539ce5e07425f77b29f73a8eaaebf3f1a8bc9c764401d118c}
+  export K8S_VERSION=${K8S_VERSION:-v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f}
 
   # delete the cluster if it exists
   if kind get clusters | grep "${KIND_CLUSTER_NAME}"; then
@@ -107,7 +107,7 @@ fi
 
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   if ! command -v ginkgo &> /dev/null; then
-    go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.3
+    go install github.com/onsi/ginkgo/v2/ginkgo@v2.23.4
   fi
   echo "[dev-env] building image"
   make -C "${CURDIR}" clean-image build image
