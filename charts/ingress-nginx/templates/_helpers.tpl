@@ -320,6 +320,17 @@ Create the name of the controller service account to use
       value: "{{ .Values.controller.wallarm.apiFirewall.maxErrorsInResponse }}"
     - name: APIFW_API_MODE_DEBUG_PATH_DB
       value: "{{ include "wallarm-apifw.path" . }}/2/wallarm_api.db"
+{{- if .Values.controller.wallarm.apiFirewall.metrics.enabled }}
+    - name: APIFW_METRICS_ENABLED
+      value: "true"
+    - name: APIFW_METRICS_HOST
+      value: "{{ .Values.controller.wallarm.apiFirewall.metrics.host }}"
+    - name: APIFW_METRICS_ENDPOINT_NAME
+      value: "{{ .Values.controller.wallarm.apiFirewall.metrics.endpointPath }}"
+{{- else }}
+    - name: APIFW_METRICS_ENABLED
+      value: "false"
+{{- end }}
 {{- if .Values.controller.wallarm.apiFirewall.extraEnvs }}
     {{- toYaml .Values.controller.wallarm.apiFirewall.extraEnvs | nindent 4 }}
 {{- end }}
@@ -331,6 +342,11 @@ Create the name of the controller service account to use
   ports:
     - name: health
       containerPort: {{ .Values.controller.wallarm.apiFirewall.config.healthPort }}
+{{- if .Values.controller.wallarm.apiFirewall.metrics.enabled }}
+    - name: {{ .Values.controller.wallarm.apiFirewall.metrics.portName }}
+      containerPort: {{ .Values.controller.wallarm.apiFirewall.metrics.port }}
+      protocol: TCP
+{{- end }}
 {{- if .Values.controller.wallarm.apiFirewall.livenessProbeEnabled }}
   livenessProbe: {{ toYaml .Values.controller.wallarm.apiFirewall.livenessProbe | nindent 4 }}
 {{- end }}
@@ -495,4 +511,107 @@ Wcli arguments building
   value: "{{ .Values.controller.wallarm.postanalytics.tls.mutualTLS.enabled }}"
 - name: WALLARM_WSTORE__SERVICE__TLS__MUTUAL_TLS__CLIENT_CA_CERT_FILE
   value: "{{ .Values.controller.wallarm.postanalytics.tls.mutualTLS.clientCACertFile }}"
+{{- end -}}
+
+{{/*
+Create a metrics service for various Wallarm components
+*/}}
+{{- define "ingress-nginx.wallarmMetricsService" -}}
+{{- if .metricsConfig.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+{{- if .metricsConfig.service.annotations }}
+  annotations: {{ toYaml .metricsConfig.service.annotations | nindent 4 }}
+{{- end }}
+  labels:
+    {{- include "ingress-nginx.labels" .context | nindent 4 }}
+    app.kubernetes.io/component: {{ .componentSelector }}
+  {{- if .metricsConfig.service.labels }}
+    {{- toYaml .metricsConfig.service.labels | nindent 4 }}
+  {{- end }}
+  name: {{ include "ingress-nginx.controller.fullname" .context }}-{{ .serviceSuffix }}-metrics
+  namespace: {{ include "ingress-nginx.namespace" .context }}
+spec:
+  type: {{ .metricsConfig.service.type }}
+{{- if .metricsConfig.service.clusterIP }}
+  clusterIP: {{ .metricsConfig.service.clusterIP }}
+{{- end }}
+{{- if .metricsConfig.service.externalIPs }}
+  externalIPs: {{ toYaml .metricsConfig.service.externalIPs | nindent 4 }}
+{{- end }}
+{{- if .metricsConfig.service.loadBalancerIP }}
+  loadBalancerIP: {{ .metricsConfig.service.loadBalancerIP }}
+{{- end }}
+{{- if .metricsConfig.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{ toYaml .metricsConfig.service.loadBalancerSourceRanges | nindent 4 }}
+{{- end }}
+{{- if .metricsConfig.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .metricsConfig.service.externalTrafficPolicy }}
+{{- end }}
+  ports:
+    - name: {{ .metricsConfig.portName }}
+      port: {{ .metricsConfig.service.servicePort }}
+      protocol: TCP
+      targetPort: {{ .metricsConfig.portName }}
+    {{- $setNodePorts := (or (eq .metricsConfig.service.type "NodePort") (eq .metricsConfig.service.type "LoadBalancer")) }}
+    {{- if (and $setNodePorts (not (empty .metricsConfig.service.nodePort))) }}
+      nodePort: {{ .metricsConfig.service.nodePort }}
+    {{- end }}
+  selector:
+    {{- include "ingress-nginx.selectorLabels" .context | nindent 4 }}
+    app.kubernetes.io/component: {{ .componentSelector }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Create a ServiceMonitor for various Wallarm components
+*/}}
+{{- define "ingress-nginx.wallarmServiceMonitor" -}}
+{{- if and .metricsConfig.enabled .metricsConfig.serviceMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "ingress-nginx.controller.fullname" .context }}-{{ .monitorSuffix }}
+  {{- if .metricsConfig.serviceMonitor.namespace }}
+  namespace: {{ .metricsConfig.serviceMonitor.namespace }}
+  {{- else }}
+  namespace: {{ include "ingress-nginx.namespace" .context }}
+  {{- end }}
+  labels:
+    {{- include "ingress-nginx.labels" .context | nindent 4 }}
+    app.kubernetes.io/component: {{ .componentSelector }}
+  {{- if .metricsConfig.serviceMonitor.additionalLabels }}
+    {{- toYaml .metricsConfig.serviceMonitor.additionalLabels | nindent 4 }}
+  {{- end }}
+  {{- if .metricsConfig.serviceMonitor.annotations }}
+  annotations:
+    {{- toYaml .metricsConfig.serviceMonitor.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .metricsConfig.serviceMonitor.namespaceSelector }}
+  namespaceSelector:
+    {{- toYaml .metricsConfig.serviceMonitor.namespaceSelector | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ingress-nginx.selectorLabels" .context | nindent 6 }}
+      app.kubernetes.io/component: {{ .componentSelector }}
+  endpoints:
+  - port: {{ .metricsConfig.portName }}
+    path: {{ .metricsConfig.endpointPath | default (default "/metrics" .defaultPath) }}
+    interval: {{ .metricsConfig.serviceMonitor.scrapeInterval }}
+    {{- if .metricsConfig.serviceMonitor.honorLabels }}
+    honorLabels: true
+    {{- end }}
+    {{- if .metricsConfig.serviceMonitor.relabelings }}
+    relabelings: {{ toYaml .metricsConfig.serviceMonitor.relabelings | nindent 4 }}
+    {{- end }}
+    {{- if .metricsConfig.serviceMonitor.metricRelabelings }}
+    metricRelabelings: {{ toYaml .metricsConfig.serviceMonitor.metricRelabelings | nindent 4 }}
+    {{- end }}
+  {{- if .metricsConfig.serviceMonitor.targetLabels }}
+  targetLabels: {{ toYaml .metricsConfig.serviceMonitor.targetLabels | nindent 2 }}
+  {{- end }}
+{{- end }}
 {{- end -}}

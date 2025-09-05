@@ -63,8 +63,25 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
+        {{- if .Values.controller.wallarm.wcliPostanalytics.metrics.enabled }}
+          - name: WALLARM_WCLI__METRICS__LISTEN_ADDRESS
+            value: "{{ .Values.controller.wallarm.wcliPostanalytics.metrics.host }}"
+          {{- if .Values.controller.wallarm.wcliPostanalytics.metrics.endpointPath }}
+          - name: WALLARM_WCLI__METRICS__ENDPOINT
+            value: "{{ .Values.controller.wallarm.wcliPostanalytics.metrics.endpointPath }}"
+          {{- end }}
+        {{- else }}
+          - name: WALLARM_WCLI__METRICS__LISTEN_ADDRESS
+            value: ""
+        {{- end }}
         {{- if .Values.controller.wallarm.wcliPostanalytics.extraEnvs }}
           {{- toYaml .Values.controller.wallarm.wcliPostanalytics.extraEnvs | nindent 10 }}
+        {{- end }}
+        {{- if .Values.controller.wallarm.wcliPostanalytics.metrics.enabled }}
+          ports:
+          - name: {{ .Values.controller.wallarm.wcliPostanalytics.metrics.portName }}
+            containerPort: {{ .Values.controller.wallarm.wcliPostanalytics.metrics.port }}
+            protocol: TCP
         {{- end }}
           volumeMounts:
           - mountPath: {{ include "wallarm.path" . }}

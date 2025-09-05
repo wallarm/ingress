@@ -217,8 +217,25 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
+        {{- if .Values.controller.wallarm.wcliController.metrics.enabled }}
+          - name: WALLARM_WCLI__METRICS__LISTEN_ADDRESS
+            value: "{{ .Values.controller.wallarm.wcliController.metrics.host }}"
+          {{- if .Values.controller.wallarm.wcliController.metrics.endpointPath }}
+          - name: WALLARM_WCLI__METRICS__ENDPOINT
+            value: "{{ .Values.controller.wallarm.wcliController.metrics.endpointPath }}"
+          {{- end }}
+        {{- else }}
+          - name: WALLARM_WCLI__METRICS__LISTEN_ADDRESS
+            value: ""
+        {{- end }}
         {{- if .Values.controller.wallarm.wcliController.extraEnvs }}
           {{- toYaml .Values.controller.wallarm.wcliController.extraEnvs | nindent 10 }}
+        {{- end }}
+        {{- if .Values.controller.wallarm.wcliController.metrics.enabled }}
+          ports:
+          - name: {{ .Values.controller.wallarm.wcliController.metrics.portName }}
+            containerPort: {{ .Values.controller.wallarm.wcliController.metrics.port }}
+            protocol: TCP
         {{- end }}
           volumeMounts:
           - mountPath: {{ include "wallarm.path" . }}

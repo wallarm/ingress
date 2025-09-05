@@ -1,0 +1,19 @@
+controller:
+  image:
+    repository: wallarm/ingress-controller
+    tag: 1.0.0-dev
+    digest: null
+
+  service:
+    type: ClusterIP
+
+  wallarm:
+    enabled: true
+    apiHost: api.wallarm.com
+    apiFirewall:
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: false
+
+  kind: Deployment

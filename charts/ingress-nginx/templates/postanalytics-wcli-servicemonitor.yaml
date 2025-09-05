@@ -1,0 +1,3 @@
+{{- if .Values.controller.wallarm.enabled -}}
+{{- include "ingress-nginx.wallarmServiceMonitor" (dict "metricsConfig" .Values.controller.wallarm.wcliPostanalytics.metrics "monitorSuffix" "wcli-post" "componentSelector" (include "ingress-nginx.wallarmPostanalyticsName" .) "context" .) -}}
+{{- end -}}

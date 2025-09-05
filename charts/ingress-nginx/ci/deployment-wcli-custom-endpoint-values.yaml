@@ -1,0 +1,26 @@
+controller:
+  image:
+    repository: wallarm/ingress-controller
+    tag: 1.0.0-dev
+    digest: null
+
+  service:
+    type: ClusterIP
+
+  wallarm:
+    enabled: true
+    apiHost: api.wallarm.com
+    wcliController:
+      metrics:
+        enabled: true
+        endpointPath: /custom/controller/metrics
+        serviceMonitor:
+          enabled: false  # ServiceMonitor CRDs not available in test environment
+    wcliPostanalytics:
+      metrics:
+        enabled: true
+        endpointPath: /custom/postanalytics/metrics
+        serviceMonitor:
+          enabled: false  # ServiceMonitor CRDs not available in test environment
+
+  kind: Deployment
