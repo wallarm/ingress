@@ -513,6 +513,19 @@ Wcli arguments building
   value: "{{ .Values.controller.wallarm.postanalytics.tls.mutualTLS.clientCACertFile }}"
 {{- end -}}
 
+{{- define "ingress-nginx.wallarmWstoreVariables" -}}
+- name: SLAB_ALLOC_ARENA
+  value: "{{ .Values.controller.wallarm.postanalytics.arena }}"
+- name: WALLARM_WSTORE__METRICS__LISTEN_ADDRESS
+  value: "{{ .Values.controller.wallarm.postanalytics.metrics.listenAddress }}"
+- name: WALLARM_WSTORE__METRICS__PROTOCOL
+  value: "{{ .Values.controller.wallarm.postanalytics.metrics.protocol }}"
+- name: WALLARM_WSTORE__SERVICE__ADDRESS
+  value: "{{ .Values.controller.wallarm.postanalytics.serviceAddress }}"
+- name: WALLARM_WSTORE__SERVICE__PROTOCOL
+  value: "{{ .Values.controller.wallarm.postanalytics.serviceProtocol }}"
+{{- end -}}
+
 {{/*
 Create a metrics service for various Wallarm components
 */}}

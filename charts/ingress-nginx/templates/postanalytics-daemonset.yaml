@@ -105,16 +105,7 @@ spec:
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           args: ["wstore"]
           env:
-            - name: SLAB_ALLOC_ARENA
-              value: "{{ .Values.controller.wallarm.postanalytics.arena }}"
-            {{- if .Values.controller.wallarm.postanalytics.serviceAddress }}
-            - name: WALLARM_WSTORE__SERVICE__ADDRESS
-              value: "{{ .Values.controller.wallarm.postanalytics.serviceAddress }}"
-            {{- end }}
-            {{- if .Values.controller.wallarm.postanalytics.serviceProtocol }}
-            - name: WALLARM_WSTORE__SERVICE__PROTOCOL
-              value: "{{ .Values.controller.wallarm.postanalytics.serviceProtocol }}"
-            {{- end }}
+            {{ include "ingress-nginx.wallarmWstoreVariables" . | nindent 12 }}
           {{- if .Values.controller.wallarm.postanalytics.tls.enabled }}
             {{ include "ingress-nginx.wallarmWstoreTlsVariables" . | nindent 12 }}
           {{- end }}

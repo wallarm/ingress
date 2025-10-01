@@ -1031,6 +1031,10 @@ controller:
       #         name: secret-resource
       extraVolumes: []
       extraVolumeMounts: []
+      metrics:
+        listenAddress: "127.0.0.1:9001"
+        protocol: "tcp4"
+
     wallarm-appstructure:
       resources: {}
       # -- Additional environment variables to set
