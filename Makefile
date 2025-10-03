@@ -274,6 +274,8 @@ release: ensure-buildx clean
 		--build-arg VERSION="$(TAG)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
+		--provenance=true \
+		--sbom=true \
 		-t $(REGISTRY)/ingress-controller:$(TAG) rootfs
 
 	docker buildx build \
@@ -287,6 +289,8 @@ release: ensure-buildx clean
 		--build-arg VERSION="$(TAG)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
+		--provenance=true \
+		--sbom=true \
 		-t $(REGISTRY)/ingress-controller-chroot:$(TAG) rootfs -f rootfs/Dockerfile-chroot
 
 sign:
