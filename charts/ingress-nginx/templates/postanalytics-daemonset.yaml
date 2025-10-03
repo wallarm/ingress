@@ -111,6 +111,10 @@ spec:
             - name: WALLARM_WSTORE__SERVICE__ADDRESS
               value: "{{ .Values.controller.wallarm.postanalytics.serviceAddress }}"
             {{- end }}
+            {{- if .Values.controller.wallarm.postanalytics.serviceProtocol }}
+            - name: WALLARM_WSTORE__SERVICE__PROTOCOL
+              value: "{{ .Values.controller.wallarm.postanalytics.serviceProtocol }}"
+            {{- end }}
           {{- if .Values.controller.wallarm.postanalytics.tls.enabled }}
             {{ include "ingress-nginx.wallarmWstoreTlsVariables" . | nindent 12 }}
           {{- end }}

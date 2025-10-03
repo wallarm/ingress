@@ -987,7 +987,10 @@ controller:
         annotations: {}
       replicaCount: 1
       arena: "2.0"
-      serviceAddress: "[::]:3313"
+      # Address where wstore will listen for connections
+      serviceAddress: "0.0.0.0:3313"
+      # Protocol for wstore service (tcp, tcp4, tcp6)
+      serviceProtocol: "tcp"
       livenessProbe:
         failureThreshold: 3
         initialDelaySeconds: 40

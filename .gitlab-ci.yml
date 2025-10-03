@@ -377,8 +377,6 @@ PUBL_SIGN_DOCKER:
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(production-local|production|release-candidate)$/
-  needs:
-    - job: IMAGE_BUILD_IC
   parallel:
     matrix:
       - IMAGE: [ingress-controller, ingress-controller-chroot]
