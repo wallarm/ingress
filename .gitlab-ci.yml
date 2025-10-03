@@ -377,6 +377,8 @@ PUBL_SIGN_DOCKER:
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(production-local|production|release-candidate)$/
+  needs:
+    - job: IMAGE_BUILD_IC
   parallel:
     matrix:
       - IMAGE: [ingress-controller, ingress-controller-chroot]
@@ -387,6 +389,7 @@ PUBL_SIGN_DOCKER:
     COSIGN_PRIVATE: {vault: "pipelines/cosign/private_key@node-team", file: false}
   script:
     - |
+      set -euo pipefail
       if [[ ! -z $AIO_VERSION ]]; then
         echo "Will push ${CI_REGISTRY_IMAGE}/${IMAGE}:${TAG} (private) to wallarm/${IMAGE}:${TAG} (public)..."
         docker buildx imagetools create -t wallarm/${IMAGE}:${TAG} ${CI_REGISTRY_IMAGE}/${IMAGE}:${TAG}
