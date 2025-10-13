@@ -139,7 +139,7 @@ workflow:
 
 IMAGE_BUILD_IC:
   stage: build
-  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
   tags: [node-c2r4-stable-dind-amd]
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production-local|production|release-candidate)$/
@@ -168,7 +168,7 @@ IMAGE_BUILD_IC:
 IMAGE_BUILD_E2E:
   stage: build
   tags: [node-c2r4-stable-dind-amd]
-  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
@@ -437,7 +437,7 @@ HELM_PUBLISH:
       CHART_VERSION=$TAG
       curl -Lo /usr/bin/yq https://github.com/mikefarah/yq/releases/download/v4.2.0/yq_linux_amd64 && chmod +x /usr/bin/yq
       yq e -i '.appVersion = "'$AIO_VERSION'"' charts/ingress-nginx/Chart.yaml
-      yq e -i '.controller.wallarm.helpers.tag = "'$TAG'"' charts/ingress-nginx/values.yaml
+      yq e -i '.controller.wallarm.helpers.tag = "'$AIO_VERSION'"' charts/ingress-nginx/values.yaml
       yq e -i '.controller.image.tag = "'$TAG'"' charts/ingress-nginx/values.yaml
     fi
     export CHART_VERSION

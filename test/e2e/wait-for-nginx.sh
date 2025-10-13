@@ -56,7 +56,7 @@ if [[ ! -z "$NAMESPACE_OVERLAY" && -d "$DIR/namespace-overlays/$NAMESPACE_OVERLA
         --values "$DIR/namespace-overlays/$NAMESPACE_OVERLAY/values.yaml" \
         --set controller.image.chroot="${IS_CHROOT}" \
         --set controller.image.repository="${REGISTRY}/ingress-controller" \
-        --set controller.image.tag="${TAG}" \
+        --set-string controller.image.tag="${TAG}" \
         ${HELM_ARGS} \
         --set controller.wallarm.enabled="${WALLARM_ENABLED}" \
         --set controller.wallarm.token="${WALLARM_API_TOKEN}" \
