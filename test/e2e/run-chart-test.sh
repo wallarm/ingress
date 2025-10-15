@@ -75,7 +75,7 @@ HELM_EXTRA_SET_ARGS="\
  --set controller.wallarm.token=${WALLARM_API_TOKEN} \
  --set controller.wallarm.nodeGroup=${NODE_GROUP_NAME} \
  --set controller.image.repository=${REGISTRY}/ingress-controller \
- --set controller.image.tag=${TAG} \
+ --set-string controller.image.tag=${TAG} \
  ${HELM_ARGS} \
  --set controller.terminationGracePeriodSeconds=0 \
  --set controller.wallarm.postanalytics.terminationGracePeriodSeconds=0 \
