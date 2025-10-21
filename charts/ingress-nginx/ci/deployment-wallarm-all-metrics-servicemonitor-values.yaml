@@ -36,7 +36,7 @@ controller:
         service:
           annotations:
             prometheus.io/scrape: "true"
-            prometheus.io/port: "9011"
+            prometheus.io/port: "9004"
         serviceMonitor:
           enabled: false  # ServiceMonitor CRDs not available in test environment
     # WCLI Postanalytics metrics
@@ -46,7 +46,7 @@ controller:
         service:
           annotations:
             prometheus.io/scrape: "true"
-            prometheus.io/port: "9012"
+            prometheus.io/port: "9003"
         serviceMonitor:
           enabled: false  # ServiceMonitor CRDs not available in test environment
 

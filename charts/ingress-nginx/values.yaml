@@ -1111,20 +1111,20 @@ controller:
       ## Metrics configuration for WCLI Controller
       metrics:
         # -- Enable metrics collection
-        enabled: false
+        enabled: true
         # -- Port for metrics endpoint
-        port: 9011
+        port: 9004
         # -- Port name for metrics endpoint
         portName: wcli-ctrl-mtrc
         # -- Path at which the metrics endpoint is exposed (optional, defaults to /metrics if not specified)
         endpointPath: ""
-        # -- IP address and/or port for the metrics endpoint (e.g., ":9011" or "127.0.0.1:9011")
+        # -- IP address and/or port for the metrics endpoint (e.g., ":9004" or "127.0.0.1:9004")
         # -- Note: Metrics are enabled by default in WCLI. To disable, set enabled: false which will pass an empty value
-        host: ":9011"
+        host: ":9004"
         service:
           annotations: {}
           # prometheus.io/scrape: "true"
-          # prometheus.io/port: "9011"
+          # prometheus.io/port: "9004"
           # prometheus.io/path: "/metrics"
           # -- Labels to be added to the metrics service resource
           labels: {}
@@ -1135,7 +1135,7 @@ controller:
           externalIPs: []
           # loadBalancerIP: ""
           loadBalancerSourceRanges: []
-          servicePort: 9011
+          servicePort: 9004
           type: ClusterIP
           # externalTrafficPolicy: ""
           # nodePort: ""
@@ -1197,18 +1197,18 @@ controller:
         # -- Enable metrics collection
         enabled: false
         # -- Port for metrics endpoint
-        port: 9012
+        port: 9003
         # -- Port name for metrics endpoint
         portName: wcli-post-mtrc
         # -- Path at which the metrics endpoint is exposed (optional, defaults to /metrics if not specified)
         endpointPath: ""
-        # -- IP address and/or port for the metrics endpoint (e.g., ":9012" or "127.0.0.1:9012")
+        # -- IP address and/or port for the metrics endpoint (e.g., ":9003" or "127.0.0.1:9003")
         # -- Note: Metrics are enabled by default in WCLI. To disable, set enabled: false which will pass an empty value
-        host: ":9012"
+        host: ":9003"
         service:
           annotations: {}
           # prometheus.io/scrape: "true"
-          # prometheus.io/port: "9012"
+          # prometheus.io/port: "9003"
           # prometheus.io/path: "/metrics"
           # -- Labels to be added to the metrics service resource
           labels: {}
@@ -1219,7 +1219,7 @@ controller:
           externalIPs: []
           # loadBalancerIP: ""
           loadBalancerSourceRanges: []
-          servicePort: 9012
+          servicePort: 9003
           type: ClusterIP
           # externalTrafficPolicy: ""
           # nodePort: ""
