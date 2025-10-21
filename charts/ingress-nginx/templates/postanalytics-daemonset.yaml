@@ -129,20 +129,23 @@ spec:
             {{- toYaml .Values.controller.wallarm.postanalytics.extraVolumeMounts | nindent 12 }}
           {{- end }}
           livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                {{- if eq .Values.controller.wallarm.postanalytics.serviceProtocol "tcp4" }}
-                - nc -z 127.0.0.1 {{ template "ingress-nginx.wallarmPostanalyticsPort" . }}
-                {{- else }}
-                - nc -z localhost {{ template "ingress-nginx.wallarmPostanalyticsPort" . }}
-                {{- end }}
+            httpGet:
+              path: /health
+              port: {{ template "ingress-nginx.wallarmPostanalyticsHealthPort" . }}
             initialDelaySeconds: {{ .Values.controller.wallarm.postanalytics.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.controller.wallarm.postanalytics.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.controller.wallarm.postanalytics.livenessProbe.timeoutSeconds }}
             successThreshold: {{ .Values.controller.wallarm.postanalytics.livenessProbe.successThreshold }}
             failureThreshold: {{ .Values.controller.wallarm.postanalytics.livenessProbe.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ template "ingress-nginx.wallarmPostanalyticsHealthPort" . }}
+            initialDelaySeconds: {{ .Values.controller.wallarm.postanalytics.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.controller.wallarm.postanalytics.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.controller.wallarm.postanalytics.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.controller.wallarm.postanalytics.readinessProbe.successThreshold }}
+            failureThreshold: {{ .Values.controller.wallarm.postanalytics.readinessProbe.failureThreshold }}
           ports:
             - name: wstore
               containerPort: {{ template "ingress-nginx.wallarmPostanalyticsPort" . }}
