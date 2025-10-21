@@ -195,6 +195,7 @@ Create the name of the controller service account to use
 {{- end -}}
 
 {{- define "ingress-nginx.wallarmPostanalyticsPort" -}}3313{{- end -}}
+{{- define "ingress-nginx.wallarmPostanalyticsHealthPort" -}}5005{{- end -}}
 {{- define "ingress-nginx.wallarmPostanalyticsName" -}}{{ .Values.controller.name }}-wallarm-wstore{{- end -}}
 {{- define "ingress-nginx.wallarmPostanalyticsWcliConfig" -}}{{ template "ingress-nginx.wallarmPostanalyticsName" . }}-wcli{{- end -}}
 {{- define "ingress-nginx.wallarmControllerWcliConfig" -}}{{ include "ingress-nginx.controller.fullname" . | lower }}-wcli{{- end -}}

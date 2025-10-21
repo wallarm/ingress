@@ -977,7 +977,7 @@ controller:
     ##
     helpers:
       image: docker.io/wallarm/node-helpers
-      tag: 6.6.0
+      tag: 6.6.2-wstore-health-check
       pullPolicy: IfNotPresent
     ## Configuration for post-analytics module
     ##
@@ -993,7 +993,13 @@ controller:
       serviceProtocol: "tcp4"
       livenessProbe:
         failureThreshold: 3
-        initialDelaySeconds: 40
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 1
+      readinessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 5
         periodSeconds: 10
         successThreshold: 1
         timeoutSeconds: 1
