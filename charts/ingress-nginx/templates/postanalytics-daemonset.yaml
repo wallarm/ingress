@@ -92,8 +92,8 @@ spec:
             subPath: token
             readOnly: true
           securityContext: {{ include "ingress-nginx.controller.containerSecurityContext" . | nindent 12 }}
-          {{- if .Values.controller.wallarm.postanalytics.resources }}
-          resources: {{ toYaml .Values.controller.wallarm.postanalytics.resources | indent 12 }}
+          {{- if .Values.controller.wallarm.wcliPostanalytics.resources }}
+          resources: {{ toYaml .Values.controller.wallarm.wcliPostanalytics.resources | nindent 12 }}
           {{- end }}
         - name: wstore
         {{- if .Values.controller.wallarm.postanalytics.image }}
