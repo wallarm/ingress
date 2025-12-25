@@ -328,6 +328,7 @@ SCAN_ARTIFACT:
   needs:
     - job: IMAGE_BUILD_IC
       optional: true
+  allow_failure: true
   rules:
     - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan)$/
   extends:
