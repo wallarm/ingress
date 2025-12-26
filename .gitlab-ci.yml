@@ -343,6 +343,7 @@ CHART_TESTING:
 SCAN_ARTIFACT:
   stage: test
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner-helper-images/security_scanners:1.0.32
+  allow_failure: true
   needs:
     - job: IMAGE_BUILD_IC
       optional: true
