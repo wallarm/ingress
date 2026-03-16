@@ -59,7 +59,7 @@ else
 fullnameOverride: nginx-ingress
 controller:
   image:
-    repository: ingress-controller/controller
+    repository: ${REGISTRY}/ingress-controller
     chroot: ${IS_CHROOT}
     tag: 1.0.0-dev
     digest:
