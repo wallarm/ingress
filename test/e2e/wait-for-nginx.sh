@@ -24,7 +24,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export NAMESPACE=$1
 export NAMESPACE_OVERLAY=$2
 export IS_CHROOT=$3
-export ENABLE_VALIDATIONS=$4
 
 echo "deploying NGINX Ingress controller in namespace $NAMESPACE"
 
@@ -34,7 +33,7 @@ function on_exit {
     test $error_code == 0 && return;
 
     echo "Obtaining ingress controller pod logs..."
-    kubectl logs -l app.kubernetes.io/name=wallarm-ingress -n $NAMESPACE
+    kubectl logs -l app.kubernetes.io/name=ingress-nginx -n $NAMESPACE
 }
 trap on_exit EXIT
 
@@ -53,30 +52,16 @@ if [[ ! -z "$NAMESPACE_OVERLAY" && -d "$DIR/namespace-overlays/$NAMESPACE_OVERLA
     echo "Namespace overlay $NAMESPACE_OVERLAY is being used for namespace $NAMESPACE"
     helm install nginx-ingress ${DIR}/charts/ingress-nginx \
         --namespace=$NAMESPACE \
-        --values "$DIR/namespace-overlays/$NAMESPACE_OVERLAY/values.yaml" \
-        --set controller.image.chroot="${IS_CHROOT}" \
-        --set controller.image.repository="${REGISTRY}/ingress-controller" \
-        --set-string controller.image.tag="${TAG}" \
-        ${HELM_ARGS} \
-        --set controller.wallarm.enabled="${WALLARM_ENABLED}" \
-        --set controller.wallarm.token="${WALLARM_API_TOKEN}" \
-        --set controller.wallarm.apiHost="${WALLARM_API_HOST}" \
-        --set controller.wallarm.fallback="off"
+        --values "$DIR/namespace-overlays/$NAMESPACE_OVERLAY/values.yaml"
 else
-    cat << EOF | helm install nginx-ingress ${DIR}/charts/ingress-nginx --namespace=$NAMESPACE ${HELM_ARGS} --values -
+    cat << EOF | helm install nginx-ingress ${DIR}/charts/ingress-nginx --namespace=$NAMESPACE --values -
 # TODO: remove the need to use fullnameOverride
 fullnameOverride: nginx-ingress
 controller:
-  enableAnnotationValidations: ${ENABLE_VALIDATIONS}
-  wallarm:
-    enabled: ${WALLARM_ENABLED}
-    token: ${WALLARM_API_TOKEN}
-    apiHost: ${WALLARM_API_HOST}
-    fallback: "off"
   image:
-    repository: ${REGISTRY}/ingress-controller
+    repository: ingress-controller/controller
     chroot: ${IS_CHROOT}
-    tag: ${TAG}
+    tag: 1.0.0-dev
     digest:
     digestChroot:
   scope:

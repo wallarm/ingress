@@ -144,17 +144,7 @@ graph TB
 
 To install the example and collectors run:
 
-1. Enable Ingress addon with:
-
-    ```yaml
-      opentelemetry:
-        enabled: true
-        image: registry.k8s.io/ingress-nginx/opentelemetry-1.25.3:v20240813-b933310d@sha256:f7604ac0547ed64d79b98d92133234e66c2c8aade3c1f4809fed5eec1fb7f922
-        containerSecurityContext:
-        allowPrivilegeEscalation: false
-    ```
-
-2. Enable OpenTelemetry and set the otlp-collector-host:
+1. Enable OpenTelemetry and set the otlp-collector-host:
 
     ```yaml
     $ echo '
@@ -162,7 +152,7 @@ To install the example and collectors run:
       kind: ConfigMap
       data:
         enable-opentelemetry: "true"
-        opentelemetry-config: "/etc/nginx/opentelemetry.toml"
+        opentelemetry-config: "/etc/ingress-controller/telemetry/opentelemetry.toml"
         opentelemetry-operation-name: "HTTP $request_method $service_name $uri"
         opentelemetry-trust-incoming-span: "true"
         otlp-collector-host: "otel-coll-collector.otel.svc"
@@ -180,7 +170,7 @@ To install the example and collectors run:
       ' | kubectl replace -f -
     ```
 
-4. Deploy otel-collector, grafana and Jaeger backend:
+2. Deploy otel-collector, grafana and Jaeger backend:
 
     ```bash
     # add helm charts needed for grafana and OpenTelemetry collector
@@ -215,7 +205,7 @@ To install the example and collectors run:
     make deploy-app
     ```
 
-5. Make a few requests to the Service:
+4. Make a few requests to the Service:
 
     ```bash
     kubectl port-forward --namespace=ingress-nginx service/ingress-nginx-controller 8090:80
@@ -244,7 +234,7 @@ To install the example and collectors run:
     RawContentLength  : 21
     ```
 
-6. View the Grafana UI:
+5. View the Grafana UI:
 
     ```bash
     kubectl port-forward --namespace=observability service/grafana 3000:80
@@ -252,7 +242,7 @@ To install the example and collectors run:
     In the Grafana interface we can see the details:
     ![grafana screenshot](../../images/otel-grafana-demo.png "grafana screenshot")
 
-7. View the Jaeger UI:
+6. View the Jaeger UI:
 
     ```bash
     kubectl port-forward --namespace=observability service/jaeger-all-in-one-query 16686:16686
@@ -260,7 +250,7 @@ To install the example and collectors run:
     In the Jaeger interface we can see the details:
     ![Jaeger screenshot](../../images/otel-jaeger-demo.png "Jaeger screenshot")
 
-8. View the Zipkin UI:
+7. View the Zipkin UI:
 
     ```bash
     kubectl port-forward --namespace=observability service/zipkin 9411:9411

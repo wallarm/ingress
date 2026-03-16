@@ -64,13 +64,10 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/http2-push-preload](#http2-push-preload)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/limit-connections](#rate-limiting)|number|
 |[nginx.ingress.kubernetes.io/limit-rps](#rate-limiting)|number|
-|[nginx.ingress.kubernetes.io/global-rate-limit](#global-rate-limiting)|number|
-|[nginx.ingress.kubernetes.io/global-rate-limit-window](#global-rate-limiting)|duration|
-|[nginx.ingress.kubernetes.io/global-rate-limit-key](#global-rate-limiting)|string|
-|[nginx.ingress.kubernetes.io/global-rate-limit-ignored-cidrs](#global-rate-limiting)|string|
 |[nginx.ingress.kubernetes.io/permanent-redirect](#permanent-redirect)|string|
 |[nginx.ingress.kubernetes.io/permanent-redirect-code](#permanent-redirect-code)|number|
 |[nginx.ingress.kubernetes.io/temporal-redirect](#temporal-redirect)|string|
+|[nginx.ingress.kubernetes.io/temporal-redirect-code](#temporal-redirect-code)|number|
 |[nginx.ingress.kubernetes.io/preserve-trailing-slash](#server-side-https-enforcement-through-redirect)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/proxy-body-size](#custom-max-body-size)|string|
 |[nginx.ingress.kubernetes.io/proxy-cookie-domain](#proxy-cookie-domain)|string|
@@ -119,13 +116,14 @@ You can add these Kubernetes annotations to specific Ingress objects to customiz
 |[nginx.ingress.kubernetes.io/proxy-buffering](#proxy-buffering)|string|
 |[nginx.ingress.kubernetes.io/proxy-buffers-number](#proxy-buffers-number)|number|
 |[nginx.ingress.kubernetes.io/proxy-buffer-size](#proxy-buffer-size)|string|
+|[nginx.ingress.kubernetes.io/proxy-busy-buffers-size](#proxy-busy-buffers-size)|string|
 |[nginx.ingress.kubernetes.io/proxy-max-temp-file-size](#proxy-max-temp-file-size)|string|
 |[nginx.ingress.kubernetes.io/ssl-ciphers](#ssl-ciphers)|string|
 |[nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers](#ssl-ciphers)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/connection-proxy-header](#connection-proxy-header)|string|
 |[nginx.ingress.kubernetes.io/enable-access-log](#enable-access-log)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/enable-opentelemetry](#enable-opentelemetry)|"true" or "false"|
-|[nginx.ingress.kubernetes.io/opentelemetry-trust-incoming-span](#opentelemetry-trust-incoming-spans)|"true" or "false"|
+|[nginx.ingress.kubernetes.io/opentelemetry-trust-incoming-span](#opentelemetry-trust-incoming-span)|"true" or "false"|
 |[nginx.ingress.kubernetes.io/use-regex](#use-regex)|bool|
 |[nginx.ingress.kubernetes.io/enable-modsecurity](#modsecurity)|bool|
 |[nginx.ingress.kubernetes.io/enable-owasp-core-rules](#modsecurity)|bool|
@@ -397,13 +395,13 @@ CORS can be controlled with the following annotations:
 
 * `nginx.ingress.kubernetes.io/cors-allow-origin`: Controls what's the accepted Origin for CORS.
 
-    This is a multi-valued field, separated by ','. It must follow this format: `http(s)://origin-site.com` or `http(s)://origin-site.com:port`
+    This is a multi-valued field, separated by ','. It must follow this format: `protocol://origin-site.com` or `protocol://origin-site.com:port`
 
     - Default: `*`
-    - Example: `nginx.ingress.kubernetes.io/cors-allow-origin: "https://origin-site.com:4443, http://origin-site.com, https://example.org:1199"`
+    - Example: `nginx.ingress.kubernetes.io/cors-allow-origin: "https://origin-site.com:4443, http://origin-site.com, myprotocol://example.org:1199"`
 
-    It also supports single level wildcard subdomains and follows this format: `http(s)://*.foo.bar`, `http(s)://*.bar.foo:8080` or `http(s)://*.abc.bar.foo:9000`
-    - Example: `nginx.ingress.kubernetes.io/cors-allow-origin: "https://*.origin-site.com:4443, http://*.origin-site.com, https://example.org:1199"`
+    It also supports single level wildcard subdomains and follows this format: `protocol://*.foo.bar`, `protocol://*.bar.foo:8080` or `protocol://*.abc.bar.foo:9000`
+    - Example: `nginx.ingress.kubernetes.io/cors-allow-origin: "https://*.origin-site.com:4443, http://*.origin-site.com, myprotocol://example.org:1199"`
 
 * `nginx.ingress.kubernetes.io/cors-allow-credentials`: Controls if credentials can be passed during CORS operations.
 
@@ -448,15 +446,15 @@ kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/server-snippet: |
-        set $agentflag 0;
+      set $agentflag 0;
 
-        if ($http_user_agent ~* "(Mobile)" ){
-          set $agentflag 1;
-        }
+      if ($http_user_agent ~* "(Mobile)" ){
+        set $agentflag 1;
+      }
 
-        if ( $agentflag = 1 ) {
-          return 301 https://m.example.com;
-        }
+      if ( $agentflag = 1 ) {
+        return 301 https://m.example.com;
+      }
 ```
 
 !!! attention
@@ -532,7 +530,7 @@ Additionally it is possible to set:
 ```yaml
 nginx.ingress.kubernetes.io/auth-url: http://foo.com/external-auth
 nginx.ingress.kubernetes.io/auth-snippet: |
-    proxy_set_header Foo-Header 42;
+  proxy_set_header Foo-Header 42;
 ```
 > Note: `nginx.ingress.kubernetes.io/auth-snippet` is an optional annotation. However, it may only be used in conjunction with `nginx.ingress.kubernetes.io/auth-url` and will be ignored if `nginx.ingress.kubernetes.io/auth-url` is not set
 
@@ -572,46 +570,6 @@ To configure settings globally for all Ingress rules, the `limit-rate-after` and
 
 The client IP address will be set based on the use of [PROXY protocol](./configmap.md#use-proxy-protocol) or from the `X-Forwarded-For` header value when [use-forwarded-headers](./configmap.md#use-forwarded-headers) is enabled.
 
-### Global Rate Limiting
-
-**Note:** Be careful when configuring both (Local) Rate Limiting and Global Rate Limiting at the same time.
-They are two completely different rate limiting implementations. Whichever limit exceeds first will reject the
-requests. It might be a good idea to configure both of them to ease load on Global Rate Limiting backend
-in cases of spike in traffic.
-
-The stock NGINX rate limiting does not share its counters among different NGINX instances.
-Given that most ingress-nginx deployments are elastic and number of replicas can change any day
-it is impossible to configure a proper rate limit using stock NGINX functionalities.
-Global Rate Limiting overcome this by using [lua-resty-global-throttle](https://github.com/ElvinEfendi/lua-resty-global-throttle). `lua-resty-global-throttle` shares its counters via a central store such as `memcached`.
-The obvious shortcoming of this is users have to deploy and operate a `memcached` instance
-in order to benefit from this functionality. Configure the `memcached`
-using [these configmap settings](./configmap.md#global-rate-limit).
-
-**Here are a few remarks for ingress-nginx integration of `lua-resty-global-throttle`:**
-
-1. We minimize `memcached` access by caching exceeding limit decisions. The expiry of
-cache entry is the desired delay `lua-resty-global-throttle` calculates for us.
-The Lua Shared Dictionary used for that is `global_throttle_cache`. Currently its size defaults to 10M.
-Customize it as per your needs using [lua-shared-dicts](./configmap.md#lua-shared-dicts).
-When we fail to cache the exceeding limit decision then we log an NGINX error. You can monitor
-for that error to decide if you need to bump the cache size. Without cache the cost of processing a
-request is two memcached commands: `GET`, and `INCR`. With the cache it is only `INCR`.
-1. Log NGINX variable `$global_rate_limit_exceeding`'s value to have some visibility into
-what portion of requests are rejected (value `y`), whether they are rejected using cached decision (value `c`),
-or if they are not rejected (default value `n`). You can use [log-format-upstream](./configmap.md#log-format-upstream)
-to include that in access logs.
-1. In case of an error it will log the error message and **fail open**.
-1. The annotations below creates Global Rate Limiting instance per ingress.
-That means if there are multiple paths configured under the same ingress,
-the Global Rate Limiting will count requests to all the paths under the same counter.
-Extract a path out into its own ingress if you need to isolate a certain path.
-
-
-* `nginx.ingress.kubernetes.io/global-rate-limit`: Configures maximum allowed number of requests per window. Required.
-* `nginx.ingress.kubernetes.io/global-rate-limit-window`: Configures a time window (i.e `1m`) that the limit is applied. Required.
-* `nginx.ingress.kubernetes.io/global-rate-limit-key`: Configures a key for counting the samples. Defaults to `$remote_addr`. You can also combine multiple NGINX variables here, like `${remote_addr}-${http_x_api_client}` which would mean the limit will be applied to requests coming from the same API client (indicated by `X-API-Client` HTTP request header) with the same source IP address.
-* `nginx.ingress.kubernetes.io/global-rate-limit-ignored-cidrs`: comma separated list of IPs and CIDRs to match client IP against. When there's a match request is not considered for rate limiting.
-
 ### Permanent Redirect
 
 This annotation allows to return a permanent redirect (Return Code 301) instead of sending data to the upstream.  For example `nginx.ingress.kubernetes.io/permanent-redirect: https://www.google.com` would redirect everything to Google.
@@ -622,6 +580,10 @@ This annotation allows you to modify the status code used for permanent redirect
 
 ### Temporal Redirect
 This annotation allows you to return a temporal redirect (Return Code 302) instead of sending data to the upstream. For example `nginx.ingress.kubernetes.io/temporal-redirect: https://www.google.com` would redirect everything to Google with a Return Code of 302 (Moved Temporarily)
+
+### Temporal Redirect Code
+
+This annotation allows you to modify the status code used for temporal redirects.  For example `nginx.ingress.kubernetes.io/temporal-redirect-code: '307'` would return your temporal-redirect with a 307.
 
 ### SSL Passthrough
 
@@ -747,6 +709,8 @@ nginx.ingress.kubernetes.io/proxy-body-size: 8m
 
 Sets a text that [should be changed in the domain attribute](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cookie_domain) of the "Set-Cookie" header fields of a proxied server response.
 
+Value must be either `off` or two space-separated tokens (source domain and replacement).
+
 To configure this setting globally for all Ingress rules, the `proxy-cookie-domain` value may be set in the [NGINX ConfigMap](./configmap.md#proxy-cookie-domain).
 
 ### Proxy cookie path
@@ -767,7 +731,7 @@ To use custom values in an Ingress rule define these annotation:
 nginx.ingress.kubernetes.io/proxy-buffering: "on"
 ```
 
-### Proxy buffers Number
+### Proxy buffers number
 
 Sets the number of the buffers in [`proxy_buffers`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffers) used for reading the first part of the response received from the proxied server.
 By default proxy buffers number is set as 4
@@ -785,6 +749,16 @@ By default proxy buffer size is set as "4k"
 To configure this setting globally, set `proxy-buffer-size` in [NGINX ConfigMap](./configmap.md#proxy-buffer-size). To use custom values in an Ingress rule, define this annotation:
 ```yaml
 nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+```
+
+### Proxy busy buffers size
+
+[Limits the total size of buffers that can be busy](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_busy_buffers_size) sending a response to the client while the response is not yet fully read.
+By default, size is limited by the size of two buffers set by the `proxy_buffer_size` and `proxy_buffers` directives.
+
+To configure this setting globally, set `proxy-busy-buffers-size` in the [ConfigMap](./configmap.md#proxy-busy-buffers-size). To use custom values in an Ingress rule, define this annotation:
+```yaml
+nginx.ingress.kubernetes.io/proxy-busy-buffers-size: "16k"
 ```
 
 ### Proxy max temp file size
@@ -864,8 +838,11 @@ nginx.ingress.kubernetes.io/enable-opentelemetry: "true"
 The option to trust incoming trace spans can be enabled or disabled globally through the ConfigMap but this will
 sometimes need to be overridden to enable it or disable it for a specific ingress (e.g. only enable on a private endpoint)
 
+!!! note
+    This annotation requires `nginx.ingress.kubernetes.io/enable-opentelemetry` to be set to `"true"`, otherwise it will be ignored.
+
 ```yaml
-nginx.ingress.kubernetes.io/opentelemetry-trust-incoming-spans: "true"
+nginx.ingress.kubernetes.io/opentelemetry-trust-incoming-span: "true"
 ```
 
 ### X-Forwarded-Prefix Header
@@ -886,7 +863,7 @@ It can be enabled using the following annotation:
 ```yaml
 nginx.ingress.kubernetes.io/enable-modsecurity: "true"
 ```
-ModSecurity will run in "Detection-Only" mode using the [recommended configuration](https://github.com/SpiderLabs/ModSecurity/blob/v3/master/modsecurity.conf-recommended).
+ModSecurity will run in "Detection-Only" mode using the [recommended configuration](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended).
 
 You can enable the [OWASP Core Rule Set](https://www.modsecurity.org/CRS/Documentation/) by
 setting the following annotation:
@@ -902,25 +879,25 @@ nginx.ingress.kubernetes.io/modsecurity-transaction-id: "$request_id"
 You can also add your own set of modsecurity rules via a snippet:
 ```yaml
 nginx.ingress.kubernetes.io/modsecurity-snippet: |
-SecRuleEngine On
-SecDebugLog /tmp/modsec_debug.log
+  SecRuleEngine On
+  SecDebugLog /tmp/modsec_debug.log
 ```
 
 Note: If you use both `enable-owasp-core-rules` and `modsecurity-snippet` annotations together, only the
 `modsecurity-snippet` will take effect. If you wish to include the [OWASP Core Rule Set](https://www.modsecurity.org/CRS/Documentation/) or
-[recommended configuration](https://github.com/SpiderLabs/ModSecurity/blob/v3/master/modsecurity.conf-recommended) simply use the include
+[recommended configuration](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended) simply use the include
 statement:
 
 nginx 0.24.1 and below
 ```yaml
 nginx.ingress.kubernetes.io/modsecurity-snippet: |
-Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
-Include /etc/nginx/modsecurity/modsecurity.conf
+  Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
+  Include /etc/nginx/modsecurity/modsecurity.conf
 ```
 nginx 0.25.0 and above
 ```yaml
 nginx.ingress.kubernetes.io/modsecurity-snippet: |
-Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
+  Include /etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf
 ```
 
 ### Backend Protocol

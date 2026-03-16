@@ -48,7 +48,7 @@ var _ = framework.DescribeSetting("enable-real-ip", func() {
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				//nolint:goconst //already a const
-				return strings.Contains(server, "server_name "+host) &&
+				return strings.Contains(server, fmt.Sprintf(`server_name "%v"`, host)) &&
 					!strings.Contains(server, "proxy_set_header X-Forwarded-Proto $full_x_forwarded_proto;")
 			})
 
@@ -65,7 +65,8 @@ var _ = framework.DescribeSetting("enable-real-ip", func() {
 			Body().
 			Raw()
 
-		assert.NotContains(ginkgo.GinkgoT(), body, "host=myhost")
+		// we use a regexp to prevent matching the expression in the middle of the x-original-forwarded-host header
+		assert.NotRegexp(ginkgo.GinkgoT(), `(\s)host=myhost`, body)
 		assert.NotContains(ginkgo.GinkgoT(), body, "x-forwarded-host=myhost")
 		assert.NotContains(ginkgo.GinkgoT(), body, "x-forwarded-proto=myproto")
 		assert.NotContains(ginkgo.GinkgoT(), body, "x-forwarded-port=1234")
@@ -85,7 +86,7 @@ var _ = framework.DescribeSetting("enable-real-ip", func() {
 
 		f.WaitForNginxServer(host,
 			func(server string) bool {
-				return strings.Contains(server, "server_name "+host) &&
+				return strings.Contains(server, fmt.Sprintf(`server_name "%v"`, host)) &&
 					strings.Contains(server, "proxy_set_header X-Forwarded-Proto $pass_access_scheme;")
 			})
 
@@ -105,7 +106,9 @@ var _ = framework.DescribeSetting("enable-real-ip", func() {
 		assert.Contains(ginkgo.GinkgoT(), body, "x-forwarded-port=80")
 		assert.Contains(ginkgo.GinkgoT(), body, "x-forwarded-proto=http")
 		assert.Contains(ginkgo.GinkgoT(), body, "x-original-forwarded-for=1.2.3.4")
-		assert.NotContains(ginkgo.GinkgoT(), body, "host=myhost")
+		assert.Contains(ginkgo.GinkgoT(), body, "x-original-forwarded-host=myhost")
+		// we use a regexp to prevent matching the expression in the middle of the x-original-forwarded-host header
+		assert.NotRegexp(ginkgo.GinkgoT(), `(\s)host=myhost`, body)
 		assert.NotContains(ginkgo.GinkgoT(), body, "x-forwarded-host=myhost")
 		assert.NotContains(ginkgo.GinkgoT(), body, "x-forwarded-proto=myproto")
 		assert.NotContains(ginkgo.GinkgoT(), body, "x-forwarded-port=1234")

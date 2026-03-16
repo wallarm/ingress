@@ -31,6 +31,7 @@ const (
 	proxyReadTimeoutAnnotation         = "proxy-read-timeout"
 	proxyBuffersNumberAnnotation       = "proxy-buffers-number"
 	proxyBufferSizeAnnotation          = "proxy-buffer-size"
+	proxyBusyBuffersSizeAnnotation     = "proxy-busy-buffers-size"
 	proxyCookiePathAnnotation          = "proxy-cookie-path"
 	proxyCookieDomainAnnotation        = "proxy-cookie-domain"
 	proxyBodySizeAnnotation            = "proxy-body-size"
@@ -45,7 +46,11 @@ const (
 	proxyMaxTempFileSizeAnnotation     = "proxy-max-temp-file-size" //#nosec G101
 )
 
-var validUpstreamAnnotation = regexp.MustCompile(`^((error|timeout|invalid_header|http_500|http_502|http_503|http_504|http_403|http_404|http_429|non_idempotent|off)\s?)+$`)
+var (
+	cookieDomainChars       = `\-\.\_\~a-zA-Z0-9\/:`
+	validUpstreamAnnotation = regexp.MustCompile(`^((error|timeout|invalid_header|http_500|http_502|http_503|http_504|http_403|http_404|http_429|non_idempotent|off)\s?)+$`)
+	cookieDomainRegex       = regexp.MustCompile(`^(off|[` + cookieDomainChars + `]+\s+[` + cookieDomainChars + `]+)$`)
+)
 
 var proxyAnnotations = parser.Annotation{
 	Group: "backend",
@@ -82,6 +87,12 @@ var proxyAnnotations = parser.Annotation{
 			Documentation: `This annotation sets the size of the buffer proxy_buffer_size used for reading the first part of the response received from the proxied server. 
 			By default proxy buffer size is set as "4k".`,
 		},
+		proxyBusyBuffersSizeAnnotation: {
+			Validator:     parser.ValidateRegex(parser.SizeRegex, true),
+			Scope:         parser.AnnotationScopeLocation,
+			Risk:          parser.AnnotationRiskLow,
+			Documentation: `This annotation limits the total size of buffers that can be busy sending a response to the client while the response is not yet fully read.`,
+		},
 		proxyCookiePathAnnotation: {
 			Validator:     parser.ValidateRegex(parser.URLIsValidRegex, true),
 			Scope:         parser.AnnotationScopeLocation,
@@ -89,7 +100,7 @@ var proxyAnnotations = parser.Annotation{
 			Documentation: `This annotation sets a text that should be changed in the path attribute of the "Set-Cookie" header fields of a proxied server response.`,
 		},
 		proxyCookieDomainAnnotation: {
-			Validator:     parser.ValidateRegex(parser.BasicCharsRegex, true),
+			Validator:     parser.ValidateRegex(cookieDomainRegex, false),
 			Scope:         parser.AnnotationScopeLocation,
 			Risk:          parser.AnnotationRiskMedium,
 			Documentation: `This annotation ets a text that should be changed in the domain attribute of the "Set-Cookie" header fields of a proxied server response.`,
@@ -167,6 +178,7 @@ type Config struct {
 	ReadTimeout          int    `json:"readTimeout"`
 	BuffersNumber        int    `json:"buffersNumber"`
 	BufferSize           string `json:"bufferSize"`
+	BusyBuffersSize      string `json:"busyBuffersSize"`
 	CookieDomain         string `json:"cookieDomain"`
 	CookiePath           string `json:"cookiePath"`
 	NextUpstream         string `json:"nextUpstream"`
@@ -204,6 +216,9 @@ func (l1 *Config) Equal(l2 *Config) bool {
 		return false
 	}
 	if l1.BufferSize != l2.BufferSize {
+		return false
+	}
+	if l1.BusyBuffersSize != l2.BusyBuffersSize {
 		return false
 	}
 	if l1.CookieDomain != l2.CookieDomain {
@@ -288,6 +303,11 @@ func (a proxy) Parse(ing *networking.Ingress) (interface{}, error) {
 	config.BufferSize, err = parser.GetStringAnnotation(proxyBufferSizeAnnotation, ing, a.annotationConfig.Annotations)
 	if err != nil {
 		config.BufferSize = defBackend.ProxyBufferSize
+	}
+
+	config.BusyBuffersSize, err = parser.GetStringAnnotation(proxyBusyBuffersSizeAnnotation, ing, a.annotationConfig.Annotations)
+	if err != nil {
+		config.BusyBuffersSize = defBackend.ProxyBusyBuffersSize
 	}
 
 	config.CookiePath, err = parser.GetStringAnnotation(proxyCookiePathAnnotation, ing, a.annotationConfig.Annotations)

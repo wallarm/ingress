@@ -1,7 +1,11 @@
+annotations:
+  artifacthub.io/changes: |
+    - Update Ingress-Nginx version controller-v1.15.0
+  artifacthub.io/prerelease: "false"
 apiVersion: v2
 name: wallarm-ingress
-version: 6.10.0
-appVersion: 6.10.0
+version: 6.10.3
+appVersion: 6.10.3
 home: https://github.com/wallarm/ingress
 description: Ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer with Wallarm module
 icon: https://static.wallarm.com/wallarm-logo.svg
@@ -17,4 +21,3 @@ maintainers:
     email: support@wallarm.com
 engine: gotpl
 kubeVersion: ">=1.20.0-0"
-

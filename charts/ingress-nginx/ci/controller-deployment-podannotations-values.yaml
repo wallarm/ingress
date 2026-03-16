@@ -13,7 +13,7 @@ controller:
     prometheus.io/scrape: "true"
     prometheus.io/port: "10254"
     prometheus.io/scheme: http
+    prometheus.io/path: /metrics
 
   wallarm:
     apiHost: api.wallarm.com
-    prometheus.io/path: /metrics

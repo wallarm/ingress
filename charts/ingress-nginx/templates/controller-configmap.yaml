@@ -13,7 +13,9 @@ metadata:
   name: {{ include "ingress-nginx.controller.fullname" . }}
   namespace: {{ include "ingress-nginx.namespace" . }}
 data:
-  allow-snippet-annotations: "{{ .Values.controller.allowSnippetAnnotations }}"
+{{- if .Values.controller.allowSnippetAnnotations }}
+  allow-snippet-annotations: "true"
+{{- end }}
 {{- if .Values.controller.wallarm.enabled }}
   enable-wallarm: "{{ .Values.controller.wallarm.enabled }}"
   wallarm-upstream-service: "{{ include "ingress-nginx.controller.fullname" . }}-wallarm-wstore"
