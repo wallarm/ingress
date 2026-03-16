@@ -258,7 +258,7 @@ func getIngressNGINXPod(ns string, kubeClientSet kubernetes.Interface) (*core.Po
 	defer cancel()
 	err := wait.PollUntilContextTimeout(ctx, 1*time.Second, DefaultTimeout, true, func(_ context.Context) (bool, error) {
 		l, err := kubeClientSet.CoreV1().Pods(ns).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: "app.kubernetes.io/name=ingress-nginx",
+			LabelSelector: "app.kubernetes.io/name=wallarm-ingress,app.kubernetes.io/component=controller",
 		})
 		if err != nil {
 			return false, nil
