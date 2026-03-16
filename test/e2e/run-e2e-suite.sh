@@ -28,6 +28,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# generate unique group name
+export NODE_GROUP_NAME="gitlab-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
+
 RED='\e[35m'
 NC='\e[0m'
 BGREEN='\e[32m'
@@ -53,6 +56,18 @@ BASEDIR=$(dirname "$0")
 NGINX_BASE_IMAGE=$(cat $BASEDIR/../../NGINX_BASE)
 HTTPBUN_IMAGE=$(cat $BASEDIR/HTTPBUN_IMAGE)
 
+
+# This will prevent the secret for index.docker.io from being used if the DOCKERHUB_USER is not set.
+DOCKERHUB_REGISTRY_SERVER="https://index.docker.io/v1/"
+
+if [ "${DOCKERHUB_USER:-false}" = "false" ]; then
+  DOCKERHUB_REGISTRY_SERVER="fake_docker_registry_server"
+fi
+
+DOCKERHUB_SECRET_NAME="dockerhub-secret"
+DOCKERHUB_USER="${DOCKERHUB_USER:-fake_user}"
+DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
+
 echo -e "${BGREEN}Granting permissions to ingress-nginx e2e service account...${NC}"
 kubectl create serviceaccount ingress-nginx-e2e || true
 kubectl create clusterrolebinding permissive-binding \
@@ -70,20 +85,42 @@ if [ $VER -lt 24 ]; then
   done
 fi
 
+
+echo "[dev-env] running helm chart e2e tests..."
+kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
+  --docker-server=${DOCKERHUB_REGISTRY_SERVER} \
+  --docker-username="${DOCKERHUB_USER}" \
+  --docker-password="${DOCKERHUB_PASSWORD}" \
+  --docker-email=docker-pull@unexists.unexists || true
+
 echo -e "Starting the e2e test pod"
+
+if [ "$REGISTRY" = "wallarm" ]; then
+  E2E_IMAGE=nginx-ingress-controller:e2e
+else
+  E2E_IMAGE=${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
+fi
 
 kubectl run --rm \
   --attach \
   --restart=Never \
   --env="E2E_NODES=${E2E_NODES}" \
   --env="FOCUS=${FOCUS}" \
-  --env="IS_CHROOT=${IS_CHROOT:-false}"\
+  --env="IS_CHROOT=${IS_CHROOT:-false}" \
+  --env="REGISTRY=${REGISTRY:-wallarm}" \
+  --env="TAG=${TAG:-1.0.0-dev}" \
+  --env="ENABLE_VALIDATIONS=${ENABLE_VALIDATIONS:-false}"\
   --env="SKIP_OPENTELEMETRY_TESTS=${SKIP_OPENTELEMETRY_TESTS:-false}"\
   --env="E2E_CHECK_LEAKS=${E2E_CHECK_LEAKS}" \
   --env="NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE}" \
+  --env="WALLARM_ENABLED=${WALLARM_ENABLED:-false}" \
+  --env="WALLARM_API_TOKEN=${WALLARM_API_TOKEN:-}" \
+  --env="WALLARM_API_HOST=${WALLARM_API_HOST:-}" \
+  --env="NODE_GROUP_NAME=${NODE_GROUP_NAME:-}" \
+  --env="HELM_ARGS=${HELM_ARGS:-}" \
   --env="HTTPBUN_IMAGE=${HTTPBUN_IMAGE}" \
-  --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e"}}' \
-  e2e --image=nginx-ingress-controller:e2e
+  --overrides='{ "apiVersion": "v1", "spec":{"serviceAccountName": "ingress-nginx-e2e","imagePullSecrets":[{"name":"dockerhub-secret"}]}}' \
+  e2e --image=$E2E_IMAGE
 
 # Get the junit-reports stored in the configMaps created during e2etests
 echo "Getting the report file out now.."

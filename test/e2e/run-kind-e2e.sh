@@ -20,12 +20,13 @@ set -o pipefail
 
 cleanup() {
   if [[ "${KUBETEST_IN_DOCKER:-}" == "true" ]]; then
-    kind "export" logs --name ${KIND_CLUSTER_NAME} "${ARTIFACTS}/logs" || true
+    kind "export" logs --name "${KIND_CLUSTER_NAME}" "${ARTIFACTS}/logs" || true
   fi
-
-  kind delete cluster \
-    --verbosity="${KIND_LOG_LEVEL}" \
-    --name "${KIND_CLUSTER_NAME}"
+  if [[ "${CI:-}" == "true" ]]; then
+    kind delete cluster \
+      --verbosity="${KIND_LOG_LEVEL}" \
+      --name "${KIND_CLUSTER_NAME}"
+  fi
 }
 
 DEBUG=${DEBUG:=false}
@@ -37,21 +38,30 @@ else
   trap cleanup EXIT
 fi
 
+[[ "${CI:-}" == "true" ]] && unset KUBERNETES_SERVICE_HOST
+
 KIND_LOG_LEVEL="1"
 IS_CHROOT="${IS_CHROOT:-false}"
+ENABLE_VALIDATIONS="${ENABLE_VALIDATIONS:-false}"
 export KIND_CLUSTER_NAME=${KIND_CLUSTER_NAME:-ingress-nginx-dev}
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Use 1.0.0-dev to make sure we use the latest configuration in the helm template
-export TAG=1.0.0-dev
+export TAG=${TAG:=1.0.0-dev}
 export ARCH=${ARCH:-amd64}
 export REGISTRY=${REGISTRY:=wallarm}
 NGINX_BASE_IMAGE=${NGINX_BASE_IMAGE:-$(cat "$DIR"/../../NGINX_BASE)}
 export NGINX_BASE_IMAGE=$NGINX_BASE_IMAGE
 export DOCKER_CLI_EXPERIMENTAL=enabled
 export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/kind-config-$KIND_CLUSTER_NAME}"
+export WALLARM_ENABLED="${WALLARM_ENABLED:-false}"
+export WALLARM_API_TOKEN="${WALLARM_API_TOKEN:-}"
+export WALLARM_API_HOST="${WALLARM_API_HOST:-}"
 SKIP_INGRESS_IMAGE_CREATION="${SKIP_INGRESS_IMAGE_CREATION:-false}"
 SKIP_E2E_IMAGE_CREATION="${SKIP_E2E_IMAGE_CREATION:=false}"
 SKIP_CLUSTER_CREATION="${SKIP_CLUSTER_CREATION:-false}"
+
+# generate unique group name
+export NODE_GROUP_NAME="gitlab-ingress-$(tr -dc A-Za-z0-9 </dev/urandom | head -c 12; echo)"
 
 if ! command -v kind --version &> /dev/null; then
   echo "kind is not installed. Use the package manager or visit the official site https://kind.sigs.k8s.io/"
@@ -81,6 +91,7 @@ if [ "${SKIP_CLUSTER_CREATION}" = "false" ]; then
   kubectl get nodes -o wide
 fi
 
+
 if [ "${SKIP_INGRESS_IMAGE_CREATION}" = "false" ]; then
   echo "[dev-env] building image"
   if [ "${IS_CHROOT}" = "true" ]; then
@@ -104,12 +115,51 @@ if [ "${SKIP_E2E_IMAGE_CREATION}" = "false" ]; then
   echo "[dev-env] ..done building e2e-image"
 fi
 
+if [[ "${CI:-}" == "true" ]]; then
+  KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{print $1}')
+  for NODE in $KIND_WORKERS; do
+      docker exec "${NODE}" bash -c "cat >> /etc/containerd/config.toml <<EOF
+[plugins.\"io.containerd.grpc.v1.cri\".registry.configs.\"registry-1.docker.io\".auth]
+  username = \"$DOCKERHUB_USER\"
+  password = \"$DOCKERHUB_PASSWORD\"
+[plugins.\"io.containerd.grpc.v1.cri\".registry.configs.\"$CI_REGISTRY\".auth]
+  username = \"$CI_REGISTRY_USER\"
+  password = \"$CI_REGISTRY_PASSWORD\"
+EOF
+systemctl restart containerd"
+  done
+fi
+
 # Preload images used in e2e tests
 KIND_WORKERS=$(kind get nodes --name="${KIND_CLUSTER_NAME}" | grep worker | awk '{printf (NR>1?",":"") $1}')
+export KIND_WORKERS
 
 echo "[dev-env] copying docker images to cluster..."
 
-kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" nginx-ingress-controller:e2e
+if [ "$REGISTRY" = "wallarm" ]; then
+  E2E_IMAGE=nginx-ingress-controller:e2e
+else
+  E2E_IMAGE=${REGISTRY}/nginx-ingress-controller-e2e:${TAG}
+fi
+
+kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" $E2E_IMAGE
 kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" ${REGISTRY}/ingress-controller:${TAG}
+
+if docker image inspect "${NGINX_BASE_IMAGE}" &> /dev/null; then
+  echo "[dev-env] copying base image ${NGINX_BASE_IMAGE} to cluster..."
+  kind load docker-image --name="${KIND_CLUSTER_NAME}" --nodes="${KIND_WORKERS}" "${NGINX_BASE_IMAGE}"
+fi
+
+if [ "${WALLARM_ENABLED}" == "true" ]; then
+  if [ -z "${WALLARM_API_TOKEN}" ]; then
+    echo "WALLARM_API_TOKEN must be set! Exiting ..."
+    exit 1
+  fi
+  if [ -z "${WALLARM_API_HOST}" ]; then
+    echo "WALLARM_API_HOST must be set! Exiting ..."
+    exit 1
+  fi
+fi
+
 echo "[dev-env] running e2e tests..."
 make -C "${DIR}"/../../ e2e-test
