@@ -251,6 +251,8 @@ run-ingress-controller: ## Run the ingress controller locally using a kubectl pr
 
 .PHONY: builder
 builder:
+	# Ensure qemu binfmt is registered for multi-arch docker run (needed by fetch-module.sh)
+	if [ "$$(uname)" = "Linux" ]; then docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; fi
 	docker buildx create --name $(BUILDER) --bootstrap --use || :
 	docker buildx inspect $(BUILDER)
 
