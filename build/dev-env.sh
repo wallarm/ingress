@@ -25,9 +25,9 @@ set -o pipefail
 DIR=$(cd $(dirname "${BASH_SOURCE}") && pwd -P)
 
 export TAG=1.0.0-dev
-export REGISTRY=${REGISTRY:-wallarm}
+export REGISTRY=${REGISTRY:-ingress-controller}
 
-DEV_IMAGE=${REGISTRY}/ingress-controller:${TAG}
+DEV_IMAGE=${REGISTRY}/controller:${TAG}
 
 if ! command -v kind &> /dev/null; then
   echo "kind is not installed"
@@ -60,13 +60,11 @@ if [[ ${KUBE_CLIENT_VERSION} -lt 24 ]]; then
   exit 1
 fi
 
-if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
-  echo "[dev-env] building image"
-  make build image
-  docker tag "${REGISTRY}/ingress-controller:${TAG}" "${DEV_IMAGE}"
-fi
+echo "[dev-env] building image"
+make build image
+docker tag "${REGISTRY}/controller:${TAG}" "${DEV_IMAGE}"
 
-export K8S_VERSION=${K8S_VERSION:-v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f}
+export K8S_VERSION=${K8S_VERSION:-v1.35.1@sha256:05d7bcdefbda08b4e038f644c4df690cdac3fba8b06f8289f30e10026720a1ab}
 
 KIND_CLUSTER_NAME="ingress-nginx-dev"
 
@@ -86,13 +84,9 @@ kubectl create namespace ingress-nginx &> /dev/null || true
 cat << EOF | helm template ingress-nginx ${DIR}/../charts/ingress-nginx --namespace=ingress-nginx --values - | kubectl apply -n ingress-nginx -f -
 controller:
   image:
-    repository: ${REGISTRY}/ingress-controller
+    repository: ${REGISTRY}/controller
     tag: ${TAG}
     digest:
-  wallarm:
-    enabled: true
-    apiHost: ${WALLARM_API_HOST}
-    token: ${WALLARM_API_TOKEN}
   config:
     worker-processes: "1"
   podLabels:

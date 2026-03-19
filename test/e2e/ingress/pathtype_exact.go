@@ -35,14 +35,8 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] exact", func() {
 	})
 
 	ginkgo.It("should choose exact location for /exact", func() {
-		f.SetNginxConfigMapData(map[string]string{
-			"allow-snippet-annotations": "true",
-		})
-		defer func() {
-			f.SetNginxConfigMapData(map[string]string{
-				"allow-snippet-annotations": "false",
-			})
-		}()
+		disableSnippet := f.AllowSnippetConfiguration()
+		defer disableSnippet()
 
 		host := "exact.path"
 
@@ -65,8 +59,8 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] exact", func() {
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, host) &&
-					strings.Contains(server, "location = /exact") &&
-					strings.Contains(server, "location /exact/")
+					strings.Contains(server, `location = "/exact"`) &&
+					strings.Contains(server, `location "/exact/"`)
 			})
 
 		body := f.HTTPTestClient().
@@ -103,8 +97,8 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] exact", func() {
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, host) &&
-					strings.Contains(server, "location = /exact") &&
-					strings.Contains(server, "location /exact/")
+					strings.Contains(server, `location = "/exact"`) &&
+					strings.Contains(server, `location "/exact/"`)
 			})
 
 		body = f.HTTPTestClient().

@@ -29,9 +29,9 @@ The following table shows a configuration option's name, type, and the default v
 |:--------------------------------------------------------------------------------|:-------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------|
 | [add-headers](#add-headers)                                                     | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [allow-backend-server-header](#allow-backend-server-header)                     | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
-| [allow-cross-namespace-resources](#allow-cross-namespace-resources)             | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
+| [allow-cross-namespace-resources](#allow-cross-namespace-resources)             | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [allow-snippet-annotations](#allow-snippet-annotations)                         | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
-| [annotations-risk-level](#annotations-risk-level)                               | string       | Critical                                                                                                                                                                                                                                                                                                                                                     |                                                                                     |
+| [annotations-risk-level](#annotations-risk-level)                               | string       | High                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
 | [annotation-value-word-blocklist](#annotation-value-word-blocklist)             | string array | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [hide-headers](#hide-headers)                                                   | string array | empty                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
 | [access-log-params](#access-log-params)                                         | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
@@ -57,7 +57,7 @@ The following table shows a configuration option's name, type, and the default v
 | [error-log-level](#error-log-level)                                             | string       | "notice"                                                                                                                                                                                                                                                                                                                                                     |                                                                                     |
 | [http2-max-field-size](#http2-max-field-size)                                   | string       | ""                                                                                                                                                                                                                                                                                                                                                           | DEPRECATED in favour of [large_client_header_buffers](#large-client-header-buffers) |
 | [http2-max-header-size](#http2-max-header-size)                                 | string       | ""                                                                                                                                                                                                                                                                                                                                                           | DEPRECATED in favour of [large_client_header_buffers](#large-client-header-buffers) |
-| [http2-max-requests](#http2-max-requests)                                       | int          | 0                                                                                                                                                                                                                                                                                                                                                            | DEPRECATED in favour of [keepalive_requests](#keepalive-requests)                   |
+| [http2-max-requests](#http2-max-requests)                                       | int          | 0                                                                                                                                                                                                                                                                                                                                                            | DEPRECATED in favour of [keepalive_requests](#keep-alive-requests)                  |
 | [http2-max-concurrent-streams](#http2-max-concurrent-streams)                   | int          | 128                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
 | [hsts](#hsts)                                                                   | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [hsts-include-subdomains](#hsts-include-subdomains)                             | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
@@ -73,7 +73,7 @@ The following table shows a configuration option's name, type, and the default v
 | [enable-multi-accept](#enable-multi-accept)                                     | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [max-worker-connections](#max-worker-connections)                               | int          | 16384                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
 | [max-worker-open-files](#max-worker-open-files)                                 | int          | 0                                                                                                                                                                                                                                                                                                                                                            |                                                                                     |
-| [map-hash-bucket-size](#max-hash-bucket-size)                                   | int          | 64                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
+| [map-hash-bucket-size](#map-hash-bucket-size)                                   | int          | 64                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [nginx-status-ipv4-whitelist](#nginx-status-ipv4-whitelist)                     | []string     | "127.0.0.1"                                                                                                                                                                                                                                                                                                                                                  |                                                                                     |
 | [nginx-status-ipv6-whitelist](#nginx-status-ipv6-whitelist)                     | []string     | "::1"                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
 | [proxy-real-ip-cidr](#proxy-real-ip-cidr)                                       | []string     | "0.0.0.0/0"                                                                                                                                                                                                                                                                                                                                                  |                                                                                     |
@@ -82,10 +82,9 @@ The following table shows a configuration option's name, type, and the default v
 | [server-name-hash-bucket-size](#server-name-hash-bucket-size)                   | int          | `<size of the processor’s cache line>`                                                                                                                                                                                                                                                                                                                       |
 | [proxy-headers-hash-max-size](#proxy-headers-hash-max-size)                     | int          | 512                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
 | [proxy-headers-hash-bucket-size](#proxy-headers-hash-bucket-size)               | int          | 64                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
-| [plugins](#plugins)                                                             | []string     |                                                                                                                                                                                                                                                                                                                                                              |                                                                                     |
 | [reuse-port](#reuse-port)                                                       | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [server-tokens](#server-tokens)                                                 | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
-| [ssl-ciphers](#ssl-ciphers)                                                     | string       | "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384"                                                                                                                          |                                                                                     |
+| [ssl-ciphers](#ssl-ciphers)                                                     | string       | "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256"                                                                                                                          |                                                                                     |
 | [ssl-ecdh-curve](#ssl-ecdh-curve)                                               | string       | "auto"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [ssl-dh-param](#ssl-dh-param)                                                   | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [ssl-protocols](#ssl-protocols)                                                 | string       | "TLSv1.2 TLSv1.3"                                                                                                                                                                                                                                                                                                                                            |                                                                                     |
@@ -116,7 +115,7 @@ The following table shows a configuration option's name, type, and the default v
 | [worker-shutdown-timeout](#worker-shutdown-timeout)                             | string       | "240s"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [enable-serial-reloads](#enable-serial-reloads)                                 | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [load-balance](#load-balance)                                                   | string       | "round_robin"                                                                                                                                                                                                                                                                                                                                                |                                                                                     |
-| [variables-hash-bucket-size](#variables-hash-bucket-size)                       | int          | 128                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
+| [variables-hash-bucket-size](#variables-hash-bucket-size)                       | int          | 256                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
 | [variables-hash-max-size](#variables-hash-max-size)                             | int          | 2048                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
 | [upstream-keepalive-connections](#upstream-keepalive-connections)               | int          | 320                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
 | [upstream-keepalive-time](#upstream-keepalive-time)                             | string       | "1h"                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
@@ -132,6 +131,7 @@ The following table shows a configuration option's name, type, and the default v
 | [use-forwarded-headers](#use-forwarded-headers)                                 | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [enable-real-ip](#enable-real-ip)                                               | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [forwarded-for-header](#forwarded-for-header)                                   | string       | "X-Forwarded-For"                                                                                                                                                                                                                                                                                                                                            |                                                                                     |
+| [forwarded-for-proxy-protocol-header](#forwarded-for-proxy-protocol-header)     | string       | "X-Forwarded-For-Proxy-Protocol"                                                                                                                                                                                                                                                                                                                             |                                                                                     |
 | [compute-full-forwarded-for](#compute-full-forwarded-for)                       | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [proxy-add-original-uri-header](#proxy-add-original-uri-header)                 | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [generate-request-id](#generate-request-id)                                     | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
@@ -148,25 +148,18 @@ The following table shows a configuration option's name, type, and the default v
 | [jaeger-debug-header](#jaeger-debug-header)                                     | string       | uber-debug-id                                                                                                                                                                                                                                                                                                                                                |                                                                                     |
 | [jaeger-baggage-header](#jaeger-baggage-header)                                 | string       | jaeger-baggage                                                                                                                                                                                                                                                                                                                                               |                                                                                     |
 | [jaeger-trace-baggage-header-prefix](#jaeger-trace-baggage-header-prefix)       | string       | uberctx-                                                                                                                                                                                                                                                                                                                                                     |                                                                                     |
-| [datadog-collector-host](#datadog-collector-host)                               | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
-| [datadog-collector-port](#datadog-collector-port)                               | int          | 8126                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
-| [datadog-service-name](#datadog-service-name)                                   | string       | "nginx"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
-| [datadog-environment](#datadog-environment)                                     | string       | "prod"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
-| [datadog-operation-name-override](#datadog-operation-name-override)             | string       | "nginx.handle"                                                                                                                                                                                                                                                                                                                                               |                                                                                     |
-| [datadog-priority-sampling](#datadog-priority-sampling)                         | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
-| [datadog-sample-rate](#datadog-sample-rate)                                     | float        | 1.0                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
 | [enable-opentelemetry](#enable-opentelemetry)                                   | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [opentelemetry-trust-incoming-span](#opentelemetry-trust-incoming-span)         | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [opentelemetry-operation-name](#opentelemetry-operation-name)                   | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
-| [opentelemetry-config](#/etc/nginx/opentelemetry.toml)                          | string       | "/etc/nginx/opentelemetry.toml"                                                                                                                                                                                                                                                                                                                              |                                                                                     |
+| [opentelemetry-config](#opentelemetry-config)                                   | string       | "/etc/ingress-controller/telemetry/opentelemetry.toml"                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [otlp-collector-host](#otlp-collector-host)                                     | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [otlp-collector-port](#otlp-collector-port)                                     | int          | 4317                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
-| [otel-max-queuesize](#otel-max-queuesize)                                       | int          |                                                                                                                                                                                                                                                                                                                                                              |                                                                                     |
-| [otel-schedule-delay-millis](#otel-schedule-delay-millis)                       | int          |                                                                                                                                                                                                                                                                                                                                                              |                                                                                     |
-| [otel-max-export-batch-size](#otel-max-export-batch-size)                       | int          |                                                                                                                                                                                                                                                                                                                                                              |                                                                                     |
+| [otel-max-queuesize](#otel-max-queuesize)                                       | int          | 2048                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
+| [otel-schedule-delay-millis](#otel-schedule-delay-millis)                       | int          | 5000                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
+| [otel-max-export-batch-size](#otel-max-export-batch-size)                       | int          | 512                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
 | [otel-service-name](#otel-service-name)                                         | string       | "nginx"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
-| [otel-sampler](#otel-sampler)                                                   | string       | "AlwaysOff"                                                                                                                                                                                                                                                                                                                                                  |                                                                                     |
-| [otel-sampler-parent-based](#otel-sampler-parent-based)                         | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
+| [otel-sampler](#otel-sampler)                                                   | string       | "AlwaysOn"                                                                                                                                                                                                                                                                                                                                                   |                                                                                     |
+| [otel-sampler-parent-based](#otel-sampler-parent-based)                         | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [otel-sampler-ratio](#otel-sampler-ratio)                                       | float        | 0.01                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
 | [main-snippet](#main-snippet)                                                   | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [http-snippet](#http-snippet)                                                   | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
@@ -180,6 +173,7 @@ The following table shows a configuration option's name, type, and the default v
 | [proxy-send-timeout](#proxy-send-timeout)                                       | int          | 60                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [proxy-buffers-number](#proxy-buffers-number)                                   | int          | 4                                                                                                                                                                                                                                                                                                                                                            |                                                                                     |
 | [proxy-buffer-size](#proxy-buffer-size)                                         | string       | "4k"                                                                                                                                                                                                                                                                                                                                                         |                                                                                     |
+| [proxy-busy-buffers-size](#proxy-busy-buffers-size)                             | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [proxy-cookie-path](#proxy-cookie-path)                                         | string       | "off"                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
 | [proxy-cookie-domain](#proxy-cookie-domain)                                     | string       | "off"                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
 | [proxy-next-upstream](#proxy-next-upstream)                                     | string       | "error timeout"                                                                                                                                                                                                                                                                                                                                              |                                                                                     |
@@ -219,17 +213,12 @@ The following table shows a configuration option's name, type, and the default v
 | [block-referers](#block-referers)                                               | []string     | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
 | [proxy-ssl-location-only](#proxy-ssl-location-only)                             | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [default-type](#default-type)                                                   | string       | "text/html"                                                                                                                                                                                                                                                                                                                                                  |                                                                                     |
-| [global-rate-limit-memcached-host](#global-rate-limit)                          | string       | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
-| [global-rate-limit-memcached-port](#global-rate-limit)                          | int          | 11211                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
-| [global-rate-limit-memcached-connect-timeout](#global-rate-limit)               | int          | 50                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
-| [global-rate-limit-memcached-max-idle-timeout](#global-rate-limit)              | int          | 10000                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
-| [global-rate-limit-memcached-pool-size](#global-rate-limit)                     | int          | 50                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
-| [global-rate-limit-status-code](#global-rate-limit)                             | int          | 429                                                                                                                                                                                                                                                                                                                                                          |                                                                                     |
 | [service-upstream](#service-upstream)                                           | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
 | [ssl-reject-handshake](#ssl-reject-handshake)                                   | bool         | "false"                                                                                                                                                                                                                                                                                                                                                      |                                                                                     |
-| [debug-connections](#debug-connections)                                         | []string     | "127.0.0.1,1.1.1.1/24"                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
-| [strict-validate-path-type](#strict-validate-path-type)                         | bool         | "false" (v1.7.x)                                                                                                                                                                                                                                                                                                                                             |                                                                                     |
+| [debug-connections](#debug-connections)                                         | []string     | ""                                                                                                                                                                                                                                                                                                                                                           |                                                                                     |
+| [strict-validate-path-type](#strict-validate-path-type)                         | bool         | "true"                                                                                                                                                                                                                                                                                                                                                       |                                                                                     |
 | [grpc-buffer-size-kb](#grpc-buffer-size-kb)                                     | int          | 0                                                                                                                                                                                                                                                                                                                                                            |                                                                                     |
+| [relative-redirects](#relative-redirects)                                       | bool         | false                                                                                                                                                                                                                                                                                                                                                        |                                                                                     |
 
 ## add-headers
 
@@ -241,17 +230,15 @@ Enables the return of the header Server from the backend instead of the generic 
 
 ## allow-cross-namespace-resources
 
-Enables users to consume cross namespace resource on annotations, when was previously enabled . _**default:**_ true
+Enables users to consume cross namespace resource on annotations, when was previously enabled . _**default:**_ false
 
 **Annotations that may be impacted with this change**:
+
 * `auth-secret`
 * `auth-proxy-set-header`
 * `auth-tls-secret`
 * `fastcgi-params-configmap`
 * `proxy-ssl-secret`
-
-
-**This option will be defaulted to false in the next major release**
 
 ## allow-snippet-annotations
 
@@ -260,15 +247,13 @@ Enables Ingress to parse and add *-snippet annotations/directives created by the
 Warning: We recommend enabling this option only if you TRUST users with permission to create Ingress objects, as this
 may allow a user to add restricted configurations to the final nginx.conf file
 
-**This option will be defaulted to false in the next major release**
-
 ## annotations-risk-level
 
 Represents the risk accepted on an annotation. If the risk is, for instance `Medium`, annotations with risk High and Critical will not be accepted.
 
 Accepted values are `Critical`, `High`, `Medium` and `Low`.
 
-Defaults to `Critical` but will be changed to `High` on the next minor release
+_**default:**_ `High`
 
 ## annotation-value-word-blocklist
 
@@ -527,7 +512,7 @@ Example for json output:
 
 log-format-upstream: '{"time": "$time_iso8601", "remote_addr": "$proxy_protocol_addr", "x_forwarded_for": "$proxy_add_x_forwarded_for", "request_id": "$req_id",
   "remote_user": "$remote_user", "bytes_sent": $bytes_sent, "request_time": $request_time, "status": $status, "vhost": "$host", "request_proto": "$server_protocol",
-  "path": "$uri", "request_query": "$args", "request_length": $request_length, "duration": $request_time,"method": "$request_method", "http_referrer": "$http_referer",
+  "path": "$uri", "request_query": "$args", "request_length": $request_length, "method": "$request_method", "http_referrer": "$http_referer",
   "http_user_agent": "$http_user_agent" }'
 ```
 
@@ -612,10 +597,6 @@ _References:_
 - [https://nginx.org/en/docs/hash.html](https://nginx.org/en/docs/hash.html)
 - [https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_headers_hash_bucket_size](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_headers_hash_bucket_size)
 
-## plugins
-
-Activates plugins installed in `/etc/nginx/lua/plugins`. Refer to [ingress-nginx plugins README](https://github.com/kubernetes/ingress-nginx/blob/main/rootfs/etc/nginx/lua/plugins/README.md) for more information on how to write and install a plugin.
-
 ## server-tokens
 
 Send NGINX Server header in responses and display NGINX version in error pages. _**default:**_ is disabled
@@ -625,7 +606,7 @@ Send NGINX Server header in responses and display NGINX version in error pages. 
 Sets the [ciphers](https://nginx.org/en/docs/http/ngx_http_ssl_module.html#ssl_ciphers) list to enable. The ciphers are specified in the format understood by the OpenSSL library.
 
 The default cipher list is:
- `ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384`.
+ `ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256`.
 
 The ordering of a ciphersuite is very important because it decides which algorithms are going to be selected in priority. The recommendation above prioritizes algorithms that provide perfect [forward secrecy](https://wiki.mozilla.org/Security/Server_Side_TLS#Forward_Secrecy).
 
@@ -767,7 +748,7 @@ Enables or disables [HTTP/2](https://nginx.org/en/docs/http/ngx_http_v2_module.h
 
 ## gzip-disable
 
-Disables [gzipping](http://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_disable) of responses for requests with "User-Agent" header fields matching any of the specified regular expressions.
+Disables [gzipping](https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_disable) of responses for requests with "User-Agent" header fields matching any of the specified regular expressions.
 
 ## gzip-level
 
@@ -821,14 +802,14 @@ _References:_
 Sets the bucket size for the variables hash table.
 
 _References:_
-[https://nginx.org/en/docs/http/ngx_http_map_module.html#variables_hash_bucket_size](https://nginx.org/en/docs/http/ngx_http_map_module.html#variables_hash_bucket_size)
+[https://nginx.org/en/docs/http/ngx_http_map_module.html#map_hash_bucket_size](https://nginx.org/en/docs/http/ngx_http_map_module.html#map_hash_bucket_size)
 
 ## variables-hash-max-size
 
 Sets the maximum size of the variables hash table.
 
 _References:_
-[https://nginx.org/en/docs/http/ngx_http_map_module.html#variables_hash_max_size](https://nginx.org/en/docs/http/ngx_http_map_module.html#variables_hash_max_size)
+[https://nginx.org/en/docs/http/ngx_http_map_module.html#map_hash_max_size](https://nginx.org/en/docs/http/ngx_http_map_module.html#map_hash_max_size)
 
 ## upstream-keepalive-connections
 
@@ -847,7 +828,7 @@ Sets the maximum time during which requests can be processed through one keepali
  _**default:**_ "1h"
 
 _References:_
-[http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_time](http://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_time)
+[https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_time](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#keepalive_time)
 
 ## upstream-keepalive-timeout
 
@@ -926,6 +907,10 @@ If false, NGINX ignores incoming `X-Forwarded-*` headers, filling them with the 
 
 Sets the header field for identifying the originating IP address of a client. _**default:**_ X-Forwarded-For
 
+## forwarded-for-proxy-protocol-header
+
+Sets the name of the intermediate header used to determine the client's originating IP when both `use-proxy-protocol` and `use-forwarded-headers` are enabled. This doesn't impact functionality and should not typically be modified. _**default:**_ X-Forwarded-For-Proxy-Protocol
+
 ## compute-full-forwarded-for
 
 Append the remote address to the X-Forwarded-For header instead of replacing it. When this option is enabled, the upstream application is responsible for extracting the client IP based on its own list of trusted proxies.
@@ -992,36 +977,6 @@ Specifies the header name used to submit baggage if there is no root span. _**de
 
 Specifies the header prefix used to propagate baggage. _**default:**_ uberctx-
 
-## datadog-collector-host
-
-Specifies the datadog agent host to use when uploading traces. It must be a valid URL.
-
-## datadog-collector-port
-
-Specifies the port to use when uploading traces. _**default:**_ 8126
-
-## datadog-service-name
-
-Specifies the service name to use for any traces created. _**default:**_ nginx
-
-## datadog-environment
-
-Specifies the environment this trace belongs to. _**default:**_ prod
-
-## datadog-operation-name-override
-
-Overrides the operation name to use for any traces crated. _**default:**_ nginx.handle
-
-## datadog-priority-sampling
-
-Specifies to use client-side sampling.
-If true disables client-side sampling (thus ignoring `sample_rate`) and enables distributed priority sampling, where traces are sampled based on a combination of user-assigned priorities and configuration from the agent. _**default:**_ true
-
-## datadog-sample-rate
-
-Specifies sample rate for any traces created.
-This is effective only when `datadog-priority-sampling` is `false` _**default:**_ 1.0
-
 ## enable-opentelemetry
 
 Enables the nginx OpenTelemetry extension. _**default:**_ is disabled
@@ -1035,6 +990,10 @@ Specifies a custom name for the server span. _**default:**_ is empty
 
 For example, set to "HTTP $request_method $uri".
 
+## opentelemetry-config
+
+Sets the opentelemetry config file. _**default:**_ /etc/ingress-controller/telemetry/opentelemetry.toml
+
 ## otlp-collector-host
 
 Specifies the host to use when uploading traces. It must be a valid URL.
@@ -1047,12 +1006,13 @@ Specifies the port to use when uploading traces. _**default:**_ 4317
 
 Specifies the service name to use for any traces created. _**default:**_ nginx
 
-##  opentelemetry-trust-incoming-span: "true"
+## opentelemetry-trust-incoming-span
+
 Enables or disables using spans from incoming requests as parent for created ones. _**default:**_ true
 
-##  otel-sampler-parent-based
+## otel-sampler-parent-based
 
-Uses sampler implementation which by default will take a sample if parent Activity is sampled. _**default:**_ false
+Uses sampler implementation which by default will take a sample if parent Activity is sampled. _**default:**_ true
 
 ## otel-sampler-ratio
 
@@ -1060,7 +1020,7 @@ Specifies sample rate for any traces created. _**default:**_ 0.01
 
 ## otel-sampler
 
-Specifies the sampler to be used when sampling traces. The available samplers are: AlwaysOff, AlwaysOn, TraceIdRatioBased, remote. _**default:**_ AlwaysOff
+Specifies the sampler to be used when sampling traces. The available samplers are: AlwaysOff, AlwaysOn, TraceIdRatioBased, remote. _**default:**_ AlwaysOn
 
 ## main-snippet
 
@@ -1123,6 +1083,10 @@ Sets the number of the buffer used for [reading the first part of the response](
 
 Sets the size of the buffer used for [reading the first part of the response](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffer_size) received from the proxied server. This part usually contains a small response header.
 
+## proxy-busy-buffers-size
+
+[Limits the total size of buffers that can be busy](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_busy_buffers_size) sending a response to the client while the response is not yet fully read.
+
 ## proxy-cookie-path
 
 Sets a text that [should be changed in the path attribute](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cookie_path) of the “Set-Cookie” header fields of a proxied server response.
@@ -1130,6 +1094,8 @@ Sets a text that [should be changed in the path attribute](https://nginx.org/en/
 ## proxy-cookie-domain
 
 Sets a text that [should be changed in the domain attribute](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_cookie_domain) of the “Set-Cookie” header fields of a proxied server response.
+
+Value must be either `off` or two space-separated tokens (source domain and replacement).
 
 ## proxy-next-upstream
 
@@ -1153,6 +1119,7 @@ _References:_
 ## proxy-request-buffering
 
 Enables or disables [buffering of a client request body](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_request_buffering).
+Valid values are `on` and `off`.
 
 ## ssl-redirect
 
@@ -1354,22 +1321,6 @@ _**default:**_ text/html
 _References:_
 [https://nginx.org/en/docs/http/ngx_http_core_module.html#default_type](https://nginx.org/en/docs/http/ngx_http_core_module.html#default_type)
 
-## global-rate-limit
-
-* `global-rate-limit-status-code`: configure HTTP status code to return when rejecting requests. Defaults to 429.
-
-Configure `memcached` client for [Global Rate Limiting](https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/annotations.md#global-rate-limiting).
-
-* `global-rate-limit-memcached-host`: IP/FQDN of memcached server to use. Required to enable Global Rate Limiting.
-* `global-rate-limit-memcached-port`: port of memcached server to use. Defaults default memcached port of `11211`.
-* `global-rate-limit-memcached-connect-timeout`: configure timeout for connect, send and receive operations. Unit is millisecond. Defaults to 50ms.
-* `global-rate-limit-memcached-max-idle-timeout`: configure timeout for cleaning idle connections. Unit is millisecond. Defaults to 50ms.
-* `global-rate-limit-memcached-pool-size`: configure number of max connections to keep alive. Make sure your `memcached` server can handle
-`global-rate-limit-memcached-pool-size * worker-processes * <number of ingress-nginx replicas>` simultaneous connections.
-
-These settings get used by [lua-resty-global-throttle](https://github.com/ElvinEfendi/lua-resty-global-throttle)
-that ingress-nginx includes. Refer to the link to learn more about `lua-resty-global-throttle`.
-
 ## service-upstream
 
 Set if the service's Cluster IP and port should be used instead of a list of all endpoints. This can be overwritten by an annotation on an Ingress rule.
@@ -1388,9 +1339,10 @@ Enables debugging log for selected client connections.
 _**default:**_ ""
 
 _References:_
-[http://nginx.org/en/docs/ngx_core_module.html#debug_connection](http://nginx.org/en/docs/ngx_core_module.html#debug_connection)
+[https://nginx.org/en/docs/ngx_core_module.html#debug_connection](https://nginx.org/en/docs/ngx_core_module.html#debug_connection)
 
 ## strict-validate-path-type
+
 Ingress objects contains a field called pathType that defines the proxy behavior. It can be `Exact`, `Prefix` and `ImplementationSpecific`.
 
 When pathType is configured as `Exact` or `Prefix`, there should be a more strict validation, allowing only paths starting with "/" and
@@ -1404,9 +1356,22 @@ This means that Ingress objects that rely on paths containing regex characters s
 The cluster admin should establish validation rules using mechanisms like [Open Policy Agent](https://www.openpolicyagent.org/) to 
 validate that only authorized users can use `ImplementationSpecific` pathType and that only the authorized characters can be used.
 
+_**default:**_ "true"
+
 ## grpc-buffer-size-kb
 
 Sets the configuration for the GRPC Buffer Size parameter. If not set it will use the default from NGINX.
 
 _References:_
 [https://nginx.org/en/docs/http/ngx_http_grpc_module.html#grpc_buffer_size](https://nginx.org/en/docs/http/ngx_http_grpc_module.html#grpc_buffer_size)
+
+## relative-redirects
+
+Use relative redirects instead of absolute redirects. Absolute redirects are the default in nginx. RFC7231 allows relative redirects since 2014.
+Similar to the Ingress rule annotation `nginx.ingress.kubernetes.io/relative-redirects`.
+
+_**default:**_ "false"
+
+_References:_
+- [https://nginx.org/en/docs/http/ngx_http_core_module.html#absolute_redirect](https://nginx.org/en/docs/http/ngx_http_core_module.html#absolute_redirect)
+- [https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.2](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.2)

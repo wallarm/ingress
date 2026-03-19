@@ -71,7 +71,7 @@ var (
 		"when secure backend enabled": {
 			"/",
 			"/",
-			"/",
+			"\"/\"",
 			"proxy_pass https://upstream_balancer;",
 			"proxy_pass https://upstream_balancer;",
 			false,
@@ -82,7 +82,7 @@ var (
 		"when secure backend and dynamic config enabled": {
 			"/",
 			"/",
-			"/",
+			"\"/\"",
 			"proxy_pass https://upstream_balancer;",
 			"proxy_pass https://upstream_balancer;",
 			false,
@@ -93,7 +93,7 @@ var (
 		"when secure backend, stickiness and dynamic config enabled": {
 			"/",
 			"/",
-			"/",
+			"\"/\"",
 			"proxy_pass https://upstream_balancer;",
 			"proxy_pass https://upstream_balancer;",
 			true,
@@ -104,7 +104,7 @@ var (
 		"invalid redirect / to / with dynamic config enabled": {
 			"/",
 			"/",
-			"/",
+			"\"/\"",
 			"proxy_pass http://upstream_balancer;",
 			"proxy_pass $scheme://upstream_balancer;",
 			false,
@@ -115,7 +115,7 @@ var (
 		"invalid redirect / to /": {
 			"/",
 			"/",
-			"/",
+			"\"/\"",
 			"proxy_pass http://upstream_balancer;",
 			"proxy_pass $scheme://upstream_balancer;",
 			false,
@@ -537,10 +537,7 @@ func TestBuildAuthResponseHeaders(t *testing.T) {
 
 func TestBuildAuthResponseLua(t *testing.T) {
 	externalAuthResponseHeaders := []string{"h1", "H-With-Caps-And-Dashes"}
-	expected := []string{
-		"ngx.var.authHeader0 = res.header['h1']",
-		"ngx.var.authHeader1 = res.header['H-With-Caps-And-Dashes']",
-	}
+	expected := "h1,H-With-Caps-And-Dashes"
 
 	headers := buildAuthUpstreamLuaHeaders(externalAuthResponseHeaders)
 
@@ -551,12 +548,25 @@ func TestBuildAuthResponseLua(t *testing.T) {
 
 func TestBuildAuthProxySetHeaders(t *testing.T) {
 	proxySetHeaders := map[string]string{
-		"header1": "value1",
-		"header2": "value2",
+		"Content-Security-Policy": "default-src 'self'; img-src 'self' example.com",
+		"Content-Type":            "application/json; charset=\"utf-8\"",
+		"header1":                 "value1",
+		"header2":                 "value2",
+		"Link":                    "<https://example.com>; rel=\"preload\"; as=\"script\"; crossorigin=\"anonymous\"",
+		"User-Agent":              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+		"new\rline":               "value1",
+		"newline2":                "valu\ne2",
 	}
+
 	expected := []string{
-		"proxy_set_header 'header1' 'value1';",
-		"proxy_set_header 'header2' 'value2';",
+		`proxy_set_header "Content-Security-Policy" "default-src 'self'; img-src 'self' example.com";`,
+		`proxy_set_header "Content-Type" "application/json; charset=\"utf-8\"";`,
+		`proxy_set_header "Link" "<https://example.com>; rel=\"preload\"; as=\"script\"; crossorigin=\"anonymous\"";`,
+		`proxy_set_header "User-Agent" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";`,
+		`proxy_set_header "header1" "value1";`,
+		`proxy_set_header "header2" "value2";`,
+		`proxy_set_header "new\rline" "value1";`,
+		`proxy_set_header "newline2" "valu\ne2";`,
 	}
 
 	headers := buildAuthProxySetHeaders(proxySetHeaders)
@@ -746,6 +756,110 @@ func TestTemplateWithData(t *testing.T) {
 	}
 }
 
+func mustReadTemplateConfig(t *testing.T) config.TemplateConfig {
+	t.Helper()
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := os.ReadFile(path.Join(pwd, "../../../../test/data/config.json"))
+	if err != nil {
+		t.Fatalf("unexpected error reading json file: %v", err)
+	}
+
+	var dat config.TemplateConfig
+	if err := jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &dat); err != nil {
+		t.Fatalf("unexpected error unmarshalling json: %v", err)
+	}
+	if dat.ListenPorts == nil {
+		dat.ListenPorts = &config.ListenPorts{}
+	}
+
+	// Required by template rendering.
+	dat.Cfg.DefaultSSLCertificate = &ingress.SSLCert{}
+
+	return dat
+}
+
+func TestTemplateRendersEscapedLocationPath(t *testing.T) {
+	dat := mustReadTemplateConfig(t)
+
+	implSpecific := networking.PathTypeImplementationSpecific
+	if len(dat.Servers) == 0 || len(dat.Servers[0].Locations) == 0 {
+		t.Fatalf("test/data/config.json must contain at least one server and one location")
+	}
+
+	base := dat.Servers[0]
+	loc := *base.Locations[0]
+	// path containing a quote and a backslash
+	loc.Path = `/"\\`
+	loc.PathType = &implSpecific
+
+	srv := *base
+	srv.Hostname = "escape.test"
+	srv.Aliases = nil
+	srv.Locations = []*ingress.Location{&loc}
+
+	dat.Servers = append(dat.Servers, &srv)
+
+	ngxTpl, err := NewTemplate(nginx.TemplatePath)
+	if err != nil {
+		t.Fatalf("invalid NGINX template: %v", err)
+	}
+
+	rt, err := ngxTpl.Write(&dat)
+	if err != nil {
+		t.Fatalf("invalid NGINX template: %v", err)
+	}
+
+	out := string(rt)
+	if !strings.Contains(out, `server_name "escape.test"`) {
+		t.Fatalf("expected server block for escape.test")
+	}
+	// The rendered nginx.conf must keep the path inside quotes and escape quotes/backslashes.
+	if !strings.Contains(out, `location "/\"\\\\"`) {
+		t.Fatalf("expected escaped location path to be rendered safely")
+	}
+}
+
+func TestTemplateRendersEscapedServerAliases(t *testing.T) {
+	dat := mustReadTemplateConfig(t)
+
+	if len(dat.Servers) == 0 {
+		t.Fatalf("test/data/config.json must contain at least one server")
+	}
+
+	base := dat.Servers[0]
+	srv := *base
+	srv.Hostname = "alias.test"
+	srv.Aliases = []string{`foo\\bar`, `foo"bar`}
+
+	dat.Servers = append(dat.Servers, &srv)
+
+	ngxTpl, err := NewTemplate(nginx.TemplatePath)
+	if err != nil {
+		t.Fatalf("invalid NGINX template: %v", err)
+	}
+
+	rt, err := ngxTpl.Write(&dat)
+	if err != nil {
+		t.Fatalf("invalid NGINX template: %v", err)
+	}
+
+	out := string(rt)
+	if !strings.Contains(out, `server_name "alias.test"`) {
+		t.Fatalf("expected server block for alias.test")
+	}
+	if !strings.Contains(out, `"foo\\\\bar"`) {
+		t.Fatalf("expected backslashes in server-alias to be escaped")
+	}
+	if !strings.Contains(out, `"foo\"bar"`) {
+		t.Fatalf("expected quotes in server-alias to be escaped")
+	}
+}
+
 func BenchmarkTemplateWithData(b *testing.B) {
 	pwd, err := os.Getwd()
 	if err != nil {
@@ -854,6 +968,24 @@ func TestBuildForwardedFor(t *testing.T) {
 	inputStr := "X-Forwarded-For"
 	expected = "$http_x_forwarded_for"
 	actual = buildForwardedFor(inputStr)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+}
+
+func TestBuildForwardedHost(t *testing.T) {
+	invalidType := &ingress.Ingress{}
+	expected := ""
+	actual := buildForwardedHost(invalidType)
+
+	if expected != actual {
+		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
+	}
+
+	inputStr := "X-Forwarded-Host"
+	expected = "$http_x_forwarded_host"
+	actual = buildForwardedHost(inputStr)
 
 	if expected != actual {
 		t.Errorf("Expected '%v' but returned '%v'", expected, actual)
@@ -1922,89 +2054,6 @@ func TestBuildServerName(t *testing.T) {
 		result := buildServerName(testCase.hostname)
 		if result != testCase.expected {
 			t.Errorf("%v: expected '%v' but returned '%v'", testCase.title, testCase.expected, result)
-		}
-	}
-}
-
-func TestParseComplexNginxVarIntoLuaTable(t *testing.T) {
-	testCases := []struct {
-		ngxVar           string
-		expectedLuaTable string
-	}{
-		{"foo", `{ { nil, nil, nil, "foo", }, }`},
-		{"$foo", `{ { nil, nil, "foo", nil, }, }`},
-		{"${foo}", `{ { nil, "foo", nil, nil, }, }`},
-		{"\\$foo", `{ { "\$foo", nil, nil, nil, }, }`},
-		{
-			"foo\\$bar$baz${daz}xiyar$pomidor",
-			`{ { nil, nil, nil, "foo", }, { "\$bar", nil, nil, nil, }, { nil, nil, "baz", nil, }, ` +
-				`{ nil, "daz", nil, nil, }, { nil, nil, nil, "xiyar", }, { nil, nil, "pomidor", nil, }, }`,
-		},
-	}
-
-	for _, testCase := range testCases {
-		actualLuaTable := parseComplexNginxVarIntoLuaTable(testCase.ngxVar)
-		if actualLuaTable != testCase.expectedLuaTable {
-			t.Errorf("expected %v but returned %v", testCase.expectedLuaTable, actualLuaTable)
-		}
-	}
-}
-
-func TestConvertGoSliceIntoLuaTablet(t *testing.T) {
-	testCases := []struct {
-		title            string
-		goSlice          interface{}
-		emptyStringAsNil bool
-		expectedLuaTable string
-		expectedErr      error
-	}{
-		{
-			"flat string slice",
-			[]string{"one", "two", "three"},
-			false,
-			`{ "one", "two", "three", }`,
-			nil,
-		},
-		{
-			"nested string slice",
-			[][]string{{"one", "", "three"}, {"foo", "bar"}},
-			false,
-			`{ { "one", "", "three", }, { "foo", "bar", }, }`,
-			nil,
-		},
-		{
-			"converts empty string to nil when enabled",
-			[][]string{{"one", "", "three"}, {"foo", "bar"}},
-			true,
-			`{ { "one", nil, "three", }, { "foo", "bar", }, }`,
-			nil,
-		},
-		{
-			"boolean slice",
-			[]bool{true, true, false},
-			false,
-			`{ true, true, false, }`,
-			nil,
-		},
-		{
-			"integer slice",
-			[]int{4, 3, 6},
-			false,
-			`{ 4, 3, 6, }`,
-			nil,
-		},
-	}
-
-	for _, testCase := range testCases {
-		actualLuaTable, err := convertGoSliceIntoLuaTable(testCase.goSlice, testCase.emptyStringAsNil)
-		if testCase.expectedErr != nil && err != nil && testCase.expectedErr.Error() != err.Error() {
-			t.Errorf("expected error '%v' but returned '%v'", testCase.expectedErr, err)
-		}
-		if testCase.expectedErr == nil && err != nil {
-			t.Errorf("expected error to be nil but returned '%v'", err)
-		}
-		if testCase.expectedLuaTable != actualLuaTable {
-			t.Errorf("%v: expected '%v' but returned '%v'", testCase.title, testCase.expectedLuaTable, actualLuaTable)
 		}
 	}
 }

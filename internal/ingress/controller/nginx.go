@@ -37,8 +37,8 @@ import (
 	"time"
 	"unicode"
 
-	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/eapache/channels"
+	proxyproto "github.com/pires/go-proxyproto"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -264,6 +264,8 @@ type NGINXController struct {
 	validationWebhookServer *http.Server
 
 	command NginxExecTester
+
+	lastConfigSuccess bool
 }
 
 // Start starts a new NGINX master process running in the foreground.
@@ -274,7 +276,7 @@ func (n *NGINXController) Start() {
 
 	// we need to use the defined ingress class to allow multiple leaders
 	// in order to update information about ingress status
-	// TODO: For now, as the the IngressClass logics has changed, is up to the
+	// TODO: For now, as the IngressClass logics has changed, is up to the
 	// cluster admin to create different Leader Election IDs.
 	// Should revisit this in a future
 
@@ -689,6 +691,10 @@ func (n *NGINXController) OnUpdate(ingressCfg ingress.Configuration) error {
 		return err
 	}
 
+	err = n.createLuaConfig(&cfg)
+	if err != nil {
+		return err
+	}
 	err = createOpentelemetryCfg(&cfg)
 	if err != nil {
 		return err
@@ -826,7 +832,11 @@ func (n *NGINXController) setupSSLProxy() {
 		klog.Fatalf("%v", err)
 	}
 
-	proxyList := &proxyproto.Listener{Listener: listener, ProxyHeaderTimeout: cfg.ProxyProtocolHeaderTimeout}
+	proxyList := &proxyproto.Listener{
+		Listener:          listener,
+		ReadHeaderTimeout: cfg.ProxyProtocolHeaderTimeout,
+		ReadBufferSize:    4096, // cf #14489
+	}
 
 	// accept TCP connections on the configured HTTPS port
 	go func() {
@@ -1076,6 +1086,32 @@ func createOpentelemetryCfg(cfg *ngx_config.Configuration) error {
 	}
 
 	return os.WriteFile(cfg.OpentelemetryConfig, tmplBuf.Bytes(), file.ReadWriteByUser)
+}
+
+func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
+	luaconfigs := &ngx_template.LuaConfig{
+		EnableMetrics: n.cfg.EnableMetrics,
+		ListenPorts: ngx_template.LuaListenPorts{
+			HTTPSPort:    strconv.Itoa(n.cfg.ListenPorts.HTTPS),
+			StatusPort:   strconv.Itoa(nginx.StatusPort),
+			SSLProxyPort: strconv.Itoa(n.cfg.ListenPorts.SSLProxy),
+		},
+		UseProxyProtocol:        cfg.UseProxyProtocol,
+		UseForwardedHeaders:     cfg.UseForwardedHeaders,
+		IsSSLPassthroughEnabled: n.cfg.EnableSSLPassthrough,
+		HTTPRedirectCode:        cfg.HTTPRedirectCode,
+		EnableOCSP:              cfg.EnableOCSP,
+		MonitorBatchMaxSize:     n.cfg.MonitorMaxBatchSize,
+		HSTS:                    cfg.HSTS,
+		HSTSMaxAge:              cfg.HSTSMaxAge,
+		HSTSIncludeSubdomains:   cfg.HSTSIncludeSubdomains,
+		HSTSPreload:             cfg.HSTSPreload,
+	}
+	jsonCfg, err := json.Marshal(luaconfigs)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(luaCfgPath, jsonCfg, file.ReadWriteByUser)
 }
 
 func cleanTempNginxCfg() error {

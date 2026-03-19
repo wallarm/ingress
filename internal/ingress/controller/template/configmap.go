@@ -67,7 +67,6 @@ const (
 	globalAuthCacheDuration       = "global-auth-cache-duration"
 	globalAuthAlwaysSetCookie     = "global-auth-always-set-cookie"
 	luaSharedDictsKey             = "lua-shared-dicts"
-	plugins                       = "plugins"
 	debugConnections              = "debug-connections"
 	workerSerialReloads           = "enable-serial-reloads"
 )
@@ -83,7 +82,6 @@ var (
 		"balancer_ewma_locks":           1024,
 		"certificate_servers":           5120,
 		"ocsp_response_cache":           5120, // keep this same as certificate_servers
-		"global_throttle_cache":         10240,
 	}
 	defaultGlobalAuthRedirectParam = "rd"
 )
@@ -417,11 +415,6 @@ func ReadConfig(src map[string]string) config.Configuration {
 			to.WorkerSerialReloads = boolVal
 		}
 		delete(conf, workerSerialReloads)
-	}
-
-	if val, ok := conf[plugins]; ok {
-		to.Plugins = splitAndTrimSpace(val, ",")
-		delete(conf, plugins)
 	}
 
 	if val, ok := conf[debugConnections]; ok {

@@ -37,14 +37,8 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] mix Exact and Prefi
 	exactPathType := networking.PathTypeExact
 
 	ginkgo.It("should choose the correct location", func() {
-		f.SetNginxConfigMapData(map[string]string{
-			"allow-snippet-annotations": "true",
-		})
-		defer func() {
-			f.SetNginxConfigMapData(map[string]string{
-				"allow-snippet-annotations": "false",
-			})
-		}()
+		disableSnippet := f.AllowSnippetConfiguration()
+		defer disableSnippet()
 
 		host := "mixed.path"
 
@@ -64,8 +58,8 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] mix Exact and Prefi
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, host) &&
-					strings.Contains(server, "location = /") &&
-					strings.Contains(server, "location /")
+					strings.Contains(server, `location = "/"`) &&
+					strings.Contains(server, `location "/"`)
 			})
 
 		ginkgo.By("Checking exact request to /")
@@ -110,8 +104,8 @@ var _ = framework.IngressNginxDescribe("[Ingress] [PathType] mix Exact and Prefi
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, host) &&
-					strings.Contains(server, "location = /foo") &&
-					strings.Contains(server, "location /foo/")
+					strings.Contains(server, `location = "/foo"`) &&
+					strings.Contains(server, `location "/foo/"`)
 			})
 
 		ginkgo.By("Checking exact request to /foo")

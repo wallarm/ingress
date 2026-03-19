@@ -2,6 +2,10 @@
 ## Ref: https://github.com/kubernetes/ingress-nginx/blob/main/docs/user-guide/nginx-configuration/index.md
 ##
 
+global:
+  image:
+    # -- Registry host to pull images from.
+    registry: registry.k8s.io
 ## Overrides for generated resource names
 # See templates/_helpers.tpl
 # nameOverride:
@@ -17,7 +21,7 @@ commonLabels: {}
 
 controller:
   name: controller
-  enableAnnotationValidations: false
+  enableAnnotationValidations: true
   image:
     ## Keep false as default for now!
     chroot: false
@@ -26,17 +30,19 @@ controller:
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
     ## repository:
-    tag: "6.10.0-rc4"
+    tag: "6.10.3"
     pullPolicy: IfNotPresent
     runAsNonRoot: true
-    # www-data -> uid 101
+    # -- This value must not be changed using the official image.
+    # uid=101(www-data) gid=82(www-data) groups=82(www-data)
     runAsUser: 101
+    # -- This value must not be changed using the official image.
+    # uid=101(www-data) gid=82(www-data) groups=82(www-data)
+    runAsGroup: 82
     allowPrivilegeEscalation: false
     seccompProfile:
       type: RuntimeDefault
     readOnlyRootFilesystem: false
-  # -- Use an existing PSP instead of creating one
-  existingPsp: ""
   # -- Configures the controller container name
   containerName: controller
   # -- Configures the ports that the nginx-controller listens on
@@ -70,6 +76,8 @@ controller:
   # By default, while using host network, name resolution uses the host's DNS. If you wish nginx-controller
   # to keep resolving names inside the k8s network, use ClusterFirstWithHostNet.
   dnsPolicy: ClusterFirst
+  # -- Instruct the kubelet to use the named RuntimeClass to run the pod
+  runtimeClassName: ""
   # -- Bare-metal considerations via the host network https://kubernetes.github.io/ingress-nginx/deploy/baremetal/#via-the-host-network
   # Ingress status was blank because there is no Service exposing the Ingress-Nginx Controller in a configuration using the host network, the default --publish-service flag used in standard cloud setups does not apply
   reportNodeInternalIp: false
@@ -232,6 +240,9 @@ controller:
   #    maxUnavailable: 1
   #  type: RollingUpdate
 
+  # -- Specifies the number of seconds you want to wait for the controller deployment to progress before the system reports back that it has failed.
+  # Ref.: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#progress-deadline-seconds
+  progressDeadlineSeconds: 0
   # -- `minReadySeconds` to avoid killing pods before we are ready
   ##
   minReadySeconds: 0
@@ -374,7 +385,9 @@ controller:
   minAvailable: 1
   # -- Maximum unavailable pods set in PodDisruptionBudget. If set, 'minAvailable' is ignored.
   # maxUnavailable: 1
-
+  # -- Eviction policy for unhealthy pods guarded by PodDisruptionBudget.
+  # Ref: https://kubernetes.io/blog/2023/01/06/unhealthy-pod-eviction-policy-for-pdbs/
+  unhealthyPodEvictionPolicy: ""
   ## Define requests resources to avoid probe issues due to CPU utilization in busy nodes
   ## ref: https://github.com/kubernetes/ingress-nginx/issues/4735#issuecomment-551204903
   ## Ideally, there should be no limits.
@@ -386,6 +399,13 @@ controller:
     requests:
       cpu: 100m
       memory: 90Mi
+  # -- Resize policy for controller containers.
+  # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources
+  resizePolicy: []
+  # - resourceName: cpu
+  #   restartPolicy: NotRequired
+  # - resourceName: memory
+  #   restartPolicy: RestartContainer
   # Mutually exclusive with keda autoscaling
   autoscaling:
     enabled: false
@@ -473,6 +493,8 @@ controller:
     external:
       # -- Enable the external controller service or not. Useful for internal-only deployments.
       enabled: true
+      # -- Labels to be added to the external controller service.
+      labels: {}
     # -- Annotations to be added to the external controller service. See `controller.service.internal.annotations` for annotations to be added to the internal controller service.
     annotations: {}
     # -- Labels to be added to both controller services.
@@ -484,6 +506,10 @@ controller:
     # This value is immutable. Set once, it can not be changed without deleting and re-creating the service.
     # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
     clusterIP: ""
+    # -- Pre-defined cluster internal IP addresses of the external controller service. Take care of collisions with existing services.
+    # This value is immutable. Set once, it can not be changed without deleting and re-creating the service.
+    # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+    clusterIPs: []
     # -- List of node IP addresses at which the external controller service is available.
     # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
     externalIPs: []
@@ -510,6 +536,9 @@ controller:
     # Ref: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
     # healthCheckNodePort: 0
 
+    # -- Traffic distribution policy of the external controller service. Set to "PreferClose" to route traffic to endpoints that are topologically closer to the client.
+    # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
+    trafficDistribution: ""
     # -- Represents the dual-stack capabilities of the external controller service. Possible values are SingleStack, PreferDualStack or RequireDualStack.
     # Fields `ipFamilies` and `clusterIP` depend on the value of this field.
     # Ref: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
@@ -553,6 +582,8 @@ controller:
     internal:
       # -- Enable the internal controller service or not. Remember to configure `controller.service.internal.annotations` when enabling this.
       enabled: false
+      # -- Labels to be added to the internal controller service.
+      labels: {}
       # -- Annotations to be added to the internal controller service. Mandatory for the internal controller service to be created. Varies with the cloud service.
       # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
       annotations: {}
@@ -564,6 +595,10 @@ controller:
       # This value is immutable. Set once, it can not be changed without deleting and re-creating the service.
       # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
       clusterIP: ""
+      # -- Pre-defined cluster internal IP addresses of the internal controller service. Take care of collisions with existing services.
+      # This value is immutable. Set once, it can not be changed without deleting and re-creating the service.
+      # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+      clusterIPs: []
       # -- List of node IP addresses at which the internal controller service is available.
       # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
       externalIPs: []
@@ -590,6 +625,9 @@ controller:
       # Ref: https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
       # healthCheckNodePort: 0
 
+      # -- Traffic distribution policy of the internal controller service. Set to "PreferClose" to route traffic to endpoints that are topologically closer to the client.
+      # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
+      trafficDistribution: ""
       # -- Represents the dual-stack capabilities of the internal controller service. Possible values are SingleStack, PreferDualStack or RequireDualStack.
       # Fields `ipFamilies` and `clusterIP` depend on the value of this field.
       # Ref: https://kubernetes.io/docs/concepts/services-networking/dual-stack/#services
@@ -669,17 +707,23 @@ controller:
   #  - name: copy-portal-skins
   #    emptyDir: {}
 
-  # -- Containers, which are run before the app containers are started.
+  # -- Containers, which are run before the app containers are started. Values may contain Helm templates.
   extraInitContainers: []
   # - name: init-myservice
   #   image: busybox
   #   command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+  # - name: init-dynamic
+  #   image: busybox
+  #   command:
+  #     - sh
+  #     - -c
+  #     - echo "Release={{ .Release.Name }} Namespace={{ .Release.Namespace }}"
 
-  # -- Modules, which are mounted into the core nginx image. See values.yaml for a sample to add opentelemetry module
+  # -- Modules, which are mounted into the core nginx image.
   extraModules: []
   # - name: mytestmodule
   #   image:
-  #     registry: registry.k8s.io
+  #     # registry: registry.k8s.io
   #     image: ingress-nginx/mytestmodule
   #     ## for backwards compatibility consider setting the full image url via the repository value below
   #     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
@@ -690,6 +734,7 @@ controller:
   #   containerSecurityContext:
   #     runAsNonRoot: true
   #     runAsUser: <user-id>
+  #     runAsGroup: <group-id>
   #     allowPrivilegeEscalation: false
   #     seccompProfile:
   #       type: RuntimeDefault
@@ -755,8 +800,6 @@ controller:
     objectSelector: {}
     # -- Labels to be added to admission webhooks
     labels: {}
-    # -- Use an existing PSP instead of creating one
-    existingPsp: ""
     service:
       annotations: {}
       # clusterIP: ""
@@ -767,10 +810,13 @@ controller:
       type: ClusterIP
     createSecretJob:
       name: create
+      # -- Deadline in seconds for the job to complete. Must be greater than 0 to enforce. If unset or 0, no deadline is enforced.
+      activeDeadlineSeconds: 0
       # -- Security context for secret creation containers
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
+        runAsGroup: 65532
         allowPrivilegeEscalation: false
         seccompProfile:
           type: RuntimeDefault
@@ -785,12 +831,25 @@ controller:
       # requests:
       #   cpu: 10m
       #   memory: 20Mi
+      # -- Volume mounts for secret creation containers
+      volumeMounts: []
+      # - name: certs
+      #   mountPath: /etc/webhook/certs
+      #   readOnly: true
+      # -- Volumes for secret creation pod
+      volumes: []
+      # - name: certs
+      #   secret:
+      #     secretName: my-webhook-secret
     patchWebhookJob:
       name: patch
+      # -- Deadline in seconds for the job to complete. Must be greater than 0 to enforce. If unset or 0, no deadline is enforced.
+      activeDeadlineSeconds: 0
       # -- Security context for webhook patch containers
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
+        runAsGroup: 65532
         allowPrivilegeEscalation: false
         seccompProfile:
           type: RuntimeDefault
@@ -799,20 +858,32 @@ controller:
             - ALL
         readOnlyRootFilesystem: true
       resources: {}
+      # -- Volume mounts for webhook patch containers
+      volumeMounts: []
+      # - name: certs
+      #   mountPath: /etc/webhook/certs
+      #   readOnly: true
+      # -- Volumes for webhook patch pod
+      volumes: []
+      # - name: certs
+      #   secret:
+      #     secretName: my-webhook-secret
     patch:
       enabled: true
       image:
-        registry: registry.k8s.io
+        # registry: registry.k8s.io
         image: ingress-nginx/kube-webhook-certgen
         ## for backwards compatibility consider setting the full image url via the repository value below
         ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
         ## repository:
-        tag: v1.6.0
-        digest: sha256:c9f76a75fd00e975416ea1b73300efd413116de0de8570346ed90766c5b5cefb
+        tag: v1.6.8
+        digest: sha256:d7e8257f8d8bce64b6df55f81fba92011a6a77269b3350f8b997b152af348dba
         pullPolicy: IfNotPresent
       # -- Provide a priority class name to the webhook patching job
       ##
       priorityClassName: ""
+      # -- Instruct the kubelet to use the named RuntimeClass to run the pod
+      runtimeClassName: ""
       podAnnotations: {}
       # NetworkPolicy for webhook patch
       networkPolicy:
@@ -844,9 +915,15 @@ controller:
       rootCert:
         # default to be 5y
         duration: ""
+        # -- Revision history limit of the root certificate.
+        # Ref.: https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1.CertificateSpec
+        revisionHistoryLimit: 0
       admissionCert:
         # default to be 1y
         duration: ""
+        # -- Revision history limit of the webhook certificate.
+        # Ref.: https://cert-manager.io/docs/reference/api-docs/#cert-manager.io/v1.CertificateSpec
+        revisionHistoryLimit: 0
         # issuerRef:
         #   name: "issuer"
         #   kind: "ClusterIssuer"
@@ -856,6 +933,8 @@ controller:
     # if this port is changed, change healthz-port: in extraArgs: accordingly
     enabled: false
     service:
+      # -- Enable the metrics service or not.
+      enabled: true
       annotations: {}
       # prometheus.io/scrape: "true"
       # prometheus.io/port: "10254"
@@ -887,13 +966,27 @@ controller:
       ## namespaceSelector:
       ##   any: true
       scrapeInterval: 30s
+      # -- Timeout after which the scrape is ended. Not being set if empty and therefore defaults to the global Prometheus scrape timeout.
+      scrapeTimeout: ""
       # honorLabels: true
       targetLabels: []
       relabelings: []
       metricRelabelings: []
+      # -- Per-scrape limit on number of labels that will be accepted for a sample.
+      labelLimit: 0
+      # -- Per-scrape limit on length of labels name that will be accepted for a sample.
+      labelNameLengthLimit: 0
+      # -- Per-scrape limit on length of labels value that will be accepted for a sample.
+      labelValueLengthLimit: 0
+      # -- Defines a per-scrape limit on the number of scraped samples that will be accepted.
+      sampleLimit: 0
+      # -- Defines a limit on the number of scraped targets that will be accepted.
+      targetLimit: 0
     prometheusRule:
       enabled: false
       additionalLabels: {}
+      # -- Annotations to be added to the PrometheusRule.
+      annotations: {}
       # namespace: ""
       rules: []
       # # These are just examples rules, please adapt them to your needs
@@ -977,7 +1070,7 @@ controller:
     ##
     helpers:
       image: docker.io/wallarm/node-helpers
-      tag: "6.10.0-rc4"
+      tag: "6.10.3"
       pullPolicy: IfNotPresent
     ## Configuration for post-analytics module
     ##
@@ -1380,7 +1473,7 @@ defaultBackend:
   enabled: false
   name: defaultbackend
   image:
-    registry: registry.k8s.io
+    # registry: registry.k8s.io
     image: defaultbackend-amd64
     ## for backwards compatibility consider setting the full image url via the repository value below
     ## use *either* current default registry/image or repository format or installing chart by providing the values.yaml will fail
@@ -1390,12 +1483,11 @@ defaultBackend:
     runAsNonRoot: true
     # nobody user -> uid 65534
     runAsUser: 65534
+    runAsGroup: 65534
     allowPrivilegeEscalation: false
     seccompProfile:
       type: RuntimeDefault
     readOnlyRootFilesystem: true
-  # -- Use an existing PSP instead of creating one
-  existingPsp: ""
   extraArgs: {}
   serviceAccount:
     create: true
@@ -1522,7 +1614,13 @@ defaultBackend:
   podAnnotations: {}
   replicaCount: 1
   # -- Minimum available pods set in PodDisruptionBudget.
+  # Define either 'minAvailable' or 'maxUnavailable', never both.
   minAvailable: 1
+  # -- Maximum unavailable pods set in PodDisruptionBudget. If set, 'minAvailable' is ignored.
+  # maxUnavailable: 1
+  # -- Eviction policy for unhealthy pods guarded by PodDisruptionBudget.
+  # Ref: https://kubernetes.io/blog/2023/01/06/unhealthy-pod-eviction-policy-for-pdbs/
+  unhealthyPodEvictionPolicy: ""
   resources: {}
   # limits:
   #   cpu: 10m
@@ -1570,7 +1668,10 @@ defaultBackend:
   service:
     annotations: {}
     # clusterIP: ""
-
+    # -- Pre-defined cluster internal IP addresses of the default backend service. Take care of collisions with existing services.
+    # This value is immutable. Set once, it can not be changed without deleting and re-creating the service.
+    # Ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+    clusterIPs: []
     # -- List of IP addresses at which the default backend service is available
     ## Ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
     ##
@@ -1580,16 +1681,14 @@ defaultBackend:
     servicePort: 80
     type: ClusterIP
   priorityClassName: ""
+  # -- Instruct the kubelet to use the named RuntimeClass to run the pod
+  runtimeClassName: ""
   # -- Labels to be added to the default backend resources
   labels: {}
 ## Enable RBAC as per https://github.com/kubernetes/ingress-nginx/blob/main/docs/deploy/rbac.md and https://github.com/kubernetes/ingress-nginx/issues/266
 rbac:
   create: true
   scope: false
-## If true, create & use Pod Security Policy resources
-## https://kubernetes.io/docs/concepts/policy/pod-security-policy/
-podSecurityPolicy:
-  enabled: false
 serviceAccount:
   create: true
   name: ""

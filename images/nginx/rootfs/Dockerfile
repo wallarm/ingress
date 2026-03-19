@@ -11,17 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM alpine:3.22 AS builder
+FROM alpine:3.23.3 AS builder
 
 COPY . /
 
-RUN --mount=type=ssh apk update \
+RUN apk update \
   && apk upgrade \
   && apk add -U bash --no-cache \
   && /build.sh
 
 # Use a multi-stage build
-FROM alpine:3.22
+FROM alpine:3.23.3
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
 
@@ -32,7 +32,6 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /usr/lib/libopentelemetry* /usr/local/lib
 COPY --from=builder /opt /opt
 COPY --from=builder /etc/nginx /etc/nginx
-COPY --from=builder /tmp/pkgs/wallarm-nginx/wallarm/share/wallarm_blocked.html /usr/share/nginx/html/
 
 RUN apk update \
   && apk upgrade \
@@ -66,7 +65,6 @@ RUN apk update \
   /var/lib/nginx/scgi \
   /var/lib/nginx/uwsgi \
   /var/log/audit \
-  /tmp/nginx \
   ); \
   for dir in "${writeDirs[@]}"; do \
   mkdir -p ${dir}; \
@@ -74,9 +72,5 @@ RUN apk update \
   done'
 
 EXPOSE 80 443
-
-# Create symlinks to redirect nginx logs to stdout and stderr docker log collector
-RUN  ln -sf /dev/stdout /var/log/nginx/access.log \
-  && ln -sf /dev/stderr /var/log/nginx/error.log
 
 CMD ["nginx", "-g", "daemon off;"]

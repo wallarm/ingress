@@ -69,15 +69,9 @@ var _ = framework.DescribeSetting("Geoip2", func() {
 	ginkgo.It("should only allow requests from specific countries", func() {
 		ginkgo.Skip("GeoIP test are temporarily disabled")
 
-		f.SetNginxConfigMapData(map[string]string{
-			"allow-snippet-annotations": "true",
-			"use-geoip2":                "true",
-		})
-		defer func() {
-			f.SetNginxConfigMapData(map[string]string{
-				"allow-snippet-annotations": "false",
-			})
-		}()
+		disableSnippet := f.AllowSnippetConfiguration()
+		defer disableSnippet()
+		f.UpdateNginxConfigMapData("use-geoip2", "true")
 
 		httpSnippetAllowingOnlyAustralia := `map $geoip2_city_country_code $blocked_country {
   default 1;
@@ -163,7 +157,7 @@ var _ = framework.DescribeSetting("Geoip2", func() {
 		f.WaitForNginxServer(host,
 			func(server string) bool {
 				return strings.Contains(server, host) &&
-					strings.Contains(server, "location /")
+					strings.Contains(server, `location "/"`)
 			})
 
 		f.HTTPTestClient().
