@@ -366,7 +366,8 @@ SCAN_ARTIFACT:
     [ -z "$TAG" ] && export TAG="$(cat TAG)" && export REGISTRY=docker.io/wallarm
     echo "Scanning image with tag ${TAG}..."
 
-    docker-scout cves "${REGISTRY}/ingress-controller:${TAG}" --exit-code --only-severity critical,high
+    docker-scout config organization wallarm
+    docker-scout cves "${REGISTRY}/ingress-controller:${TAG}" --exit-code --only-severity critical,high --ignore-suppressed
 
 
 
