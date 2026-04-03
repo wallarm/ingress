@@ -49,12 +49,12 @@ workflow:
     - if: $AIO_VERSION =~ /^([0-9]+.[0-9]+.[0-9]+-rc).*$/
       variables:
         REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
-        HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION # only override tag here, registry in use is still PUBLIC (chart default)
+        HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION --set controller.wallarm.helpers.image=dkr.wallarm.com/wallarm-node/node-helpers
         CHART_TYPE: "release-candidate"
     - if: $AIO_VERSION
       variables:
         REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
-        HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION # only override tag here, registry in use is still PUBLIC (chart default)
+        HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION --set controller.wallarm.helpers.image=dkr.wallarm.com/wallarm-node/node-helpers
         CHART_TYPE: "release"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^stable\/.*$/
       changes:
