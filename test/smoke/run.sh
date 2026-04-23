@@ -59,6 +59,12 @@ CI_REGISTRY_SECRET_NAME="ci-registry-secret"
 DOCKERHUB_USER="${DOCKERHUB_USER:-fake_user}"
 DOCKERHUB_PASSWORD="${DOCKERHUB_PASSWORD:-fake_password}"
 
+# Upstream-triggered pipelines set helpers.image to dkr.wallarm.com/wallarm-node/node-helpers,
+# which needs CI registry auth. Outside CI we fall back to fakes; the default helpers image is public.
+CI_REGISTRY="${CI_REGISTRY:-fake_registry_server}"
+CI_REGISTRY_USER="${CI_REGISTRY_USER:-fake_user}"
+CI_REGISTRY_PASSWORD="${CI_REGISTRY_PASSWORD:-fake_password}"
+
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -112,6 +118,12 @@ kubectl create secret docker-registry ${DOCKERHUB_SECRET_NAME} \
     --docker-password="${DOCKERHUB_PASSWORD}" \
     --docker-email=docker-pull@unexists.unexists || true
 
+kubectl create secret docker-registry ${CI_REGISTRY_SECRET_NAME} \
+    --docker-server=${CI_REGISTRY} \
+    --docker-username="${CI_REGISTRY_USER}" \
+    --docker-password="${CI_REGISTRY_PASSWORD}" \
+    --docker-email=docker-pull@unexists.unexists || true
+
 if [ "${SKIP_IMAGE_CREATION:-false}" = "false" ]; then
   echo "[test-env] building controller image..."
   make -C "${DIR}"/../../ clean-image build image
@@ -134,6 +146,7 @@ cat << EOF | helm upgrade --install ingress-nginx "${DIR}/../../charts/ingress-n
 fullnameOverride: wallarm-ingress
 imagePullSecrets:
   - name: ${DOCKERHUB_SECRET_NAME}
+  - name: ${CI_REGISTRY_SECRET_NAME}
 controller:
   wallarm:
     enabled: true
