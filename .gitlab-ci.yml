@@ -84,6 +84,7 @@ workflow:
         X_CI_BUILD_KIND: "vulnscan"
         REGISTRY: docker.io/wallarm
     - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "api"
 
 
 .x-docker-login-private: &x_docker_login_private
