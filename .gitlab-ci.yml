@@ -79,8 +79,15 @@ workflow:
       variables:
         X_CI_BUILD_KIND: "smokeonly"
         REGISTRY: docker.io/wallarm
-    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $X_CI_BUILD_KIND == "cve-scan"
+      variables:
+        REGISTRY: $CI_REGISTRY_IMAGE
+        TAG: "$CI_COMMIT_SHORT_SHA"
     - if: $CI_PIPELINE_SOURCE == "api"
+      variables:
+        REGISTRY: $CI_REGISTRY_IMAGE
+        TAG: "$CI_COMMIT_SHORT_SHA"
+    - if: $CI_PIPELINE_SOURCE == "web"
 
 
 .x-docker-login-private: &x_docker_login_private
