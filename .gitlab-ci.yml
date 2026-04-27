@@ -56,7 +56,7 @@ workflow:
         REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
         HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION --set controller.wallarm.helpers.image=dkr.wallarm.com/wallarm-node/node-helpers
         CHART_TYPE: "release"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^stable\/.*$/
+    - if: ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^stable\/.*$/) && $CI_PIPELINE_SOURCE == "push"
       changes:
         - TAG
       variables:
