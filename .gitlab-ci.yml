@@ -23,7 +23,7 @@ variables:
       - 'production-local'
       - 'chart'
       - 'smokeonly'
-      - 'vulnscan'
+      - 'cve-scan'
   ARCH:
     description: default architecture (mandatory var in test scripts)
     value: amd64
@@ -78,10 +78,6 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == "smoke"
       variables:
         X_CI_BUILD_KIND: "smokeonly"
-        REGISTRY: docker.io/wallarm
-    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == "vulnscan"
-      variables:
-        X_CI_BUILD_KIND: "vulnscan"
         REGISTRY: docker.io/wallarm
     - if: $CI_PIPELINE_SOURCE == "web"
     - if: $CI_PIPELINE_SOURCE == "api"
@@ -143,7 +139,7 @@ IMAGE_BUILD_IC:
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
   tags: [node-c2r4-stable-dind-amd]
   rules:
-    - if: $X_CI_BUILD_KIND =~ /^(develop|production-local|production|release-candidate)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|production-local|production|release-candidate|cve-scan)$/
   extends:
     - .before-build
   variables:
@@ -230,6 +226,10 @@ SMOKE:
   rules:
     - if: '$SKIP_TESTS == "true"'
       when: never
+    # cve-scan: slim 4-variant matrix to a single representative (amd64 × v1.30).
+    - if: '$X_CI_BUILD_KIND == "cve-scan" && ($ARCH != "amd64" || $K8S != "v1.30")'
+      when: never
+    - if: '$X_CI_BUILD_KIND == "cve-scan"'
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .SMOKE_BASE
@@ -360,7 +360,7 @@ SCAN_ARTIFACT:
   rules:
     - if: '$SKIP_TESTS == "true"'
       when: never
-    - if: $X_CI_BUILD_KIND =~ /^(develop|vulnscan|production|release-candidate)$/
+    - if: $X_CI_BUILD_KIND =~ /^(develop|cve-scan|production|release-candidate)$/
   extends:
     - .before-build
   script: |
