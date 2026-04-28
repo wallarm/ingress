@@ -233,10 +233,6 @@ SMOKE:
   rules:
     - if: '$SKIP_TESTS == "true"'
       when: never
-    # cve-scan: slim 4-variant matrix to a single representative (amd64 × v1.30).
-    - if: '$X_CI_BUILD_KIND == "cve-scan" && ($ARCH != "amd64" || $K8S != "v1.30")'
-      when: never
-    - if: '$X_CI_BUILD_KIND == "cve-scan"'
     - if: $X_CI_BUILD_KIND =~ /^(develop|production|release-candidate)$/
   extends:
     - .SMOKE_BASE
