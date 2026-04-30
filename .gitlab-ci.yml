@@ -390,7 +390,9 @@ PUBLISH_GUARD:
 
 PUBL_SIGN_DOCKER:
   stage: sign
-  needs: [PUBLISH_GUARD]
+  needs:
+    - PUBLISH_GUARD
+    - IMAGE_BUILD_IC
   tags: [node-c4r8-stable-dind-amd]
   image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
   rules:
@@ -425,6 +427,8 @@ HELM_PUBLISH:
   stage: publish
   needs:
     - job: PUBLISH_GUARD
+      optional: true
+    - job: IMAGE_BUILD_IC  # optional since it doesn't run for X_CI_BUILD_KIND=chart
       optional: true
     - job: "PUBL_SIGN_DOCKER: [ingress-controller]"
       optional: true
