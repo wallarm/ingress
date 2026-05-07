@@ -52,6 +52,35 @@ func validateApplicationID(s string) error {
 	return err
 }
 
+var (
+	partnerClientUUIDRegex  = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	partnerClientLabelRegex = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+)
+
+// validatePartnerClientUUID accepts either "<uuid>" or "<uuid> <label>".
+// The optional label is passed through to the wallarm_partner_client_uuid
+// directive (NGINX Node 6.12.0+) where it surfaces as the client_label
+// dimension on per-tenant Prometheus metrics.
+func validatePartnerClientUUID(s string) error {
+	fields := strings.Fields(s)
+	switch len(fields) {
+	case 1:
+		if !partnerClientUUIDRegex.MatchString(fields[0]) {
+			return fmt.Errorf("value %q is not a valid UUID", fields[0])
+		}
+	case 2:
+		if !partnerClientUUIDRegex.MatchString(fields[0]) {
+			return fmt.Errorf("value %q is not a valid UUID", fields[0])
+		}
+		if !partnerClientLabelRegex.MatchString(fields[1]) {
+			return fmt.Errorf("label %q is invalid (allowed characters: alphanumeric, '.', '-', '_')", fields[1])
+		}
+	default:
+		return fmt.Errorf("expected '<uuid>' or '<uuid> <label>', got %q", s)
+	}
+	return nil
+}
+
 func validateParserDisable(s string) error {
 	allowedParsers := map[string]bool{
 		"cookie":    true,
@@ -155,10 +184,10 @@ var wallarmAnnotations = parser.Annotation{
 			Documentation:     `Unique identifier of the protected application to be used in the Wallarm Cloud. The value can be a positive integer except for 0`,
 		},
 		wallarmPartnerClientUUIDAnnotation: {
-			Validator:     parser.ValidateRegex(regexp.MustCompile(`[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}`), true),
+			Validator:     validatePartnerClientUUID,
 			Scope:         parser.AnnotationScopeLocation,
 			Risk:          parser.AnnotationRiskLow,
-			Documentation: `Unique identifier of the tenant for the multi-tenant Wallarm node. The value should be a string in the UUID format`,
+			Documentation: `Unique identifier of the tenant for the multi-tenant Wallarm node, optionally followed by a human-readable label (e.g. "11111111-1111-1111-1111-111111111111 US-8"). The label is supported on NGINX Node 6.12.0+ and is reported as the client_label dimension on per-tenant Prometheus metrics`,
 		},
 		wallarmBlockPageAnnotation: {
 			Validator:     validateBlockPage,

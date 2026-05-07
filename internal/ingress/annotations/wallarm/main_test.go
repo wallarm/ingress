@@ -243,3 +243,29 @@ func TestBlockPageValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestPartnerClientUUIDValidation(t *testing.T) {
+	testcases := []struct {
+		configValue string
+		valid       bool
+	}{
+		{"11111111-1111-1111-1111-111111111111", true},
+		{"11111111-1111-1111-1111-111111111111 US-8", true},
+		{"  11111111-1111-1111-1111-111111111111   US-8  ", true},
+		{"11111111-1111-1111-1111-111111111111 tenant_1.eu", true},
+
+		{"", false},
+		{"not-a-uuid", false},
+		{"11111111-1111-1111-1111-11111111111", false},
+		{"11111111-1111-1111-1111-111111111111 bad label", false},
+		{"11111111-1111-1111-1111-111111111111 US-8;injected", false},
+		{"11111111-1111-1111-1111-111111111111 US/8", false},
+	}
+
+	for _, tc := range testcases {
+		valid := validatePartnerClientUUID(tc.configValue) == nil
+		if valid != tc.valid {
+			t.Errorf("failed to validate %q, should be %t", tc.configValue, tc.valid)
+		}
+	}
+}
