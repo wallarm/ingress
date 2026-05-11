@@ -28,6 +28,11 @@ data:
             return 200 '{"json_response": "Hello, I am json"}';
             default_type application/json;
         }
+        # Location for MCP tool detection test
+        location ~ ^/api-discovery-test/mcp/ {
+            default_type application/json;
+            return 200 '{"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"get_weather","title":"Get Weather","description":"Get current weather for a city","inputSchema":{"type":"object","properties":{"city":{"type":"string","description":"City name"}},"required":["city"]}}]}}';
+        }
         # Location for Blocking Tor Source Type
         location /blocking-by-tor-test {
               add_header Block-by-Tor "Hello, I am header!";
