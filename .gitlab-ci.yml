@@ -1,3 +1,15 @@
+include:
+  # Docker Scout CVE scanning (shared DevOps template, publishes SBOM to the CVE dashboard)
+  - project: 'devops-public/pipelines'
+    ref: '${X_DEVOPS_SHARED_PIPELINES_STABLE}'
+    file: '/applications/common/tests/docker-scout.yaml'
+    inputs:
+      scout_image: '${REGISTRY}/ingress-controller:${TAG}'
+      # 'true' also publishes SBOMs from MR/dev pipelines (wanted for E2E validation
+      # of the dashboard ingestion); releases are additionally forced via workflow rules
+      scout_publish_sbom: 'true'
+      stage: 'scan'
+
 default:
   id_tokens:
     VAULT_ID_TOKEN:
@@ -7,6 +19,7 @@ default:
 
 stages:
   - build
+  - scan
   - test
   - sign
   - publish
@@ -51,11 +64,13 @@ workflow:
         REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
         HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION --set controller.wallarm.helpers.image=dkr.wallarm.com/wallarm-node/node-helpers
         CHART_TYPE: "release-candidate"
+        SCOUT_PUBLISH_SBOM: "true" # release artifacts must land on the CVE dashboard
     - if: $AIO_VERSION
       variables:
         REGISTRY: $CI_REGISTRY_IMAGE # using private registry to build img and run tests before publishing images
         HELM_ARGS: --set controller.wallarm.helpers.tag=$AIO_VERSION --set controller.wallarm.helpers.image=dkr.wallarm.com/wallarm-node/node-helpers
         CHART_TYPE: "release"
+        SCOUT_PUBLISH_SBOM: "true" # release artifacts must land on the CVE dashboard
     - if: ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_COMMIT_BRANCH =~ /^stable\/.*$/) && $CI_PIPELINE_SOURCE == "push"
       changes:
         - TAG
@@ -156,6 +171,11 @@ IMAGE_BUILD_IC:
     if [[ ! -z $AIO_VERSION ]]; then
       .gitlab/calculate-version.sh
       source version.env && export TAG
+    fi
+    # make sure TAG always reaches downstream jobs (Docker Scout scan) via dotenv,
+    # also for flows where it comes from the TAG file instead of calculate-version.sh
+    if [[ -z "${TAG}" ]]; then
+      echo "TAG=$(cat TAG)" >> version.env
     fi
     echo "Calculated node version: ${TAG:-from TAG}"
     echo "Building for registry: $REGISTRY"
@@ -356,22 +376,17 @@ CHART_TESTING:
 
     make kind-e2e-chart-tests
 
-SCAN_ARTIFACT:
-  stage: test
-  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/docker:v0.5.0
-  allow_failure: true # workaround in case of false positives
+# Vulnerability scan (docker_scout_scan comes from the shared docker-scout
+# template, see include; only needs/rules are customized here)
+docker_scout_scan:
+  needs:
+    - job: IMAGE_BUILD_IC
+      optional: true
   rules:
     - if: '$SKIP_TESTS == "true"'
       when: never
     - if: $X_CI_BUILD_KIND =~ /^(develop|cve-scan|production|release-candidate)$/
-  extends:
-    - .before-build
-  script: |
-    [ -z "$TAG" ] && export TAG="$(cat TAG)" && export REGISTRY=docker.io/wallarm
-    echo "Scanning image with tag ${TAG}..."
-
-    docker-scout config organization wallarm
-    docker-scout cves "${REGISTRY}/ingress-controller:${TAG}" --exit-code --only-severity critical,high --ignore-suppressed
+    - when: never
 
 
 
