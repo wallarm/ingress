@@ -7,9 +7,9 @@ include:
       scout_image: '${REGISTRY}/ingress-controller:${TAG}'
       # bucket sub-path organizes the CVE dashboard tree: <node-type>/<artifact>/<release line>
       scout_sbom_bucket: 'wlrm-devops-cve-dashboard/nginx-node/ingress/6.x'
-      # 'true' also publishes SBOMs from MR/dev pipelines (wanted for E2E validation
-      # of the dashboard ingestion); releases are additionally forced via workflow rules
-      scout_publish_sbom: 'true'
+      # only release pipelines publish SBOMs; they set SCOUT_PUBLISH_SBOM in the
+      # workflow rules below, dev/MR/api/web pipelines do not
+      scout_publish_sbom: 'false'
       stage: 'scan'
 
 default:
