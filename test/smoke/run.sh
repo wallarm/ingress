@@ -164,7 +164,7 @@ controller:
        
   image:
     repository: ${REGISTRY}/ingress-controller
-    tag: ${TAG}
+    tag: "${TAG}"
 
   config:
     worker-processes: "1"
