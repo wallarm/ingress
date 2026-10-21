@@ -58,6 +58,13 @@ data:
         location /smoke-auto-forced-browsing/ {
             return 404;
         }
+        # ptrav_etc_passwd — passive detect matches "root:[x*]:0:0:root:/root" in the
+        # response (test_triggers_incidents_exceeded.py). Mirrors smoke-tests
+        # data/ingress_conf/workload_common.yaml and aio-deploy backend_nginx.conf.
+        location /passive-detect/ptrav {
+          default_type text/plain;
+          return 200 'root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\nbin:x:2:2:bin:/bin:/usr/sbin/nologin\n';
+        }
       }
     }
 ---
@@ -188,6 +195,30 @@ spec:
                 port:
                   number: 80
             path: /blocking-by-tor-test
+            pathType: Prefix
+---
+# Passive detect needs the leaking RESPONSE, so the attack must reach the backend:
+# monitoring, not block, plus parse-response (on by default, pinned here). Annotations,
+# never a snippet: the template always renders both directives and nginx rejects a
+# duplicate. Mirrors smoke-tests data/ingress_conf/workload.yaml.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/wallarm-mode: monitoring
+    nginx.ingress.kubernetes.io/wallarm-parse-response: "on"
+  name: wallarm-passive-detect
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: workload
+                port:
+                  number: 80
+            path: /passive-detect
             pathType: Prefix
 ---
 apiVersion: networking.k8s.io/v1
