@@ -253,7 +253,7 @@ run-ingress-controller: ## Run the ingress controller locally using a kubectl pr
 builder:
 	# Ensure qemu binfmt is registered for multi-arch docker run (needed by fetch-module.sh)
 	if [ "$$(uname)" = "Linux" ]; then docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; fi
-	docker buildx create --name $(BUILDER) --bootstrap --use || :
+	docker buildx create --name $(BUILDER) --driver-opt image=$(BUILDKIT_IMAGE) --bootstrap --use || :
 	docker buildx inspect $(BUILDER)
 
 .PHONY: show-version
@@ -261,6 +261,11 @@ show-version:
 	echo -n $(TAG)
 
 BUILDER ?= ingress-nginx
+# Pin BuildKit below v0.32: newer versions push attestations as OCI artifacts
+# whose `subject` can reach the registry before the image manifest, and
+# dkr.wallarm.com rejects that as "blob unknown to registry".
+# https://gitlab.com/gitlab-org/container-registry/-/issues/2375
+BUILDKIT_IMAGE ?= moby/buildkit:v0.31.2
 PLATFORMS ?= amd64
 BUILDX_PLATFORMS ?= linux/amd64
 
