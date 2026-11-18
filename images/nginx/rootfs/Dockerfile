@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM alpine:3.23.3 AS builder
+FROM alpine:3.24.4 AS builder
 
 COPY . /
 
@@ -21,7 +21,7 @@ RUN apk update \
   && /build.sh
 
 # Use a multi-stage build
-FROM alpine:3.23.3
+FROM alpine:3.24.4
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
 
@@ -70,6 +70,12 @@ RUN apk update \
   mkdir -p ${dir}; \
   chown -R www-data:www-data ${dir}; \
   done'
+
+# Wallarm: this nginx carries CVE backports, so its sha256 is not in the list of
+# official binaries built into ngx_http_wallarm_module. The module also accepts
+# hashes listed here (build-time strict pick-module.sh and the runtime check).
+# Exactly one line: the module's parser loops on short lines.
+RUN sha256sum /usr/local/nginx/sbin/nginx | cut -d' ' -f1 > /etc/wallarm_custom_build.sha256.txt
 
 EXPOSE 80 443
 

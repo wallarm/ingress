@@ -1,10 +1,5 @@
-<<<<<<<< HEAD:images/nginx/rootfs/patches/22_nginx-1.25.3-larger_max_error_str.patch
---- nginx-1.25.3/src/core/ngx_log.h	2013-10-08 05:07:14.000000000 -0700
-+++ nginx-1.25.3-patched/src/core/ngx_log.h	2013-12-05 20:35:35.996236720 -0800
-========
 --- nginx-1.27.1/src/core/ngx_log.h	2013-10-08 05:07:14.000000000 -0700
 +++ nginx-1.27.1-patched/src/core/ngx_log.h	2013-12-05 20:35:35.996236720 -0800
->>>>>>>> helm-chart-4.15.0:images/nginx/rootfs/patches/22_nginx-1.27.1-larger_max_error_str.patch
 @@ -64,7 +64,9 @@ struct ngx_log_s {
  };
  

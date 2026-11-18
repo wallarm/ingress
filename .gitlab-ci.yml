@@ -156,6 +156,53 @@ workflow:
   - sudo mv ./kind_latest /usr/local/bin/kind
 
 
+### NGINX base image (images/nginx -> NGINX_BASE)
+# Upstream ingress-nginx retired in March 2026 and publishes no more base images,
+# so security rebuilds are ours. Manual, from an MR that changes images/nginx:
+# each arch builds natively, then one multi-arch tag is assembled. Put the printed
+# NGINX_BASE line into NGINX_BASE. nginx-package-collector picks the image up from
+# this repo's history to mint the recipe the Wallarm module is built against.
+
+NGINX_BASE_BUILD:
+  stage: build
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
+  tags: [$RUNNER]
+  timeout: 3h
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [images/nginx/**/*]
+      when: manual
+      allow_failure: true
+  extends:
+    - .before-build
+  parallel:
+    matrix:
+      - ARCH: amd64
+        RUNNER: node-c4r8-stable-dind-amd
+      - ARCH: arm64
+        RUNNER: node-c4r8-stable-dind-arm
+  script:
+    - make -C images/nginx push IMAGE="${CI_REGISTRY_IMAGE}/nginx" TAG="$(cat images/nginx/TAG)-${ARCH}" PLATFORMS="linux/${ARCH}"
+
+NGINX_BASE_MANIFEST:
+  stage: build
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/wallarm-node/node-gitlab-runner/tests-k8s:v0.5.0
+  tags: [node-c2r4-stable-dind-amd]
+  needs: [NGINX_BASE_BUILD]
+  rules: # play after both NGINX_BASE_BUILD jobs have passed
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes: [images/nginx/**/*]
+      when: manual
+      allow_failure: true
+  extends:
+    - .before-build
+  script:
+    - BASE_TAG="$(cat images/nginx/TAG)"
+    - BASE_IMAGE="${CI_REGISTRY_IMAGE}/nginx"
+    - docker buildx imagetools create --tag "${BASE_IMAGE}:${BASE_TAG}" "${BASE_IMAGE}:${BASE_TAG}-amd64" "${BASE_IMAGE}:${BASE_TAG}-arm64"
+    - DIGEST="$(docker buildx imagetools inspect "${BASE_IMAGE}:${BASE_TAG}" --format '{{json .Manifest}}' | jq -r .digest)"
+    - echo "NGINX_BASE=${BASE_IMAGE}:${BASE_TAG}@${DIGEST}"
+
 ### DEV & PROD jobs
 
 IMAGE_BUILD_IC:
