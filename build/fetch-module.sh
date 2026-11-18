@@ -44,14 +44,21 @@ chmod +x "${TMP_TARGET_DIR}/pick-module.sh"
 
 # New: Dynamically pick the proper module using the pick-module.sh script inside a Docker container.
 NGINX_BASE=$(cat NGINX_BASE)
+# The module is selected against NGINX_ABI_BASE when that file exists: the image
+# NGINX_BASE was rebuilt from with layout-preserving CVE backports. NGINX_BASE's
+# own nginx is allowlisted (/etc/wallarm_custom_build.sha256.txt), so the strict
+# check would accept any module with the same version and signature, including
+# nginx.org ones built without the ingress-nginx header patches.
+NGINX_ABI_BASE=$(cat NGINX_ABI_BASE 2>/dev/null || cat NGINX_BASE)
 if [ "${ARCH}" = "arm64" ]; then
     # Remove digest so Docker pulls the correct multi-arch image.
     NGINX_BASE=$(echo "$NGINX_BASE" | sed 's/@.*//')
+    NGINX_ABI_BASE=$(echo "$NGINX_ABI_BASE" | sed 's/@.*//')
 fi
 
-echo "Running dynamic module selection via pick-module.sh in container"
+echo "Running dynamic module selection via pick-module.sh in container ${NGINX_ABI_BASE}"
 # Filter output so only valid module paths (starting with "modules/") are captured.
-MODULE_REL_PATH=$(docker run --rm -v "${TMP_TARGET_DIR}:${TMP_TARGET_DIR}" --platform "linux/${ARCH}" "${NGINX_BASE}" sh -c "sh ${TMP_TARGET_DIR}/pick-module.sh" | grep '^modules/' | tail -n 1)
+MODULE_REL_PATH=$(docker run --rm -v "${TMP_TARGET_DIR}:${TMP_TARGET_DIR}" --platform "linux/${ARCH}" "${NGINX_ABI_BASE}" sh -c "sh ${TMP_TARGET_DIR}/pick-module.sh" | grep '^modules/' | tail -n 1)
 if [ -z "${MODULE_REL_PATH}" ]; then
   echo "Error: pick-module.sh did not return a module path." >&2
   exit 1
@@ -75,7 +82,7 @@ echo "Clean ${TMP_TARGET_DIR}"
 rm -rf "${TMP_TARGET_DIR}"
 
 # Remove the image to allow pulling different architectures on the same runner.
-docker image rm "${NGINX_BASE}" || true
+docker image rm "${NGINX_BASE}" "${NGINX_ABI_BASE}" || true
 
 # making sure signatures of nginx binary and our module match to avoid shipping broken installs, logic from AiO
 NGX_VER=$(docker run --rm --platform "linux/${ARCH}" "${NGINX_BASE}" sh -c "nginx -v 2>&1 | grep -o '[0-9.]*$'")
