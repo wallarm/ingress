@@ -1,8 +1,12 @@
-From b89c4100bf6762a45e4a6463eaf4b70368277c94 Mon Sep 17 00:00:00 2001
-From: Roman Arutyunyan <arut@nginx.com>
-Date: Thu, 29 Oct 2026 21:37:05 +0400
-Subject: [PATCH] HTTP/2: account for queued frames when validating
- WINDOW_UPDATE
+Backport of nginx commit b89c4100bf6762a45e4a6463eaf4b70368277c94
+(CVE-2026-123007, fixed in 1.30.7 / 1.31.9), with one change:
+send_queued is appended to the end of struct ngx_http_v2_connection_s
+instead of after send_window. Every existing field keeps its offset, so
+ngx_http_wallarm_module built for the unpatched 1.27.1 (it accesses pool,
+free_frames and goaway of this struct) stays ABI-compatible. Nothing outside
+nginx core allocates the struct.
+
+HTTP/2: account for queued frames when validating WINDOW_UPDATE
 
 When a stream is terminated, its unsent payload length is refunded back
 to the connection flow control.  Previously, this could increase the
@@ -12,22 +16,11 @@ terminated.  This eventually resulted in broken buffer size control in
 ngx_http_v2_send_chain() followed by memory corruption and a possible
 segmentation fault.
 
-The fix is to account for the queued frames when validating a client
-WINDOW_UPDATE.  From the client's point of view, the queued frames
-still belong to the flow control window.
-
-Reported by Xint.io.
----
- src/http/v2/ngx_http_v2.c               | 4 ++--
- src/http/v2/ngx_http_v2.h               | 1 +
- src/http/v2/ngx_http_v2_filter_module.c | 3 +++
- 3 files changed, 6 insertions(+), 2 deletions(-)
-
 diff --git a/src/http/v2/ngx_http_v2.c b/src/http/v2/ngx_http_v2.c
-index e0e7ef37..e5d93733 100644
+index 91a28b22..ed732f38 100644
 --- a/src/http/v2/ngx_http_v2.c
 +++ b/src/http/v2/ngx_http_v2.c
-@@ -2484,13 +2484,13 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
+@@ -2471,13 +2471,13 @@ ngx_http_v2_state_window_update(ngx_http_v2_connection_t *h2c, u_char *pos,
          return ngx_http_v2_state_complete(h2c, pos, end);
      }
  
@@ -44,22 +37,25 @@ index e0e7ef37..e5d93733 100644
          return ngx_http_v2_connection_error(h2c, NGX_HTTP_V2_FLOW_CTRL_ERROR);
      }
 diff --git a/src/http/v2/ngx_http_v2.h b/src/http/v2/ngx_http_v2.h
-index beb77a5c..0c8066e6 100644
+index 6751b302..22ebd118 100644
 --- a/src/http/v2/ngx_http_v2.h
 +++ b/src/http/v2/ngx_http_v2.h
-@@ -137,6 +137,7 @@ struct ngx_http_v2_connection_s {
-     ngx_uint_t                       priority_limit;
- 
-     size_t                           send_window;
+@@ -168,6 +168,10 @@ struct ngx_http_v2_connection_s {
+     unsigned                         table_update:1;
+     unsigned                         blocked:1;
+     unsigned                         goaway:1;
++
++    /* Wallarm: appended, not after send_window as upstream does, to keep
++     * the struct layout of already built dynamic modules. */
 +    size_t                           send_queued;
-     size_t                           recv_window;
-     size_t                           init_window;
+ };
+ 
  
 diff --git a/src/http/v2/ngx_http_v2_filter_module.c b/src/http/v2/ngx_http_v2_filter_module.c
-index 6b73b1e6..fe235fbd 100644
+index 1e2cafaf..c4495406 100644
 --- a/src/http/v2/ngx_http_v2_filter_module.c
 +++ b/src/http/v2/ngx_http_v2_filter_module.c
-@@ -1224,6 +1224,7 @@ ngx_http_v2_send_chain(ngx_connection_t *fc, ngx_chain_t *in, off_t limit)
+@@ -1028,6 +1028,7 @@ ngx_http_v2_send_chain(ngx_connection_t *fc, ngx_chain_t *in, off_t limit)
              ngx_http_v2_queue_frame(h2c, frame);
  
              h2c->send_window -= frame_size;
@@ -67,7 +63,7 @@ index 6b73b1e6..fe235fbd 100644
  
              stream->send_window -= frame_size;
              stream->queued++;
-@@ -1619,6 +1620,7 @@ done:
+@@ -1423,6 +1424,7 @@ done:
      stream->request->header_size += NGX_HTTP_V2_FRAME_HEADER_SIZE;
  
      h2c->payload_bytes += frame->length;
@@ -75,7 +71,7 @@ index 6b73b1e6..fe235fbd 100644
  
      ngx_http_v2_handle_frame(stream, frame);
  
-@@ -1753,6 +1755,7 @@ ngx_http_v2_filter_cleanup(void *data)
+@@ -1557,6 +1559,7 @@ ngx_http_v2_filter_cleanup(void *data)
      }
  
      h2c->send_window += window;

@@ -48,4 +48,6 @@ cp -a /usr/* /chroot/usr/
 cp -a /etc/nginx/* /chroot/etc/nginx/
 cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
 cp /lib/ld-musl-* /chroot/lib/
+# nginx runs chrooted: the Wallarm module looks for its sha256 allowlist in /chroot/etc
+cp /etc/wallarm_custom_build.sha256.txt /chroot/etc/
 cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/
