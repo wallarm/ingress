@@ -26,6 +26,10 @@ workflow:
       variables:
         X_CI_BUILD_KIND: "production"
         REGISTRY: docker.io/wallarm
+    - if: $CI_COMMIT_TAG =~ /^([0-9]+.[0-9]+.[0-9]+\+upstream).*$/
+      variables:
+        X_CI_BUILD_KIND: "chart"
+        CHART_TYPE: "release"
     - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/
 
 
@@ -61,6 +65,17 @@ workflow:
     export COSIGN_PASSWORD=$(vault kv get -field=password -mount="node-team" pipelines/cosign)
     export COSIGN_PRIVATE=$(vault kv get -field=private_key -mount="node-team" pipelines/cosign)
 
+.x-get-github-token: &x_get_github_token
+  - |
+    export GITHUB_TOKEN=$(vault kv get -field=token -mount="node-team" "pipelines/common/github_token")
+
+.x-get-gitlab-credentials: &x_get_gitlab_credentials
+  - |
+    export GITLAB_TOKEN=$(vault kv get -field=token_secret -mount="node-team" pipelines/gl_version_repo_creds)
+    export GITLAB_TOKEN_NAME=$(vault kv get -field=token_name -mount="node-team" pipelines/gl_version_repo_creds)
+    export GITLAB_HOST=$(vault kv get -field=host -mount="node-team" pipelines/gl_version_repo_creds)
+    export GITLAB_REPO=$(vault kv get -field=repo -mount="node-team" pipelines/gl_version_repo_creds)
+
 .before-build:
   before_script:
     - *x_docker_login_private
@@ -71,6 +86,18 @@ workflow:
     - *x_vault_login
     - *x_docker_login_public
     - *x_sign_images
+
+.before-helm-publish:
+  before_script:
+    - *x_vault_login
+    - *x_get_github_token
+
+.before-update-versions:
+  before_script:
+    - *x_vault_login
+    - *x_get_gitlab_credentials
+
+
 
 ### NGINX base image (patched nginx, published to the private GitLab registry)
 
@@ -148,3 +175,51 @@ SIGN_DOCKER:
     expire_in: 30 days
     paths:
       - $CI_PROJECT_DIR/*.json
+
+HELM_PUBLISH:
+  stage: publish
+  rules:
+   - if: $X_CI_BUILD_KIND == "chart"
+  extends:
+    - .before-helm-publish
+  variables:
+    GITHUB_REPOSITORY: wallarm/helm-charts
+    CHARTS_DIR: charts
+    CHARTS_URL: https://charts.wallarm.com
+    LINTING: off
+    BRANCH: main
+    TARGET_DIR: wallarm-ingress
+    INDEX_DIR: .
+  # Git tags used for (final) releases are long (include two versions) and we only need first part for helm chart version, so we crop it at '+'
+  # (a '-N' suffix, e.g. 5.3.10-2+upstream4.11.3 -> 5.3.10-2, is part of the chart version)
+  # Git tags used for RC contain only one version and there is no need to change them, so we pass them as is
+  script: |
+    if [[ $CHART_TYPE =~ "release-candidate" ]]; then
+      CHART_VERSION=$CI_COMMIT_TAG
+    else
+      CHART_VERSION=$(echo $CI_COMMIT_TAG | sed 's/+.*$//g')
+    fi
+    export CHART_VERSION
+    echo "CHART_VERSION=$CHART_VERSION" >> chart.env
+
+    echo "Chart type: $CHART_TYPE"
+    echo "Publishing Helm chart version: $CHART_VERSION"
+
+    .gitlab/chart-publish.sh
+  artifacts:
+    reports:
+      dotenv: chart.env
+
+UPDATE_VERSION:
+  stage: publish
+  image: europe-docker.pkg.dev/wallarm-infra/wallarm-cloud-europe/devops/docker/gitlab-runner/gitlab-runner:v1.11.6
+  needs: [HELM_PUBLISH]
+  rules:
+    - if: $X_CI_BUILD_KIND == "chart" && $CHART_TYPE == "release"
+  extends:
+    - .before-update-versions
+  variables:
+    COMPONENT_NAME: wallarm-ingress-controller
+    COMPONENT_VERSION: $CHART_VERSION
+  script: |
+    .gitlab/update-version.sh
