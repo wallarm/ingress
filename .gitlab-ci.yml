@@ -26,7 +26,7 @@ workflow:
       variables:
         X_CI_BUILD_KIND: "production"
         REGISTRY: docker.io/wallarm
-    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/
 
 
 
