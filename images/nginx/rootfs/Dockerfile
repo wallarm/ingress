@@ -15,7 +15,7 @@ FROM alpine:3.20 as builder
 
 COPY . /
 
-RUN --mount=type=ssh apk update \
+RUN apk update \
   && apk upgrade \
   && apk add -U bash --no-cache \
   && /build.sh
@@ -32,7 +32,6 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /usr/lib/libopentelemetry* /usr/local/lib
 COPY --from=builder /opt /opt
 COPY --from=builder /etc/nginx /etc/nginx
-COPY --from=builder /tmp/pkgs/wallarm-nginx/wallarm/share/wallarm_blocked.html /usr/share/nginx/html/
 
 RUN apk update \
   && apk upgrade \
