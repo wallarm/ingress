@@ -1,1 +1,1 @@
-registry.k8s.io/ingress-nginx/nginx:v0.1.0@sha256:87dcd5ed0206161b86f3767ccdc592716617481e3eac89bfc46ec515419c0b94
+dkr.wallarm.com/wallarm-node/ingress/nginx:5.3.10.2@sha256:230d0cfc9567495f8a712e967fd5853d61b977a60efdd6ad53855ee16ca0a831
