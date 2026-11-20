@@ -19,7 +19,7 @@ if [ $FOUND != "null" ]; then
 fi
 
 jq -r '.body."'"$COMPONENT_NAME"'" += ["'"$COMPONENT_VERSION"'"]' latest.json > latest.new.json
-VERSIONS=$(jq -r '.body."'"$COMPONENT_NAME"'" | sort_by(.|split(".")|map(tonumber))' latest.new.json)
+VERSIONS=$(jq -r '.body."'"$COMPONENT_NAME"'" | sort_by([scan("[0-9]+") | tonumber])' latest.new.json)
 jq -r '.body."'"$COMPONENT_NAME"'" = '"$VERSIONS" latest.new.json > latest.json
 git add latest.json
 COMMIT_MESSAGE="Bump ${COMPONENT_NAME} version to ${COMPONENT_VERSION}"
