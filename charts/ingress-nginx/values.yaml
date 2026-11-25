@@ -452,6 +452,9 @@ controller:
     # fallback:
     #   failureThreshold: 3
     #   replicas: 11
+    #   # How KEDA uses `replicas` once the fallback is active (KEDA >= 2.17): static (KEDA's default),
+    #   # currentReplicas, currentReplicasIfHigher or currentReplicasIfLower. Omit it to keep KEDA's default.
+    #   behavior: currentReplicasIfHigher
     restoreToOriginalReplicaCount: false
     scaledObject:
       annotations: {}

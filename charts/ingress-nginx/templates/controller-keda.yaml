@@ -28,6 +28,9 @@ spec:
   fallback:
     failureThreshold: {{ .failureThreshold | default 3 }}
     replicas: {{ .replicas | default $.Values.controller.keda.maxReplicas }}
+    {{- with .behavior }}
+    behavior: {{ . }}
+    {{- end }}
 {{- end }}
   triggers:
 {{- with .Values.controller.keda.triggers }}

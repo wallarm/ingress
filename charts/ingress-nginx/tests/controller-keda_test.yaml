@@ -29,3 +29,31 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: should create a ScaledObject with a fallback without behavior if `controller.keda.fallback.behavior` is not set
+    set:
+      controller.keda.enabled: true
+      controller.keda.fallback:
+        failureThreshold: 5
+        replicas: 4
+    asserts:
+      - equal:
+          path: spec.fallback
+          value:
+            failureThreshold: 5
+            replicas: 4
+
+  - it: should create a ScaledObject with a fallback behavior if `controller.keda.fallback.behavior` is set
+    set:
+      controller.keda.enabled: true
+      controller.keda.fallback:
+        replicas: 2
+        behavior: currentReplicasIfHigher
+    asserts:
+      - equal:
+          path: spec.fallback
+          value:
+            failureThreshold: 3
+            replicas: 2
+            behavior: currentReplicasIfHigher
+
